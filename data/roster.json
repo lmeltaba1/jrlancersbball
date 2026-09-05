@@ -1,0 +1,55 @@
+{
+  "team": {
+    "name": "Jr. Lancers",
+    "school": "Lafayette",
+    "season": "2026-2027",
+    "grade": "5th",
+    "colors": {
+      "primary": "#000000",
+      "secondary": "#FFD700"
+    }
+  },
+  "coaches": [
+    {
+      "name": "Logan Meltabarger",
+      "role": "Head Coach",
+      "phone": "314-555-1234",
+      "email": "lmeltabarger@icloud.com",
+      "canTrackStats": true
+    }
+  ],
+  "players": [
+    {
+      "id": 1,
+      "firstName": "Player",
+      "lastName": "One",
+      "number": 1,
+      "position": "PG",
+      "positionName": "Point Guard",
+      "parents": [
+        {
+          "name": "Parent One",
+          "email": "parent1@email.com",
+          "phone": "314-555-0001",
+          "canTrackStats": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "firstName": "Player",
+      "lastName": "Two",
+      "number": 2,
+      "position": "SG",
+      "positionName": "Shooting Guard",
+      "parents": [
+        {
+          "name": "Parent Two",
+          "email": "parent2@email.com",
+          "phone": "314-555-0002",
+          "canTrackStats": false
+        }
+      ]
+    }
+  ]
+}

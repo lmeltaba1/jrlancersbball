@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>Jr. Lancers Basketball</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="images/lancers-logo-180.png">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <h1>
+        <img src="images/lancers-logo.svg" alt="Lancers" class="header-logo">
+        Jr. Lancers
+      </h1>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Hero Banner -->
+    <div class="hero-banner">
+      <h2>Go Lancers!</h2>
+      <p id="welcome-text">5th Grade Basketball</p>
+    </div>
+
+    <!-- Next Game Card -->
+    <div class="card" id="next-game-card" style="display: none;">
+      <div class="card-title">Next Game</div>
+      <div id="next-game-content"></div>
+    </div>
+
+    <!-- Season Record -->
+    <div class="card">
+      <div class="card-title">Season Record</div>
+      <div id="season-record" style="text-align: center; padding: 10px 0;">
+        <span style="font-size: 2rem; font-weight: 800; color: var(--lancers-gold);">--</span>
+      </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="quick-links">
+      <a href="roster.html" class="quick-link">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span>Roster</span>
+      </a>
+      <a href="schedule.html" class="quick-link">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <span>Schedule</span>
+      </a>
+      <a href="volunteers.html" class="quick-link">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+        <span>Volunteer</span>
+      </a>
+      <a href="game-stats.html" class="quick-link">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+        <span>Stats</span>
+      </a>
+    </div>
+
+    <!-- Login Prompt (shown if not logged in) -->
+    <div class="card" id="login-prompt" style="display: none;">
+      <div class="card-title">Parents & Coaches</div>
+      <p style="color: var(--text-secondary); margin-bottom: 12px;">
+        Log in to sign up for volunteer duties and track game stats.
+      </p>
+      <a href="login.html" class="btn btn-primary" style="width: 100%;">Log In</a>
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item active">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      <span>Home</span>
+    </a>
+    <a href="roster.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <span>Roster</span>
+    </a>
+    <a href="schedule.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <span>Schedule</span>
+    </a>
+    <a href="game-stats.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span>Stats</span>
+    </a>
+    <a href="volunteers.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+      <span>Volunteer</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Load next game
+      try {
+        const nextGame = await getNextGame();
+        if (nextGame) {
+          const gameCard = document.getElementById('next-game-card');
+          const gameContent = document.getElementById('next-game-content');
+          const dateInfo = formatDate(nextGame.date);
+
+          gameContent.innerHTML = `
+            <div class="game-card" style="margin: 0;">
+              <div class="game-card-header ${nextGame.league}">
+                <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
+                <span class="league-badge ${nextGame.league}">${leagueNames[nextGame.league]}</span>
+              </div>
+              <div class="game-card-body">
+                <div class="game-matchup">
+                  <span class="team-name">Lancers</span>
+                  <span class="vs-badge">VS</span>
+                  <span class="team-name">${nextGame.opponent}</span>
+                </div>
+                <div class="game-details">
+                  <span class="game-detail">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    ${nextGame.time}
+                  </span>
+                  <span class="game-detail">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    ${nextGame.location}
+                  </span>
+                </div>
+                <div style="text-align: center; margin-top: 10px;">
+                  <span class="jersey-indicator ${nextGame.jersey}">${nextGame.jersey.toUpperCase()} JERSEY</span>
+                </div>
+              </div>
+            </div>
+          `;
+          gameCard.style.display = 'block';
+        }
+      } catch (e) {
+        console.error('Error loading next game:', e);
+      }
+
+      // Load season record
+      try {
+        const record = await getSeasonRecord();
+        document.getElementById('season-record').innerHTML = `
+          <span style="font-size: 2rem; font-weight: 800; color: var(--lancers-gold);">${record.wins} - ${record.losses}</span>
+        `;
+      } catch (e) {
+        console.error('Error loading record:', e);
+      }
+
+      // Check auth state
+      if (auth) {
+        auth.onAuthStateChanged(function(user) {
+          if (user && user.emailVerified) {
+            document.getElementById('login-prompt').style.display = 'none';
+          } else {
+            document.getElementById('login-prompt').style.display = 'block';
+          }
+        });
+      } else {
+        document.getElementById('login-prompt').style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

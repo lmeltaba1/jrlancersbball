@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000000">
+  <title>Register - Jr. Lancers</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <h1>
+        <a href="index.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 10px;">
+          <img src="images/lancers-logo.svg" alt="Lancers" class="header-logo">
+          Jr. Lancers
+        </a>
+      </h1>
+    </div>
+  </header>
+
+  <main class="main-content" style="padding-top: 40px;">
+    <div class="card" style="max-width: 400px; margin: 0 auto;">
+      <h2 style="text-align: center; margin-bottom: 24px; color: var(--lancers-gold);">Create Account</h2>
+
+      <form id="register-form">
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input type="email" id="email" class="form-input" placeholder="Use email from TeamSnap" required>
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
+            Use the same email address that's in TeamSnap so we can identify you.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="At least 6 characters" required minlength="6">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="confirm-password">Confirm Password</label>
+          <input type="password" id="confirm-password" class="form-input" placeholder="Enter password again" required>
+        </div>
+
+        <div id="error-message" style="color: #EF4444; font-size: 0.85rem; margin-bottom: 16px; display: none;"></div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 16px;">
+          Create Account
+        </button>
+      </form>
+
+      <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
+
+      <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem;">
+        Already have an account?
+        <a href="login.html">Log In</a>
+      </p>
+    </div>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/theme.js"></script>
+  <script>
+    document.getElementById('register-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      const errorDiv = document.getElementById('error-message');
+
+      if (password !== confirmPassword) {
+        errorDiv.textContent = 'Passwords do not match.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      try {
+        const result = await auth.createUserWithEmailAndPassword(email, password);
+
+        // Send verification email
+        await result.user.sendEmailVerification();
+
+        alert('Account created! Please check your email to verify your account before logging in.');
+        window.location.href = 'login.html';
+
+      } catch (error) {
+        errorDiv.style.display = 'block';
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorDiv.textContent = 'An account with this email already exists.';
+            break;
+          case 'auth/invalid-email':
+            errorDiv.textContent = 'Invalid email address.';
+            break;
+          case 'auth/weak-password':
+            errorDiv.textContent = 'Password is too weak. Use at least 6 characters.';
+            break;
+          default:
+            errorDiv.textContent = error.message;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

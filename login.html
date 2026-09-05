@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>Login - Jr. Lancers</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <h1>
+        <a href="index.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 10px;">
+          <img src="images/lancers-logo.svg" alt="Lancers" class="header-logo">
+          Jr. Lancers
+        </a>
+      </h1>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content" style="padding-top: 40px;">
+    <div class="card" style="max-width: 400px; margin: 0 auto;">
+      <h2 style="text-align: center; margin-bottom: 24px; color: var(--lancers-gold);">Welcome Back</h2>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input type="email" id="email" class="form-input" placeholder="parent@email.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="Enter your password" required>
+        </div>
+
+        <div id="error-message" style="color: #EF4444; font-size: 0.85rem; margin-bottom: 16px; display: none;"></div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 16px;">
+          Log In
+        </button>
+
+        <div style="text-align: center;">
+          <a href="reset-password.html" style="font-size: 0.85rem;">Forgot password?</a>
+        </div>
+      </form>
+
+      <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
+
+      <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem;">
+        Don't have an account?
+        <a href="register.html">Register</a>
+      </p>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/theme.js"></script>
+  <script>
+    // Check if already logged in
+    if (auth) {
+      auth.onAuthStateChanged(function(user) {
+        if (user && user.emailVerified) {
+          window.location.href = 'index.html';
+        }
+      });
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('error-message');
+
+      try {
+        const result = await auth.signInWithEmailAndPassword(email, password);
+
+        if (!result.user.emailVerified) {
+          errorDiv.textContent = 'Please verify your email before logging in. Check your inbox.';
+          errorDiv.style.display = 'block';
+          await auth.signOut();
+          return;
+        }
+
+        // Success - redirect
+        window.location.href = 'index.html';
+      } catch (error) {
+        errorDiv.style.display = 'block';
+        switch (error.code) {
+          case 'auth/user-not-found':
+            errorDiv.textContent = 'No account found with this email.';
+            break;
+          case 'auth/wrong-password':
+            errorDiv.textContent = 'Incorrect password.';
+            break;
+          case 'auth/invalid-email':
+            errorDiv.textContent = 'Invalid email address.';
+            break;
+          case 'auth/too-many-requests':
+            errorDiv.textContent = 'Too many failed attempts. Try again later.';
+            break;
+          default:
+            errorDiv.textContent = error.message;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

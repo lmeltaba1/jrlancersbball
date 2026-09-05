@@ -1,0 +1,57 @@
+{
+  "season": "2026-2027",
+  "games": [
+    {
+      "id": 1,
+      "league": "parkrock",
+      "date": "2026-11-15",
+      "time": "9:00 AM",
+      "endTime": "10:00 AM",
+      "opponent": "Warriors",
+      "location": "Park Rock Gym",
+      "home": true,
+      "jersey": "gold",
+      "result": null,
+      "finalScore": null
+    },
+    {
+      "id": 2,
+      "league": "cnr",
+      "date": "2026-11-22",
+      "time": "2:00 PM",
+      "endTime": "3:00 PM",
+      "opponent": "Eagles",
+      "location": "CNR Recreation Center",
+      "home": false,
+      "jersey": "black",
+      "result": null,
+      "finalScore": null
+    },
+    {
+      "id": 3,
+      "league": "parkrock",
+      "date": "2026-11-29",
+      "time": "10:30 AM",
+      "endTime": "11:30 AM",
+      "opponent": "Hawks",
+      "location": "Park Rock Gym",
+      "home": false,
+      "jersey": "black",
+      "result": null,
+      "finalScore": null
+    },
+    {
+      "id": 4,
+      "league": "cnr",
+      "date": "2026-12-06",
+      "time": "1:00 PM",
+      "endTime": "2:00 PM",
+      "opponent": "Celtics",
+      "location": "CNR Recreation Center",
+      "home": true,
+      "jersey": "gold",
+      "result": null,
+      "finalScore": null
+    }
+  ]
+}
