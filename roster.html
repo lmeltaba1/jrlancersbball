@@ -94,6 +94,24 @@
       min-width: 35px;
       text-align: right;
     }
+    .contact-icon {
+      color: var(--lancers-gold);
+      width: 22px;
+      height: 22px;
+    }
+    .contact-icon:active {
+      opacity: 0.7;
+    }
+    .parent-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .parent-item:last-child {
+      border-bottom: none;
+    }
   </style>
 </head>
 <body>
@@ -119,16 +137,34 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    <!-- Coach Card -->
-    <div class="card" id="coach-card" style="display: none;">
-      <div class="card-title">Coaching Staff</div>
-      <div id="coaches-list" class="roster-list"></div>
+    <!-- Section Tabs -->
+    <div class="section-tabs">
+      <button class="section-tab active" data-section="players">Players</button>
+      <button class="section-tab" data-section="parents">Parents</button>
     </div>
 
-    <!-- Players List -->
-    <div id="players-list">
-      <div style="text-align: center; padding: 40px;">
-        <div class="spinner" style="margin: 0 auto;"></div>
+    <!-- Players Section -->
+    <div class="section-content active" id="players-section">
+      <!-- Coach Card -->
+      <div class="card" id="coach-card" style="display: none;">
+        <div class="card-title">Coaching Staff</div>
+        <div id="coaches-list" class="roster-list"></div>
+      </div>
+
+      <!-- Players List -->
+      <div id="players-list">
+        <div style="text-align: center; padding: 40px;">
+          <div class="spinner" style="margin: 0 auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Parents Section -->
+    <div class="section-content" id="parents-section">
+      <div id="parents-list">
+        <div style="text-align: center; padding: 40px;">
+          <div class="spinner" style="margin: 0 auto;"></div>
+        </div>
       </div>
     </div>
   </main>
@@ -220,7 +256,22 @@
     let scheduleData = null;
     let allGameStats = {};
 
+    // Contact icon SVGs
+    const phoneIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="contact-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>`;
+    const textIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="contact-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>`;
+    const emailIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="contact-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>`;
+
     document.addEventListener('DOMContentLoaded', async function() {
+      // Tab switching
+      document.querySelectorAll('.section-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.section-content').forEach(c => c.classList.remove('active'));
+          this.classList.add('active');
+          document.getElementById(this.dataset.section + '-section').classList.add('active');
+        });
+      });
+
       try {
         // Load roster and schedule in parallel
         const [roster, schedule] = await Promise.all([
@@ -247,24 +298,15 @@
           document.getElementById('coach-card').style.display = 'block';
           document.getElementById('coaches-list').innerHTML = rosterData.coaches.map(coach => `
             <div class="roster-item">
-              <div class="position-badge pos-pg" style="font-size: 0.6rem;">HC</div>
+              <div class="position-badge pos-pg" style="font-size: 0.6rem;">${coach.role === 'Head Coach' ? 'HC' : 'AC'}</div>
               <div style="flex: 1;">
                 <div class="player-name">${coach.name}</div>
                 <div class="position-name">${coach.role}</div>
               </div>
-              <div style="display: flex; gap: 8px;">
-                ${coach.phone ? `
-                  <a href="tel:${coach.phone}" style="color: var(--lancers-gold);">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                  </a>
-                ` : ''}
-                <a href="mailto:${coach.email}" style="color: var(--lancers-gold);">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </a>
+              <div style="display: flex; gap: 12px;">
+                ${coach.phone ? `<a href="tel:${coach.phone}">${phoneIcon}</a>` : ''}
+                ${coach.phone ? `<a href="sms:${coach.phone}">${textIcon}</a>` : ''}
+                <a href="mailto:${coach.email}">${emailIcon}</a>
               </div>
             </div>
           `).join('');
@@ -295,9 +337,48 @@
           `;
         }).join('');
 
+        // Render parents section - grouped by player
+        const parentsByPlayer = [];
+        players.forEach(player => {
+          if (player.parents && player.parents.length > 0) {
+            player.parents.forEach(parent => {
+              parentsByPlayer.push({
+                ...parent,
+                playerName: `${player.firstName} ${player.lastName}`,
+                playerNumber: player.number
+              });
+            });
+          }
+        });
+
+        // Sort parents alphabetically by their name
+        parentsByPlayer.sort((a, b) => a.name.localeCompare(b.name));
+
+        document.getElementById('parents-list').innerHTML = parentsByPlayer.map(parent => {
+          const roleLabel = parent.role || 'Parent';
+          return `
+            <div class="card" style="margin-bottom: 8px;">
+              <div class="parent-item" style="border: none; padding: 0;">
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; color: var(--text-primary);">${parent.name}</div>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                    ${roleLabel} of #${parent.playerNumber || '-'} ${parent.playerName}
+                  </div>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                  ${parent.phone ? `<a href="tel:${parent.phone}">${phoneIcon}</a>` : ''}
+                  ${parent.phone ? `<a href="sms:${parent.phone}">${textIcon}</a>` : ''}
+                  <a href="mailto:${parent.email}">${emailIcon}</a>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
       } catch (e) {
         console.error('Error loading roster:', e);
         document.getElementById('players-list').innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Error loading roster</p>';
+        document.getElementById('parents-list').innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Error loading parents</p>';
       }
     });
 
@@ -366,7 +447,6 @@
         gameByGameData.sort((a, b) => new Date(b.date) - new Date(a.date));
         document.getElementById('game-by-game').innerHTML = gameByGameData.map(g => {
           const dateInfo = formatDate(g.date);
-          const resultClass = g.result === 'W' ? 'win' : (g.result === 'L' ? 'loss' : '');
           return `
             <div class="game-stat-row">
               <div>
@@ -395,18 +475,9 @@
                 <div style="font-size: 0.75rem; color: var(--text-secondary);">${roleLabel}</div>
               </div>
               <div style="display: flex; gap: 12px;">
-                ${parent.phone ? `
-                  <a href="tel:${parent.phone}" style="color: var(--lancers-gold);">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 22px; height: 22px;">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                  </a>
-                ` : ''}
-                <a href="mailto:${parent.email}" style="color: var(--lancers-gold);">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 22px; height: 22px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </a>
+                ${parent.phone ? `<a href="tel:${parent.phone}">${phoneIcon}</a>` : ''}
+                ${parent.phone ? `<a href="sms:${parent.phone}">${textIcon}</a>` : ''}
+                <a href="mailto:${parent.email}">${emailIcon}</a>
               </div>
             </div>
           `;

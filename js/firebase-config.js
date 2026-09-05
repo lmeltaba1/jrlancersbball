@@ -39,7 +39,7 @@ if (typeof firebase !== 'undefined') {
 // Helper to get player info from roster
 async function getPlayerFromRoster(email) {
   try {
-    const res = await fetch('data/roster.json');
+    const res = await fetch('data/roster.json?v=' + Date.now());
     const data = await res.json();
     const emailLower = email.toLowerCase();
 
