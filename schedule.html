@@ -16,7 +16,7 @@
     <div class="header-content">
       <h1>
         <a href="index.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 10px;">
-          <img src="images/lancers-logo.svg" alt="Lancers" class="header-logo">
+          <img src="images/lancers-logo.png" alt="Lancers" class="header-logo">
           Schedule
         </a>
       </h1>
@@ -44,11 +44,12 @@
       </div>
     </div>
 
-    <!-- League Filter Tabs -->
+    <!-- Filter Tabs -->
     <div class="section-tabs">
-      <button class="section-tab active" data-league="all">All Games</button>
-      <button class="section-tab" data-league="parkrock">Park Rock</button>
-      <button class="section-tab" data-league="cnr">CNR</button>
+      <button class="section-tab active" data-filter="all">All</button>
+      <button class="section-tab" data-filter="games">Games</button>
+      <button class="section-tab" data-filter="parkrock">Park Rock</button>
+      <button class="section-tab" data-filter="cnr">CNR</button>
     </div>
 
     <!-- Schedule List -->
@@ -79,17 +80,17 @@
       </svg>
       <span>Schedule</span>
     </a>
+    <a href="chat.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+      <span>Chat</span>
+    </a>
     <a href="game-stats.html" class="nav-item">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
       </svg>
       <span>Stats</span>
-    </a>
-    <a href="volunteers.html" class="nav-item">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-      </svg>
-      <span>Volunteer</span>
     </a>
   </nav>
 
@@ -101,7 +102,7 @@
   <script src="js/theme.js"></script>
   <script src="js/app.js"></script>
   <script>
-    let allGames = [];
+    let allEvents = [];
     let volunteers = {};
     let currentFilter = 'all';
 
@@ -110,11 +111,22 @@
       cnr: 'CNR'
     };
 
+    const eventTypeNames = {
+      practice: 'Practice',
+      event: 'Event'
+    };
+
     document.addEventListener('DOMContentLoaded', async function() {
       // Load schedule
       try {
         const data = await loadSchedule();
-        allGames = data.games;
+        allEvents = data.games || [];
+        // Add events/practices if they exist
+        if (data.events) {
+          allEvents = allEvents.concat(data.events);
+        }
+        // Sort by date
+        allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
 
         // Load volunteer data
         if (db) {
@@ -140,7 +152,7 @@
         tab.addEventListener('click', function() {
           document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
           this.classList.add('active');
-          currentFilter = this.dataset.league;
+          currentFilter = this.dataset.filter;
           renderSchedule();
         });
       });
@@ -151,15 +163,17 @@
       let parkrockWins = 0, parkrockLosses = 0;
       let cnrWins = 0, cnrLosses = 0;
 
-      allGames.forEach(game => {
-        if (game.result === 'W') {
-          wins++;
-          if (game.league === 'parkrock') parkrockWins++;
-          else cnrWins++;
-        } else if (game.result === 'L') {
-          losses++;
-          if (game.league === 'parkrock') parkrockLosses++;
-          else cnrLosses++;
+      allEvents.forEach(event => {
+        if (event.type === 'game' || event.league) {
+          if (event.result === 'W') {
+            wins++;
+            if (event.league === 'parkrock') parkrockWins++;
+            else if (event.league === 'cnr') cnrWins++;
+          } else if (event.result === 'L') {
+            losses++;
+            if (event.league === 'parkrock') parkrockLosses++;
+            else if (event.league === 'cnr') cnrLosses++;
+          }
         }
       });
 
@@ -172,83 +186,123 @@
 
     function renderSchedule() {
       const container = document.getElementById('schedule-list');
-      const filtered = currentFilter === 'all'
-        ? allGames
-        : allGames.filter(g => g.league === currentFilter);
+      let filtered;
+
+      if (currentFilter === 'all') {
+        filtered = allEvents;
+      } else if (currentFilter === 'games') {
+        filtered = allEvents.filter(e => e.type === 'game' || e.league);
+      } else {
+        filtered = allEvents.filter(e => e.league === currentFilter);
+      }
 
       if (filtered.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No games scheduled</p>';
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No events scheduled</p>';
         return;
       }
 
-      container.innerHTML = filtered.map(game => {
-        const dateInfo = formatDate(game.date);
-        const vol = volunteers[game.id] || {};
-        const needsScorekeeper = !vol.scorekeeper;
-        const needsTableWorker = game.league === 'cnr' && !vol.tableWorker;
+      container.innerHTML = filtered.map(event => {
+        const dateInfo = formatDate(event.date);
+        const isGame = event.type === 'game' || event.league;
 
-        let resultHtml = '';
-        if (game.result) {
-          const isWin = game.result === 'W';
-          resultHtml = `
-            <div class="game-result ${isWin ? 'win' : 'loss'}">
-              ${isWin ? 'W' : 'L'} ${game.finalScore ? game.finalScore.lancers + ' - ' + game.finalScore.opponent : ''}
+        if (isGame) {
+          // Render game card
+          const vol = volunteers[event.id] || {};
+          let resultHtml = '';
+          if (event.result) {
+            const isWin = event.result === 'W';
+            resultHtml = `
+              <div class="game-result ${isWin ? 'win' : 'loss'}">
+                ${isWin ? 'W' : 'L'} ${event.finalScore ? event.finalScore.lancers + ' - ' + event.finalScore.opponent : ''}
+              </div>
+            `;
+          }
+
+          let volunteerHtml = '';
+          if (!event.result) {
+            volunteerHtml = `
+              <div class="volunteer-status">
+                <span class="volunteer-slot ${vol.scorekeeper ? 'filled' : 'empty'}">
+                  ${vol.scorekeeper ? '&#10003;' : '&#9888;'} Scorekeeper${vol.scorekeeper ? ': ' + vol.scorekeeper.name.split(' ')[0] : ': NEEDED'}
+                </span>
+                ${event.league === 'cnr' ? `
+                  <span class="volunteer-slot ${vol.tableWorker ? 'filled' : 'empty'}">
+                    ${vol.tableWorker ? '&#10003;' : '&#9888;'} Table${vol.tableWorker ? ': ' + vol.tableWorker.name.split(' ')[0] : ': NEEDED'}
+                  </span>
+                ` : ''}
+              </div>
+            `;
+          }
+
+          return `
+            <div class="game-card">
+              <div class="game-card-header ${event.league}">
+                <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
+                <span class="league-badge ${event.league}">${leagueNames[event.league]}</span>
+              </div>
+              <div class="game-card-body">
+                <div class="game-matchup">
+                  <span class="team-name">Lancers</span>
+                  <span class="vs-badge">${event.home ? 'VS' : '@'}</span>
+                  <span class="team-name">${event.opponent}</span>
+                </div>
+                <div class="game-details">
+                  <span class="game-detail">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    ${event.time}
+                  </span>
+                  <span class="game-detail">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    ${event.location}
+                  </span>
+                </div>
+                ${event.jersey ? `
+                  <div style="text-align: center; margin-top: 10px;">
+                    <span class="jersey-indicator ${event.jersey}">${event.jersey.toUpperCase()} JERSEY</span>
+                  </div>
+                ` : ''}
+                ${resultHtml}
+                ${volunteerHtml}
+                ${event.result ? `<a href="stats-view.html?game=${event.id}" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">View Stats</a>` : ''}
+              </div>
+            </div>
+          `;
+        } else {
+          // Render practice/event card
+          const typeLabel = eventTypeNames[event.type] || 'Event';
+          return `
+            <div class="game-card">
+              <div class="game-card-header" style="background: var(--bg-elevated);">
+                <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
+                <span class="league-badge" style="background: var(--text-secondary);">${typeLabel}</span>
+              </div>
+              <div class="game-card-body">
+                <div style="font-weight: 700; font-size: 1rem; margin-bottom: 8px;">${event.name || typeLabel}</div>
+                <div class="game-details">
+                  <span class="game-detail">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    ${event.time}
+                  </span>
+                  <span class="game-detail">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    ${event.location}
+                  </span>
+                </div>
+                ${event.notes ? `<p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 10px;">${event.notes}</p>` : ''}
+              </div>
             </div>
           `;
         }
-
-        let volunteerHtml = '';
-        if (!game.result) {
-          volunteerHtml = `
-            <div class="volunteer-status">
-              <span class="volunteer-slot ${vol.scorekeeper ? 'filled' : 'empty'}">
-                ${vol.scorekeeper ? '&#10003;' : '&#9888;'} Scorekeeper${vol.scorekeeper ? ': ' + vol.scorekeeper.name.split(' ')[0] : ': NEEDED'}
-              </span>
-              ${game.league === 'cnr' ? `
-                <span class="volunteer-slot ${vol.tableWorker ? 'filled' : 'empty'}">
-                  ${vol.tableWorker ? '&#10003;' : '&#9888;'} Table${vol.tableWorker ? ': ' + vol.tableWorker.name.split(' ')[0] : ': NEEDED'}
-                </span>
-              ` : ''}
-            </div>
-          `;
-        }
-
-        return `
-          <div class="game-card">
-            <div class="game-card-header ${game.league}">
-              <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
-              <span class="league-badge ${game.league}">${leagueNames[game.league]}</span>
-            </div>
-            <div class="game-card-body">
-              <div class="game-matchup">
-                <span class="team-name">Lancers</span>
-                <span class="vs-badge">${game.home ? 'VS' : '@'}</span>
-                <span class="team-name">${game.opponent}</span>
-              </div>
-              <div class="game-details">
-                <span class="game-detail">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  ${game.time}
-                </span>
-                <span class="game-detail">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  ${game.location}
-                </span>
-              </div>
-              <div style="text-align: center; margin-top: 10px;">
-                <span class="jersey-indicator ${game.jersey}">${game.jersey.toUpperCase()} JERSEY</span>
-              </div>
-              ${resultHtml}
-              ${volunteerHtml}
-              ${game.result ? `<a href="stats-view.html?game=${game.id}" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">View Stats</a>` : ''}
-            </div>
-          </div>
-        `;
       }).join('');
     }
   </script>

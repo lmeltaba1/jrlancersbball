@@ -4,6 +4,7 @@
     "school": "Lafayette",
     "season": "2026-2027",
     "grade": "5th",
+    "teamSnapId": 10778938,
     "colors": {
       "primary": "#000000",
       "secondary": "#FFD700"
@@ -13,41 +14,210 @@
     {
       "name": "Logan Meltabarger",
       "role": "Head Coach",
-      "phone": "314-555-1234",
       "email": "lmeltabarger@icloud.com",
+      "phone": "3142581513",
+      "canTrackStats": true
+    },
+    {
+      "name": "Matthew Moore",
+      "role": "Assistant Coach",
+      "email": "matthewmoore09@yahoo.com",
+      "phone": "4173531948",
       "canTrackStats": true
     }
   ],
   "players": [
     {
       "id": 1,
-      "firstName": "Player",
-      "lastName": "One",
+      "firstName": "Raequan",
+      "lastName": "Brimer",
       "number": 1,
-      "position": "PG",
-      "positionName": "Point Guard",
+      "position": "PF",
+      "positionName": "Power Forward",
       "parents": [
         {
-          "name": "Parent One",
-          "email": "parent1@email.com",
-          "phone": "314-555-0001",
+          "name": "Ryan Carney",
+          "email": "ryancar20@gmail.com",
+          "phone": ""
+        },
+        {
+          "name": "Mindy Carney",
+          "email": "mindy.m.carney@gmail.com",
+          "phone": "5738199211",
           "canTrackStats": true
         }
       ]
     },
     {
       "id": 2,
-      "firstName": "Player",
-      "lastName": "Two",
-      "number": 2,
+      "firstName": "Camden",
+      "lastName": "Kreyling",
+      "number": 9,
+      "position": "PG",
+      "positionName": "Point Guard",
+      "parents": [
+        {
+          "name": "Melissa Kreyling",
+          "email": "mkreyling@yahoo.com",
+          "phone": "3147501712"
+        },
+        {
+          "name": "Gregg Kreyling",
+          "email": "gakreyling@hotmail.com",
+          "phone": ""
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "firstName": "Grant",
+      "lastName": "Weltz",
+      "number": 14,
+      "position": "C",
+      "positionName": "Center",
+      "parents": [
+        {
+          "name": "Carey Weltz",
+          "email": "careypatton@hotmail.com",
+          "phone": "3147497691"
+        },
+        {
+          "name": "Drew Weltz",
+          "email": "andrew.weltz@yahoo.com",
+          "phone": ""
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "firstName": "Rylan",
+      "lastName": "Trott",
+      "number": 19,
       "position": "SG",
       "positionName": "Shooting Guard",
       "parents": [
         {
-          "name": "Parent Two",
-          "email": "parent2@email.com",
-          "phone": "314-555-0002",
-          "canTrackStats": false
+          "name": "Brittany Trott",
+          "email": "brittany28@aol.com",
+          "phone": "3143977610"
+        },
+        {
+          "name": "Kevin Trott",
+          "email": "ktjetski16@aol.com",
+          "phone": ""
+        },
+        {
+          "name": "Maureen Trott",
+          "email": "maureen.trott@att.net",
+          "phone": "",
+          "role": "Guardian"
+        },
+        {
+          "name": "Ranona Bowers",
+          "email": "ranonab@aol.com",
+          "phone": "3144795101",
+          "role": "Guardian"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "firstName": "Ashton",
+      "lastName": "Carney",
+      "number": 22,
+      "position": "C",
+      "positionName": "Center",
+      "parents": [
+        {
+          "name": "Ryan Carney",
+          "email": "ryancar20@gmail.com",
+          "phone": ""
+        },
+        {
+          "name": "Mindy Carney",
+          "email": "mindy.m.carney@gmail.com",
+          "phone": "5738199211"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "firstName": "Dean",
+      "lastName": "Meltabarger",
+      "number": 30,
+      "position": "SG",
+      "positionName": "Shooting Guard",
+      "parents": [
+        {
+          "name": "Logan Meltabarger",
+          "email": "lmeltabarger@icloud.com",
+          "phone": ""
+        },
+        {
+          "name": "Bailey Meltabarger",
+          "email": "bemeltabarger@gmail.com",
+          "phone": "3147531022",
+          "canTrackStats": true
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "firstName": "Wyatt",
+      "lastName": "Weems",
+      "number": 0,
+      "position": "SF",
+      "positionName": "Small Forward",
+      "parents": [
+        {
+          "name": "Jillian Weems",
+          "email": "jillian.weems@me.com",
+          "phone": "3142217372"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "firstName": "Peyton",
+      "lastName": "Parks",
+      "number": 0,
+      "position": "SF",
+      "positionName": "Small Forward",
+      "parents": [
+        {
+          "name": "Jamie Parks",
+          "email": "jamieparks86@gmail.com",
+          "phone": "8167998735"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "firstName": "Jeevan",
+      "lastName": "Sabharwal",
+      "number": 0,
+      "position": "PG",
+      "positionName": "Point Guard",
+      "parents": [
+        {
+          "name": "Rebecca Sabharwal",
+          "email": "ral0709@charter.net",
+          "phone": "3144121868"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "firstName": "Easton",
+      "lastName": "Moore",
+      "number": 0,
+      "position": "PF",
+      "positionName": "Power Forward",
+      "parents": [
+        {
+          "name": "Matthew Moore",
+          "email": "matthewmoore09@yahoo.com",
+          "phone": "4173531948"
         }
       ]
     }

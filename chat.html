@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>Team Chat - Jr. Lancers</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    .chat-main {
+      padding: 16px;
+      padding-bottom: 140px;
+    }
+    .chat-input-fixed {
+      position: fixed;
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 24px);
+      max-width: 576px;
+      display: flex;
+      gap: 10px;
+      background: var(--bg-elevated);
+      padding: 10px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      z-index: 100;
+    }
+    .chat-input-fixed input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      font-size: 16px;
+      outline: none;
+      background-color: var(--bg-body);
+      color: var(--text-primary);
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .chat-input-fixed input::placeholder {
+      color: var(--text-muted);
+    }
+    .chat-input-fixed input:focus {
+      border-color: var(--lancers-gold);
+    }
+    .chat-input-fixed button {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--lancers-gold);
+      color: black;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .chat-message {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+    .chat-message.sent {
+      align-self: flex-end;
+      background: var(--lancers-gold);
+      color: black;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-message.received {
+      align-self: flex-start;
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border-bottom-left-radius: 4px;
+    }
+    .chat-message .sender {
+      font-weight: 700;
+      font-size: 0.75rem;
+      margin-bottom: 4px;
+      color: var(--lancers-gold);
+    }
+    .chat-message.sent .sender {
+      color: rgba(0,0,0,0.6);
+    }
+    .chat-message .time {
+      font-size: 0.7rem;
+      margin-top: 4px;
+      opacity: 0.6;
+    }
+    .date-divider {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin: 16px 0 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .unread-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+      color: var(--lancers-gold);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .unread-divider::before,
+    .unread-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--lancers-gold);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <h1>
+        <a href="index.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 10px;">
+          <img src="images/lancers-logo.png" alt="Lancers" class="header-logo">
+          Team Chat
+        </a>
+      </h1>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content chat-main">
+    <!-- Loading state -->
+    <div id="loadingState" class="card" style="text-align: center; padding: 40px;">
+      <div class="spinner" style="margin: 0 auto;"></div>
+    </div>
+
+    <!-- Auth required prompt -->
+    <div id="authRequired" class="card" style="display: none;">
+      <h2 class="card-title">Sign In Required</h2>
+      <p style="margin-bottom: 16px; color: var(--text-secondary);">You need to sign in to access Team Chat.</p>
+      <a href="login.html" class="btn btn-primary" style="width: 100%; display: block; text-align: center;">Sign In</a>
+    </div>
+
+    <!-- Chat container -->
+    <div id="chatContainer" style="display: none;">
+      <div style="background: var(--bg-elevated); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px;">
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">Chatting as: <strong id="chatUserName" style="color: var(--lancers-gold);"></strong></span>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+    </div>
+  </main>
+
+  <!-- Fixed Input -->
+  <div class="chat-input-fixed" id="chatInputContainer" style="display: none;">
+    <input type="text" id="messageInput" placeholder="Type a message...">
+    <button id="sendBtn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      <span>Home</span>
+    </a>
+    <a href="roster.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <span>Roster</span>
+    </a>
+    <a href="schedule.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <span>Schedule</span>
+    </a>
+    <a href="chat.html" class="nav-item active">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+      <span>Chat</span>
+    </a>
+    <a href="game-stats.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span>Stats</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    var currentUser = null;
+    var currentUserInfo = null;
+    var displayName = '';
+    var lastReadMessageId = null;
+    var initialLoadComplete = false;
+    var unreadDividerAdded = false;
+    var lastDateShown = null;
+
+    function escapeHtml(text) {
+      var div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatTime(timestamp) {
+      if (!timestamp) return '';
+      var date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatDateLabel(timestamp) {
+      if (!timestamp) return '';
+      var date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      var today = new Date();
+      var yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      var dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      var todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      var yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+      if (dateOnly.getTime() === todayOnly.getTime()) {
+        return 'Today';
+      } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
+        return 'Yesterday';
+      } else {
+        return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+      }
+    }
+
+    function getDateKey(timestamp) {
+      if (!timestamp) return '';
+      var date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toDateString();
+    }
+
+    function addDateDivider(label) {
+      var div = document.createElement('div');
+      div.className = 'date-divider';
+      div.textContent = label;
+      document.getElementById('chatMessages').appendChild(div);
+    }
+
+    function addMessage(messageId, text, sender, timestamp, isOwn, shouldScroll) {
+      var chatMessages = document.getElementById('chatMessages');
+
+      var dateKey = getDateKey(timestamp);
+      if (dateKey && dateKey !== lastDateShown) {
+        addDateDivider(formatDateLabel(timestamp));
+        lastDateShown = dateKey;
+      }
+
+      var div = document.createElement('div');
+      div.className = 'chat-message ' + (isOwn ? 'sent' : 'received');
+      div.setAttribute('data-message-id', messageId);
+
+      var content = '';
+      if (!isOwn) {
+        content += '<div class="sender">' + escapeHtml(sender) + '</div>';
+      }
+      content += '<div>' + escapeHtml(text) + '</div>';
+      content += '<div class="time">' + formatTime(timestamp) + '</div>';
+      div.innerHTML = content;
+      chatMessages.appendChild(div);
+
+      if (shouldScroll) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    }
+
+    function addUnreadDivider() {
+      if (unreadDividerAdded) return;
+      var div = document.createElement('div');
+      div.className = 'unread-divider';
+      div.id = 'unreadDivider';
+      div.textContent = 'New Messages';
+      document.getElementById('chatMessages').appendChild(div);
+      unreadDividerAdded = true;
+    }
+
+    async function getLastReadMessageId() {
+      if (!currentUser || !db) return null;
+      try {
+        var doc = await db.collection('chatReadStatus').doc(currentUser.uid).get();
+        if (doc.exists) {
+          return doc.data().lastReadMessageId;
+        }
+      } catch (e) {
+        console.error('Error getting last read:', e);
+      }
+      return null;
+    }
+
+    async function saveLastReadMessageId(messageId) {
+      if (!currentUser || !db || !messageId) return;
+      try {
+        await db.collection('chatReadStatus').doc(currentUser.uid).set({
+          lastReadMessageId: messageId,
+          lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      } catch (e) {
+        console.error('Error saving last read:', e);
+      }
+    }
+
+    function sendMessage() {
+      var text = document.getElementById('messageInput').value.trim();
+      if (!text || !currentUser || !db) return;
+
+      db.collection('messages').add({
+        text: text,
+        senderName: displayName,
+        senderEmail: currentUser.email,
+        uid: currentUser.uid,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() {
+        document.getElementById('messageInput').value = '';
+      }).catch(function(e) {
+        alert('Error sending: ' + e.message);
+      });
+    }
+
+    // Check auth
+    if (auth) {
+      auth.onAuthStateChanged(async function(user) {
+        if (user && user.emailVerified) {
+          currentUser = user;
+          currentUserInfo = await getPlayerFromRoster(user.email);
+
+          if (currentUserInfo) {
+            displayName = currentUserInfo.isCoach
+              ? 'Coach ' + currentUserInfo.name.split(' ')[0]
+              : currentUserInfo.name || currentUserInfo.parent?.name || user.email.split('@')[0];
+
+            document.getElementById('chatUserName').textContent = displayName;
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('chatContainer').style.display = 'block';
+            document.getElementById('chatInputContainer').style.display = 'flex';
+
+            lastReadMessageId = await getLastReadMessageId();
+
+            if (db) {
+              var isFirstSnapshot = true;
+              var latestMessageId = null;
+              var foundLastRead = false;
+
+              db.collection('messages').orderBy('timestamp', 'asc').onSnapshot(function(snapshot) {
+                var chatMessages = document.getElementById('chatMessages');
+
+                snapshot.docChanges().forEach(function(change) {
+                  if (change.type === 'added') {
+                    var msg = change.doc.data();
+                    var messageId = change.doc.id;
+                    var isOwn = msg.uid === currentUser.uid;
+                    latestMessageId = messageId;
+
+                    if (isFirstSnapshot && lastReadMessageId && foundLastRead && !unreadDividerAdded) {
+                      addUnreadDivider();
+                    }
+
+                    if (messageId === lastReadMessageId) {
+                      foundLastRead = true;
+                    }
+
+                    var shouldScroll = !isFirstSnapshot;
+                    addMessage(messageId, msg.text, msg.senderName, msg.timestamp, isOwn, shouldScroll);
+                  }
+                });
+
+                if (isFirstSnapshot) {
+                  isFirstSnapshot = false;
+                  initialLoadComplete = true;
+
+                  var divider = document.getElementById('unreadDivider');
+                  if (divider) {
+                    divider.scrollIntoView({ behavior: 'auto', block: 'start' });
+                  } else if (lastReadMessageId) {
+                    var lastReadEl = chatMessages.querySelector('[data-message-id="' + lastReadMessageId + '"]');
+                    if (lastReadEl) {
+                      lastReadEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+                    } else {
+                      chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
+                  } else {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                  }
+                }
+
+                if (latestMessageId) {
+                  saveLastReadMessageId(latestMessageId);
+                }
+              });
+            }
+          } else {
+            // User not in roster - still allow chat
+            displayName = user.email.split('@')[0];
+            document.getElementById('chatUserName').textContent = displayName;
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('chatContainer').style.display = 'block';
+            document.getElementById('chatInputContainer').style.display = 'flex';
+          }
+        } else {
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('authRequired').style.display = 'block';
+        }
+      });
+    } else {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('authRequired').style.display = 'block';
+    }
+
+    document.getElementById('sendBtn').addEventListener('click', sendMessage);
+    document.getElementById('messageInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    document.getElementById('messageInput').addEventListener('focus', function() {
+      setTimeout(function() {
+        var chatMessages = document.getElementById('chatMessages');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }, 300);
+    });
+  </script>
+</body>
+</html>

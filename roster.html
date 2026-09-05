@@ -9,6 +9,92 @@
   <title>Roster - Jr. Lancers</title>
   <link rel="stylesheet" href="css/styles.css">
   <link rel="manifest" href="manifest.json">
+  <style>
+    .player-card {
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .player-card:active {
+      transform: scale(0.98);
+    }
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      display: none;
+      overflow-y: auto;
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+    .modal-overlay.active {
+      display: block;
+    }
+    .modal-content {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .modal-close {
+      background: var(--bg-elevated);
+      border: none;
+      color: var(--text-primary);
+      font-size: 1.5rem;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .stat-box {
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--lancers-gold);
+    }
+    .stat-label {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+    .game-stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.85rem;
+    }
+    .game-stat-row:last-child {
+      border-bottom: none;
+    }
+    .game-stats-mini {
+      display: flex;
+      gap: 12px;
+      color: var(--text-secondary);
+    }
+    .game-stats-mini span {
+      min-width: 35px;
+      text-align: right;
+    }
+  </style>
 </head>
 <body>
   <!-- Header -->
@@ -16,7 +102,7 @@
     <div class="header-content">
       <h1>
         <a href="index.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 10px;">
-          <img src="images/lancers-logo.svg" alt="Lancers" class="header-logo">
+          <img src="images/lancers-logo.png" alt="Lancers" class="header-logo">
           Roster
         </a>
       </h1>
@@ -33,43 +119,60 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    <!-- Section Tabs -->
-    <div class="section-tabs">
-      <button class="section-tab active" data-section="players">Players</button>
-      <button class="section-tab" data-section="parents">Parents</button>
+    <!-- Coach Card -->
+    <div class="card" id="coach-card" style="display: none;">
+      <div class="card-title">Coaching Staff</div>
+      <div id="coaches-list" class="roster-list"></div>
     </div>
 
-    <!-- Players Section -->
-    <div class="section-content active" id="players-section">
-      <!-- Coach Card -->
-      <div class="card" id="coach-card" style="display: none;">
-        <div class="card-title">Coaching Staff</div>
-        <div id="coaches-list" class="roster-list"></div>
-      </div>
-
-      <!-- Players List -->
-      <div class="card">
-        <div class="card-title">Players</div>
-        <div id="players-list" class="roster-list">
-          <div style="text-align: center; padding: 20px;">
-            <div class="spinner" style="margin: 0 auto;"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Parents Section -->
-    <div class="section-content" id="parents-section">
-      <div class="card">
-        <div class="card-title">Parent Directory</div>
-        <div id="parents-list" class="roster-list">
-          <div style="text-align: center; padding: 20px;">
-            <div class="spinner" style="margin: 0 auto;"></div>
-          </div>
-        </div>
+    <!-- Players List -->
+    <div id="players-list">
+      <div style="text-align: center; padding: 40px;">
+        <div class="spinner" style="margin: 0 auto;"></div>
       </div>
     </div>
   </main>
+
+  <!-- Player Stats Modal -->
+  <div class="modal-overlay" id="player-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h2 id="modal-player-name" style="margin: 0; color: var(--text-primary);"></h2>
+          <div id="modal-player-info" style="color: var(--text-secondary); font-size: 0.85rem;"></div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Season Totals</div>
+        <div class="stat-grid" id="season-stats">
+          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">PTS</div></div>
+          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">REB</div></div>
+          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">AST</div></div>
+          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">STL</div></div>
+        </div>
+        <div class="stat-grid" id="season-stats-2">
+          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">BLK</div></div>
+          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">TO</div></div>
+          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">FLS</div></div>
+          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">Games</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Game by Game</div>
+        <div id="game-by-game">
+          <p style="color: var(--text-secondary); text-align: center; padding: 20px;">No games played yet</p>
+        </div>
+      </div>
+
+      <div class="card" id="contact-card">
+        <div class="card-title">Contact Info</div>
+        <div id="contact-list"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Bottom Navigation -->
   <nav class="bottom-nav">
@@ -91,46 +194,58 @@
       </svg>
       <span>Schedule</span>
     </a>
+    <a href="chat.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+      <span>Chat</span>
+    </a>
     <a href="game-stats.html" class="nav-item">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
       </svg>
       <span>Stats</span>
     </a>
-    <a href="volunteers.html" class="nav-item">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-      </svg>
-      <span>Volunteer</span>
-    </a>
   </nav>
 
   <!-- Scripts -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/app.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', async function() {
-      // Tab switching
-      document.querySelectorAll('.section-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-          document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
-          document.querySelectorAll('.section-content').forEach(c => c.classList.remove('active'));
-          this.classList.add('active');
-          document.getElementById(this.dataset.section + '-section').classList.add('active');
-        });
-      });
+    let rosterData = null;
+    let scheduleData = null;
+    let allGameStats = {};
 
-      // Load roster
+    document.addEventListener('DOMContentLoaded', async function() {
       try {
-        const data = await loadRoster();
+        // Load roster and schedule in parallel
+        const [roster, schedule] = await Promise.all([
+          loadRoster(),
+          loadSchedule()
+        ]);
+        rosterData = roster;
+        scheduleData = schedule;
+
+        // Load all game stats from Firestore
+        if (db) {
+          try {
+            const snapshot = await db.collection('gameStats').get();
+            snapshot.forEach(doc => {
+              allGameStats[doc.id] = doc.data();
+            });
+          } catch (e) {
+            console.log('Could not load game stats:', e);
+          }
+        }
 
         // Render coaches
-        if (data.coaches && data.coaches.length > 0) {
+        if (rosterData.coaches && rosterData.coaches.length > 0) {
           document.getElementById('coach-card').style.display = 'block';
-          document.getElementById('coaches-list').innerHTML = data.coaches.map(coach => `
+          document.getElementById('coaches-list').innerHTML = rosterData.coaches.map(coach => `
             <div class="roster-item">
               <div class="position-badge pos-pg" style="font-size: 0.6rem;">HC</div>
               <div style="flex: 1;">
@@ -138,11 +253,13 @@
                 <div class="position-name">${coach.role}</div>
               </div>
               <div style="display: flex; gap: 8px;">
-                <a href="tel:${coach.phone}" style="color: var(--lancers-gold);">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                </a>
+                ${coach.phone ? `
+                  <a href="tel:${coach.phone}" style="color: var(--lancers-gold);">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                  </a>
+                ` : ''}
                 <a href="mailto:${coach.email}" style="color: var(--lancers-gold);">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -154,57 +271,171 @@
         }
 
         // Render players
-        const players = data.players.sort((a, b) => a.number - b.number);
-        document.getElementById('players-list').innerHTML = players.map(player => `
-          <div class="roster-item">
-            <div class="player-number">${player.number}</div>
-            <div class="position-badge pos-${player.position.toLowerCase()}">${player.position}</div>
-            <div style="flex: 1;">
-              <div class="player-name">${player.firstName} ${player.lastName}</div>
-              <div class="position-name">${player.positionName}</div>
-            </div>
-          </div>
-        `).join('');
-
-        // Render parents
-        const parentsList = [];
-        players.forEach(player => {
-          if (player.parents) {
-            player.parents.forEach(parent => {
-              parentsList.push({
-                ...parent,
-                playerName: player.firstName + ' ' + player.lastName
-              });
-            });
-          }
+        const players = rosterData.players.sort((a, b) => {
+          if (a.number === 0 && b.number !== 0) return 1;
+          if (b.number === 0 && a.number !== 0) return -1;
+          return a.number - b.number;
         });
 
-        document.getElementById('parents-list').innerHTML = parentsList.map(parent => `
-          <div class="roster-item">
-            <div style="flex: 1;">
-              <div class="player-name">${parent.name}</div>
-              <div class="position-name">Parent of ${parent.playerName}</div>
-            </div>
-            <div style="display: flex; gap: 8px;">
-              ${parent.phone ? `
-                <a href="tel:${parent.phone}" style="color: var(--lancers-gold);">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                </a>
-              ` : ''}
-              <a href="mailto:${parent.email}" style="color: var(--lancers-gold);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        document.getElementById('players-list').innerHTML = players.map(player => {
+          return `
+            <div class="card player-card" style="margin-bottom: 12px;" onclick="showPlayerStats(${player.id})">
+              <div class="roster-item" style="border: none; padding: 0;">
+                <div class="player-number">${player.number || '-'}</div>
+                <div class="position-badge pos-${player.position.toLowerCase()}">${player.position}</div>
+                <div style="flex: 1;">
+                  <div class="player-name">${player.firstName} ${player.lastName}</div>
+                  <div class="position-name">${player.positionName}</div>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px; color: var(--text-secondary);">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
-              </a>
+              </div>
             </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
 
       } catch (e) {
         console.error('Error loading roster:', e);
         document.getElementById('players-list').innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Error loading roster</p>';
+      }
+    });
+
+    function showPlayerStats(playerId) {
+      const player = rosterData.players.find(p => p.id === playerId);
+      if (!player) return;
+
+      // Set player header info
+      document.getElementById('modal-player-name').textContent = `#${player.number || '-'} ${player.firstName} ${player.lastName}`;
+      document.getElementById('modal-player-info').textContent = player.positionName;
+
+      // Calculate season totals
+      let seasonTotals = {
+        points: 0, rebounds: 0, assists: 0, steals: 0,
+        blocks: 0, turnovers: 0, fouls: 0, games: 0
+      };
+
+      const gameByGameData = [];
+
+      // Go through each game's stats
+      for (const gameId in allGameStats) {
+        const gameStats = allGameStats[gameId];
+        if (gameStats.playerStats && gameStats.playerStats[playerId]) {
+          const ps = gameStats.playerStats[playerId];
+          seasonTotals.points += ps.points || 0;
+          seasonTotals.rebounds += ps.rebounds || 0;
+          seasonTotals.assists += ps.assists || 0;
+          seasonTotals.steals += ps.steals || 0;
+          seasonTotals.blocks += ps.blocks || 0;
+          seasonTotals.turnovers += ps.turnovers || 0;
+          seasonTotals.fouls += ps.fouls || 0;
+          seasonTotals.games++;
+
+          // Find game info
+          const game = scheduleData.games.find(g => g.id.toString() === gameId);
+          if (game) {
+            gameByGameData.push({
+              date: game.date,
+              opponent: game.opponent,
+              result: game.result,
+              stats: ps
+            });
+          }
+        }
+      }
+
+      // Update season stats display
+      document.getElementById('season-stats').innerHTML = `
+        <div class="stat-box"><div class="stat-value">${seasonTotals.points}</div><div class="stat-label">PTS</div></div>
+        <div class="stat-box"><div class="stat-value">${seasonTotals.rebounds}</div><div class="stat-label">REB</div></div>
+        <div class="stat-box"><div class="stat-value">${seasonTotals.assists}</div><div class="stat-label">AST</div></div>
+        <div class="stat-box"><div class="stat-value">${seasonTotals.steals}</div><div class="stat-label">STL</div></div>
+      `;
+      document.getElementById('season-stats-2').innerHTML = `
+        <div class="stat-box"><div class="stat-value">${seasonTotals.blocks}</div><div class="stat-label">BLK</div></div>
+        <div class="stat-box"><div class="stat-value">${seasonTotals.turnovers}</div><div class="stat-label">TO</div></div>
+        <div class="stat-box"><div class="stat-value">${seasonTotals.fouls}</div><div class="stat-label">FLS</div></div>
+        <div class="stat-box"><div class="stat-value">${seasonTotals.games}</div><div class="stat-label">Games</div></div>
+      `;
+
+      // Update game by game display
+      if (gameByGameData.length === 0) {
+        document.getElementById('game-by-game').innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No games played yet</p>';
+      } else {
+        // Sort by date descending
+        gameByGameData.sort((a, b) => new Date(b.date) - new Date(a.date));
+        document.getElementById('game-by-game').innerHTML = gameByGameData.map(g => {
+          const dateInfo = formatDate(g.date);
+          const resultClass = g.result === 'W' ? 'win' : (g.result === 'L' ? 'loss' : '');
+          return `
+            <div class="game-stat-row">
+              <div>
+                <div style="font-weight: 600; color: var(--text-primary);">vs ${g.opponent}</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">${dateInfo.month} ${dateInfo.day}</div>
+              </div>
+              <div class="game-stats-mini">
+                <span>${g.stats.points || 0}p</span>
+                <span>${g.stats.rebounds || 0}r</span>
+                <span>${g.stats.assists || 0}a</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Update contact info
+      if (player.parents && player.parents.length > 0) {
+        document.getElementById('contact-card').style.display = 'block';
+        document.getElementById('contact-list').innerHTML = player.parents.map(parent => {
+          const roleLabel = parent.role || 'Parent';
+          return `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+              <div>
+                <div style="font-size: 0.9rem; color: var(--text-primary);">${parent.name}</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">${roleLabel}</div>
+              </div>
+              <div style="display: flex; gap: 12px;">
+                ${parent.phone ? `
+                  <a href="tel:${parent.phone}" style="color: var(--lancers-gold);">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 22px; height: 22px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                  </a>
+                ` : ''}
+                <a href="mailto:${parent.email}" style="color: var(--lancers-gold);">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 22px; height: 22px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        document.getElementById('contact-card').style.display = 'none';
+      }
+
+      // Show modal
+      document.getElementById('player-modal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('player-modal').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('player-modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeModal();
+      }
+    });
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeModal();
       }
     });
   </script>

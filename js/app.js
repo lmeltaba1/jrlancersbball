@@ -2,22 +2,13 @@
 
 // Data loading functions
 async function loadRoster() {
-  // First try to load from TeamSnap cache
-  const cached = localStorage.getItem('lancers_roster_cache');
-  if (cached) {
-    const data = JSON.parse(cached);
-    // Check if cache is less than 1 hour old
-    if (Date.now() - data.timestamp < 3600000) {
-      return data.roster;
-    }
-  }
-  // Fall back to static JSON
-  const response = await fetch('data/roster.json');
+  // Always fetch fresh data with cache-busting
+  const response = await fetch('data/roster.json?v=' + Date.now());
   return response.json();
 }
 
 async function loadSchedule() {
-  const response = await fetch('data/schedule.json');
+  const response = await fetch('data/schedule.json?v=' + Date.now());
   return response.json();
 }
 
