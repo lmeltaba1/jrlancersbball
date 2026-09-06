@@ -33,19 +33,19 @@
   <!-- Main Content -->
   <main class="main-content">
     <!-- Player Banner (shown when logged in with a player) -->
-    <div id="player-banner" class="card" style="display: none; background: linear-gradient(135deg, var(--lancers-gold) 0%, #B8860B 100%); border: none; cursor: pointer;" onclick="goToPlayerProfile()">
+    <div id="player-banner" class="card" style="display: none; background: var(--bg-card); border: 1px solid var(--border-accent); cursor: pointer;" onclick="goToPlayerProfile()">
       <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="background: var(--lancers-black); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <span id="player-number" style="font-size: 1.5rem; font-weight: 800; color: var(--lancers-gold);">--</span>
+        <div style="background: #ffffff; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <span id="player-number" style="font-size: 1.5rem; font-weight: 800; color: #000000;">--</span>
         </div>
         <div style="flex: 1;">
-          <div id="player-name" style="font-size: 1.25rem; font-weight: 800; color: var(--lancers-black);">Player Name</div>
+          <div id="player-name" style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">Player Name</div>
           <div style="display: flex; align-items: center; gap: 8px;">
             <span id="player-position-badge" class="position-badge" style="font-size: 0.7rem;">PG</span>
-            <span id="player-position-name" style="font-size: 0.85rem; color: rgba(0,0,0,0.7);">Point Guard</span>
+            <span id="player-position-name" style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">Point Guard</span>
           </div>
         </div>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 24px; height: 24px; color: var(--lancers-black);">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 24px; height: 24px; color: rgba(255,255,255,0.5);">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </div>

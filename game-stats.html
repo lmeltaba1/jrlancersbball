@@ -25,7 +25,7 @@
     .player-num {
       font-weight: 800;
       font-size: 1rem;
-      color: var(--lancers-gold);
+      color: #ffffff;
     }
     .player-name {
       font-size: 0.7rem;
@@ -38,7 +38,7 @@
       display: flex;
       gap: 4px;
       flex-wrap: nowrap;
-      flex: 1;
+      align-items: center;
     }
     .mini-btn {
       min-width: 36px;
@@ -53,18 +53,18 @@
       flex-shrink: 0;
     }
     .mini-btn:active { transform: scale(0.9); }
-    .btn-pts { background: var(--lancers-gold); color: #000; }
+    .btn-pts { background: #ffffff; color: #000; }
     .btn-pos { background: #22C55E; color: #fff; }
     .btn-neg { background: #EF4444; color: #fff; }
-    .btn-opp { background: #6B7280; color: #fff; }
+    .btn-opp { background: #444444; color: #fff; }
     .stat-display {
       min-width: 22px;
       text-align: center;
       font-size: 0.8rem;
       font-weight: 700;
-      color: var(--text-primary);
+      color: #ffffff;
     }
-    .stat-display.pts { color: var(--lancers-gold); font-size: 0.9rem; }
+    .stat-display.pts { color: #ffffff; font-size: 0.9rem; font-weight: 800; }
     .foul-warn { color: #F59E0B !important; }
     .foul-out { color: #EF4444 !important; text-decoration: line-through; }
     .scoreboard-compact {
@@ -74,8 +74,7 @@
       gap: 60px;
       padding: 10px 16px;
       background: var(--bg-card);
-      border: 2px solid var(--lancers-gold);
-      border-radius: 12px;
+      border: 1px solid var(--border-accent);
       margin-bottom: 8px;
     }
     .score-side {
@@ -90,9 +89,9 @@
     .score-num {
       font-size: 2rem;
       font-weight: 800;
-      color: var(--lancers-gold);
+      color: #ffffff;
     }
-    .score-num.opp { color: var(--text-primary); }
+    .score-num.opp { color: #888888; }
     .opponent-row {
       display: flex;
       align-items: center;
@@ -128,7 +127,7 @@
       color: var(--text-secondary);
       gap: 6px;
     }
-    .players-header .player-info { color: var(--lancers-gold); }
+    .players-header .player-info { color: #ffffff; }
     .header-stats {
       display: flex;
       gap: 4px;
@@ -212,7 +211,17 @@
           Live Stats
         </a>
       </h1>
-      <div id="connection-status" style="width: 10px; height: 10px; border-radius: 50%; background: #22C55E;"></div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div id="connection-status" style="width: 10px; height: 10px; border-radius: 50%; background: #22C55E;"></div>
+        <button class="theme-toggle" onclick="toggleTheme()">
+          <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+          <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </button>
+      </div>
     </div>
   </header>
 
