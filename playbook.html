@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>Playbook - Jr. Lancers</title>
+  <link rel="stylesheet" href="css/athletic.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* Playbook-specific styles */
+    .court-container {
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto;
+      aspect-ratio: 1 / 1.05;
+      background: linear-gradient(180deg, #C4853A 0%, #B5752A 100%);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .play-description {
+      margin-top: 8px;
+      padding: 8px 10px;
+      background: var(--bg-elevated);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      line-height: 1.3;
+      color: var(--text-secondary);
+    }
+
+    .play-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .play-steps li {
+      white-space: nowrap;
+    }
+
+    .play-steps li::before {
+      content: counter(step) ". ";
+      counter-increment: step;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .court-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Court lines */
+    .court-line {
+      fill: none;
+      stroke: #FFFFFF;
+      stroke-width: 2;
+    }
+
+    .court-line-thin {
+      fill: none;
+      stroke: #FFFFFF;
+      stroke-width: 1.5;
+    }
+
+    /* Player circles */
+    .player {
+      transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .player-circle {
+      stroke: #000;
+      stroke-width: 2;
+    }
+
+    .player-label {
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      fill: #000;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    /* Ball */
+    .ball {
+      fill: #FF6B35;
+      stroke: #000;
+      stroke-width: 1.5;
+    }
+
+    /* Action paths */
+    .action-path {
+      fill: none;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .action-path.cut {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+    }
+
+    .action-path.pass {
+      stroke-dasharray: 8, 6;
+    }
+
+    .action-path.dribble {
+      stroke-dasharray: 4, 4;
+    }
+
+    .action-path.screen {
+      stroke-width: 6;
+      stroke-linecap: square;
+    }
+
+    /* Arrow heads */
+    .arrow-head {
+      fill: currentColor;
+    }
+
+    /* Animation classes */
+    .animate-path {
+      animation: drawPath 1s ease-out forwards;
+    }
+
+    @keyframes drawPath {
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .animate-move {
+      animation: movePlayer 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    /* Play card styling */
+    .play-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      border: 1px solid var(--border-color);
+    }
+
+    .play-card-header {
+      padding: 12px 16px;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .play-card-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #000;
+    }
+
+    .play-card-body {
+      padding: 12px;
+    }
+
+    .replay-btn {
+      background: rgba(0,0,0,0.2);
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      color: #000;
+      font-weight: 600;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .replay-btn:hover {
+      background: rgba(0,0,0,0.3);
+    }
+
+    /* Phase indicator */
+    .phase-indicator {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .phase-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: all 0.3s;
+    }
+
+    .phase-dot.active {
+      background: var(--gold);
+      transform: scale(1.3);
+    }
+
+    /* Player legend */
+    .player-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1.5px solid #000;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <h1>
+        <a href="index.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 10px;">
+          <img src="images/lancers-logo.png" alt="Lancers" class="header-logo">
+          Playbook
+        </a>
+      </h1>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Chapter Tabs -->
+    <div class="section-tabs">
+      <button class="section-tab active" data-chapter="man">vs Man</button>
+      <button class="section-tab" data-chapter="zone">vs Zone</button>
+      <button class="section-tab" data-chapter="inbound">Inbound</button>
+    </div>
+
+    <!-- Plays Container -->
+    <div id="plays-container"></div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      <span>Home</span>
+    </a>
+    <a href="roster.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <span>Roster</span>
+    </a>
+    <a href="schedule.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <span>Schedule</span>
+    </a>
+    <a href="chat.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+      <span>Chat</span>
+    </a>
+    <a href="playbook.html" class="nav-item active">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+      </svg>
+      <span>Plays</span>
+    </a>
+    <a href="stats-view.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span>Stats</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="js/theme.js"></script>
+  <script src="js/plays.js"></script>
+  <script>
+    // Position colors
+    const positionColors = {
+      1: '#FFD700',  // PG - Gold
+      2: '#FFFFFF',  // SG - White
+      3: '#60A5FA',  // SF - Blue
+      4: '#F472B6',  // PF - Pink
+      5: '#34D399'   // C - Green
+    };
+
+    const positionNames = {
+      1: 'PG',
+      2: 'SG',
+      3: 'SF',
+      4: 'PF',
+      5: 'C'
+    };
+
+    let currentChapter = 'man';
+    let playAnimations = {};
+
+    // Generate half-court SVG
+    function generateCourtSVG() {
+      // Court dimensions: 400x420 viewBox (scaled half-court)
+      // NCAA half-court is 47ft x 50ft
+      return `
+        <svg class="court-svg" viewBox="0 0 400 420" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <!-- Arrow marker -->
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="currentColor" />
+            </marker>
+          </defs>
+
+          <!-- Court background -->
+          <rect x="0" y="0" width="400" height="420" fill="url(#courtGradient)" />
+          <defs>
+            <linearGradient id="courtGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#C4853A" />
+              <stop offset="100%" style="stop-color:#B5752A" />
+            </linearGradient>
+          </defs>
+
+          <!-- Court lines group -->
+          <g class="court-lines">
+            <!-- Boundary lines -->
+            <rect x="20" y="20" width="360" height="380" class="court-line" rx="0" />
+
+            <!-- Baseline -->
+            <line x1="20" y1="20" x2="380" y2="20" class="court-line" />
+
+            <!-- Paint / Key (12ft wide = ~86px, 19ft long = ~145px) -->
+            <rect x="157" y="20" width="86" height="145" class="court-line" fill="none" />
+
+            <!-- Free throw line -->
+            <line x1="157" y1="165" x2="243" y2="165" class="court-line" />
+
+            <!-- Free throw circle (6ft radius = ~46px) -->
+            <circle cx="200" cy="165" r="46" class="court-line-thin" fill="none" />
+
+            <!-- Restricted area arc (4ft radius = ~30px) -->
+            <path d="M 170 20 A 30 30 0 0 0 230 20" class="court-line-thin" fill="none" />
+
+            <!-- Backboard -->
+            <line x1="175" y1="35" x2="225" y2="35" stroke="#666" stroke-width="4" />
+
+            <!-- Rim -->
+            <circle cx="200" cy="45" r="12" stroke="#FF6B35" stroke-width="3" fill="none" />
+
+            <!-- 3-point arc (23.75ft = ~180px from basket center at y=45) -->
+            <path d="M 30 20 L 30 100 A 180 180 0 0 0 370 100 L 370 20" class="court-line" fill="none" />
+
+            <!-- Half-court line -->
+            <line x1="20" y1="400" x2="380" y2="400" class="court-line" />
+
+            <!-- Center circle (6ft radius) -->
+            <path d="M 154 400 A 46 46 0 0 1 246 400" class="court-line-thin" fill="none" />
+
+            <!-- Lane blocks (hash marks on paint) -->
+            <line x1="157" y1="80" x2="147" y2="80" class="court-line-thin" />
+            <line x1="243" y1="80" x2="253" y2="80" class="court-line-thin" />
+            <line x1="157" y1="110" x2="147" y2="110" class="court-line-thin" />
+            <line x1="243" y1="110" x2="253" y2="110" class="court-line-thin" />
+            <line x1="157" y1="140" x2="147" y2="140" class="court-line-thin" />
+            <line x1="243" y1="140" x2="253" y2="140" class="court-line-thin" />
+          </g>
+
+          <!-- Players and actions will be added here -->
+          <g class="players-group"></g>
+          <g class="actions-group"></g>
+          <g class="ball-group"></g>
+        </svg>
+      `;
+    }
+
+    // Render a single play card
+    function renderPlayCard(playId, play, index) {
+      const card = document.createElement('div');
+      card.className = 'play-card';
+      card.id = `play-${playId}`;
+
+      card.innerHTML = `
+        <div class="play-card-header">
+          <h3>${play.name}</h3>
+          <button class="replay-btn" id="btn-${playId}" onclick="replayPlay('${playId}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Go
+          </button>
+        </div>
+        <div class="play-card-body">
+          <div class="court-container" id="court-${playId}">
+            ${generateCourtSVG()}
+          </div>
+          ${generatePlayDescription(play)}
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Generate full play description with steps
+    function generatePlayDescription(play) {
+      if (!play.phases || play.phases.length === 0) {
+        return play.description ? `<p style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; margin-top: 8px;">${play.description}</p>` : '';
+      }
+
+      // Build step-by-step description from phases
+      let steps = [];
+      play.phases.forEach((phase, i) => {
+        if (i === 0) return; // Skip initial positioning phase
+
+        phase.actions.forEach(action => {
+          if (action.type === 'dribble') {
+            steps.push(`${action.player} dribbles to the wing`);
+          } else if (action.type === 'pass') {
+            steps.push(`${action.from} passes to ${action.to}`);
+          } else if (action.type === 'cut') {
+            steps.push(`${action.player} cuts to the corner`);
+          } else if (action.type === 'screen') {
+            steps.push(`${action.player} sets screen`);
+          } else if (action.type === 'shot') {
+            steps.push(`${action.player} shoots`);
+          }
+        });
+      });
+
+      if (steps.length === 0) return '';
+
+      return `
+        <div class="play-description" style="counter-reset: step;">
+          <ul class="play-steps">
+            ${steps.map(step => `<li>${step}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
+    // Render players on the court (TheHoopsGeek style)
+    function renderPlayers(svg, positions, ballHolder) {
+      const playersGroup = svg.querySelector('.players-group');
+      playersGroup.innerHTML = '';
+
+      Object.entries(positions).forEach(([num, pos]) => {
+        const player = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        player.classList.add('player');
+        player.setAttribute('data-player', num);
+
+        // Ball holder gets a circle around their number
+        const hasBall = parseInt(num) === ballHolder;
+
+        player.innerHTML = `
+          ${hasBall ? `<circle cx="${pos.x}" cy="${pos.y}" r="16" fill="none" stroke="#333" stroke-width="2" />` : ''}
+          <text x="${pos.x}" y="${pos.y}" class="player-label" style="fill: #333; font-size: 20px; font-weight: 700;">${num}</text>
+        `;
+        playersGroup.appendChild(player);
+      });
+
+      // Clear ball group (we use circle around number instead)
+      const ballGroup = svg.querySelector('.ball-group');
+      ballGroup.innerHTML = '';
+    }
+
+    // Render static play overview (all actions visible at once - TheHoopsGeek style)
+    function renderStaticPlay(playId, play) {
+      const svg = document.querySelector(`#court-${playId} .court-svg`);
+      if (!svg) return;
+
+      // Use starting positions from first phase
+      const startPositions = play.positions || (play.phases && play.phases[0].positions);
+      const ball = play.ball || (play.phases && play.phases[0].ball);
+
+      // Render players at starting positions
+      renderPlayers(svg, startPositions, ball);
+
+      // Draw all action paths for the entire play
+      const actionsGroup = svg.querySelector('.actions-group');
+      actionsGroup.innerHTML = '';
+
+      if (!play.phases || play.phases.length <= 1) return;
+
+      // Loop through each phase and draw its actions
+      for (let i = 1; i < play.phases.length; i++) {
+        const phase = play.phases[i];
+        const prevPhase = play.phases[i - 1];
+
+        if (!phase.actions) continue;
+
+        phase.actions.forEach(action => {
+          if (action.type === 'dribble') {
+            // Wavy dribble line from start to end position
+            const from = action.from || prevPhase.positions[action.player];
+            const to = action.to || phase.positions[action.player];
+            const wavyPath = createWavyPath(from.x, from.y, to.x, to.y);
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', wavyPath);
+            path.style.stroke = '#333';
+            path.style.strokeWidth = '2.5';
+            path.style.fill = 'none';
+            path.setAttribute('marker-end', 'url(#arrowhead)');
+            actionsGroup.appendChild(path);
+
+          } else if (action.type === 'cut') {
+            // Solid cut line with arrow (player movement without ball)
+            const from = action.from || prevPhase.positions[action.player];
+            const to = action.to || phase.positions[action.player];
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', from.x);
+            line.setAttribute('y1', from.y);
+            line.setAttribute('x2', to.x);
+            line.setAttribute('y2', to.y);
+            line.style.stroke = '#333';
+            line.style.strokeWidth = '2';
+            line.setAttribute('marker-end', 'url(#arrowhead)');
+            actionsGroup.appendChild(line);
+
+          } else if (action.type === 'pass') {
+            // Dashed pass line from sender to receiver
+            const fromPos = prevPhase.positions[action.from];
+            const toPos = phase.positions[action.to];
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', fromPos.x);
+            line.setAttribute('y1', fromPos.y);
+            line.setAttribute('x2', toPos.x);
+            line.setAttribute('y2', toPos.y);
+            line.style.stroke = '#333';
+            line.style.strokeWidth = '2';
+            line.style.strokeDasharray = '8, 5';
+            line.setAttribute('marker-end', 'url(#arrowhead)');
+            actionsGroup.appendChild(line);
+
+          } else if (action.type === 'shot') {
+            // Shot line from player to target (rim)
+            const from = prevPhase.positions[action.player];
+            const to = action.target;
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', from.x);
+            line.setAttribute('y1', from.y);
+            line.setAttribute('x2', to.x);
+            line.setAttribute('y2', to.y);
+            line.style.stroke = '#333';
+            line.style.strokeWidth = '2';
+            line.style.strokeDasharray = '8, 5';
+            line.setAttribute('marker-end', 'url(#arrowhead)');
+            actionsGroup.appendChild(line);
+
+            // Add X marker at rim to indicate shot target
+            const cross1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            cross1.setAttribute('x1', to.x - 6);
+            cross1.setAttribute('y1', to.y - 6);
+            cross1.setAttribute('x2', to.x + 6);
+            cross1.setAttribute('y2', to.y + 6);
+            cross1.style.stroke = '#333';
+            cross1.style.strokeWidth = '2';
+            actionsGroup.appendChild(cross1);
+
+            const cross2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            cross2.setAttribute('x1', to.x + 6);
+            cross2.setAttribute('y1', to.y - 6);
+            cross2.setAttribute('x2', to.x - 6);
+            cross2.setAttribute('y2', to.y + 6);
+            cross2.style.stroke = '#333';
+            cross2.style.strokeWidth = '2';
+            actionsGroup.appendChild(cross2);
+
+          } else if (action.type === 'screen') {
+            // Screen indicator bar
+            const screener = prevPhase.positions[action.player];
+            const screenLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            screenLine.setAttribute('x1', screener.x - 12);
+            screenLine.setAttribute('y1', screener.y);
+            screenLine.setAttribute('x2', screener.x + 12);
+            screenLine.setAttribute('y2', screener.y);
+            screenLine.style.stroke = '#333';
+            screenLine.style.strokeWidth = '4';
+            screenLine.style.strokeLinecap = 'round';
+            actionsGroup.appendChild(screenLine);
+          }
+        });
+      }
+    }
+
+    // Animate a play (show movements step by step)
+    async function animatePlay(playId, play) {
+      const svg = document.querySelector(`#court-${playId} .court-svg`);
+      if (!svg) return;
+
+      // Update button to show animation is playing
+      const btn = document.getElementById(`btn-${playId}`);
+      if (btn) {
+        btn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+          Playing...
+        `;
+        btn.disabled = true;
+      }
+
+      // Clear any existing animation
+      if (playAnimations[playId]) {
+        clearTimeout(playAnimations[playId]);
+      }
+
+      // Clear actions
+      const actionsGroup = svg.querySelector('.actions-group');
+      actionsGroup.innerHTML = '';
+
+      // Handle phase-based plays
+      if (play.phases && play.phases.length > 0) {
+        // Start at phase 1
+        let currentPositions = play.phases[0].positions;
+        renderPlayers(svg, currentPositions, play.phases[0].ball);
+
+        // Animate through each phase
+        for (let i = 1; i < play.phases.length; i++) {
+          await new Promise(resolve => {
+            playAnimations[playId] = setTimeout(resolve, 400);
+          });
+
+          const phase = play.phases[i];
+          const prevPhase = play.phases[i - 1];
+
+          // Clear previous actions before drawing new ones
+          actionsGroup.innerHTML = '';
+
+          // Animate actions for this phase
+          for (const action of phase.actions) {
+            await animateAction(svg, action, prevPhase.positions, phase.positions);
+          }
+
+          // Move players to new positions and update ball holder
+          await animatePlayerMovement(svg, prevPhase.positions, phase.positions, phase.ball);
+          currentPositions = phase.positions;
+
+          await new Promise(resolve => {
+            playAnimations[playId] = setTimeout(resolve, 400);
+          });
+        }
+      } else {
+        // Simple play with actions array
+        const positions = play.positions;
+        renderPlayers(svg, positions, play.ball);
+
+        for (const action of (play.actions || [])) {
+          await new Promise(resolve => {
+            playAnimations[playId] = setTimeout(resolve, 400);
+          });
+          await animateAction(svg, action, positions, positions);
+        }
+      }
+
+      // Animation complete - restore static view and update button to Replay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      renderStaticPlay(playId, play);
+
+      if (btn) {
+        btn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 4v6h6"></path>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+          </svg>
+          Replay
+        `;
+        btn.disabled = false;
+      }
+    }
+
+    // Animate a single action (dribble, pass, etc)
+    async function animateAction(svg, action, fromPositions, toPositions) {
+      const actionsGroup = svg.querySelector('.actions-group');
+
+      if (action.type === 'dribble') {
+        const from = action.from || fromPositions[action.player];
+        const to = action.to || toPositions[action.player];
+        const wavyPath = createWavyPath(from.x, from.y, to.x, to.y);
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', wavyPath);
+        path.style.stroke = '#333';
+        path.style.strokeWidth = '2.5';
+        path.style.fill = 'none';
+        path.setAttribute('marker-end', 'url(#arrowhead)');
+
+        // Animate drawing
+        const length = path.getTotalLength ? path.getTotalLength() : 300;
+        path.style.strokeDasharray = length;
+        path.style.strokeDashoffset = length;
+        actionsGroup.appendChild(path);
+
+        // Trigger animation
+        await new Promise(resolve => setTimeout(resolve, 50));
+        path.style.transition = 'stroke-dashoffset 0.8s ease-out';
+        path.style.strokeDashoffset = '0';
+
+        await new Promise(resolve => setTimeout(resolve, 800));
+      } else if (action.type === 'pass') {
+        const from = fromPositions[action.from];
+        const to = toPositions[action.to];
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', from.x);
+        line.setAttribute('y1', from.y);
+        line.setAttribute('x2', from.x);
+        line.setAttribute('y2', from.y);
+        line.style.stroke = '#333';
+        line.style.strokeWidth = '2';
+        line.style.strokeDasharray = '8, 5';
+        line.setAttribute('marker-end', 'url(#arrowhead)');
+        actionsGroup.appendChild(line);
+
+        // Animate line extending
+        await new Promise(resolve => setTimeout(resolve, 50));
+        line.style.transition = 'all 0.5s ease-out';
+        line.setAttribute('x2', to.x);
+        line.setAttribute('y2', to.y);
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } else if (action.type === 'cut') {
+        // Player cut - solid line with arrow (player movement without ball)
+        const from = action.from || fromPositions[action.player];
+        const to = action.to || toPositions[action.player];
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', from.x);
+        line.setAttribute('y1', from.y);
+        line.setAttribute('x2', from.x);
+        line.setAttribute('y2', from.y);
+        line.style.stroke = '#333';
+        line.style.strokeWidth = '2';
+        line.setAttribute('marker-end', 'url(#arrowhead)');
+        actionsGroup.appendChild(line);
+
+        // Animate line extending
+        await new Promise(resolve => setTimeout(resolve, 50));
+        line.style.transition = 'all 0.5s ease-out';
+        line.setAttribute('x2', to.x);
+        line.setAttribute('y2', to.y);
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } else if (action.type === 'shot') {
+        // Shot - dashed line from player to target (rim)
+        const from = fromPositions[action.player];
+        const to = action.target;
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', from.x);
+        line.setAttribute('y1', from.y);
+        line.setAttribute('x2', from.x);
+        line.setAttribute('y2', from.y);
+        line.style.stroke = '#333';
+        line.style.strokeWidth = '2';
+        line.style.strokeDasharray = '8, 5';
+        line.setAttribute('marker-end', 'url(#arrowhead)');
+        actionsGroup.appendChild(line);
+
+        // Animate line extending to target
+        await new Promise(resolve => setTimeout(resolve, 50));
+        line.style.transition = 'all 0.4s ease-out';
+        line.setAttribute('x2', to.x);
+        line.setAttribute('y2', to.y);
+
+        await new Promise(resolve => setTimeout(resolve, 400));
+      } else if (action.type === 'made') {
+        // Made basket - concentric circles at rim
+        const target = action.target;
+
+        // Create bullseye/made basket indicator
+        const outer = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        outer.setAttribute('cx', target.x);
+        outer.setAttribute('cy', target.y);
+        outer.setAttribute('r', '0');
+        outer.style.stroke = '#333';
+        outer.style.strokeWidth = '2';
+        outer.style.fill = 'none';
+        actionsGroup.appendChild(outer);
+
+        const inner = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        inner.setAttribute('cx', target.x);
+        inner.setAttribute('cy', target.y);
+        inner.setAttribute('r', '0');
+        inner.style.stroke = '#333';
+        inner.style.strokeWidth = '2';
+        inner.style.fill = 'none';
+        actionsGroup.appendChild(inner);
+
+        // Animate circles expanding
+        await new Promise(resolve => setTimeout(resolve, 50));
+        outer.style.transition = 'r 0.3s ease-out';
+        outer.setAttribute('r', '18');
+
+        await new Promise(resolve => setTimeout(resolve, 150));
+        inner.style.transition = 'r 0.3s ease-out';
+        inner.setAttribute('r', '8');
+
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+
+    // Animate players moving from one position to another
+    async function animatePlayerMovement(svg, fromPositions, toPositions, newBallHolder) {
+      const playersGroup = svg.querySelector('.players-group');
+
+      // Update each player position with transition
+      Object.keys(toPositions).forEach(num => {
+        const playerEl = playersGroup.querySelector(`[data-player="${num}"]`);
+        if (!playerEl) return;
+
+        const from = fromPositions[num];
+        const to = toPositions[num];
+
+        // Only animate if position changed
+        if (from.x !== to.x || from.y !== to.y) {
+          playerEl.style.transition = 'transform 0.6s ease-in-out';
+          playerEl.style.transform = `translate(${to.x - from.x}px, ${to.y - from.y}px)`;
+        }
+      });
+
+      // Update ball holder circle
+      renderPlayers(svg, toPositions, newBallHolder);
+    }
+
+    // Create wavy path for dribble
+    function createWavyPath(x1, y1, x2, y2) {
+      const segments = 10;
+      const amplitude = 6;
+      let path = `M${x1},${y1}`;
+
+      for (let i = 1; i <= segments; i++) {
+        const t = i / segments;
+        const x = x1 + (x2 - x1) * t;
+        const y = y1 + (y2 - y1) * t;
+        // Perpendicular offset for wavy effect
+        const dx = -(y2 - y1);
+        const dy = (x2 - x1);
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        const offset = (i % 2 === 0 ? 1 : -1) * amplitude;
+        const px = x + (dx / len) * offset;
+        const py = y + (dy / len) * offset;
+        path += ` L${px.toFixed(1)},${py.toFixed(1)}`;
+      }
+
+      return path;
+    }
+
+    // Animate a single action
+    function animateSingleAction(svg, action, positions, index) {
+      const actionsGroup = svg.querySelector('.actions-group');
+
+      if (action.type === 'dribble' && action.path) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const wavyPath = makeWavyPath(action.path);
+        path.setAttribute('d', wavyPath);
+        path.style.stroke = '#333';
+        path.style.strokeWidth = '2.5';
+        path.style.fill = 'none';
+        path.setAttribute('marker-end', 'url(#arrowhead)');
+        // Animate drawing
+        const length = path.getTotalLength ? path.getTotalLength() : 200;
+        path.style.strokeDasharray = length;
+        path.style.strokeDashoffset = length;
+        path.style.animation = 'drawPath 0.6s ease-out forwards';
+        actionsGroup.appendChild(path);
+      } else if (action.type === 'cut' && action.path) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', action.path);
+        path.style.stroke = '#333';
+        path.style.strokeWidth = '2';
+        path.style.strokeDasharray = '8, 4';
+        path.style.fill = 'none';
+        path.setAttribute('marker-end', 'url(#arrowhead)');
+        path.style.opacity = '0';
+        path.style.animation = 'fadeIn 0.4s ease-out forwards';
+        actionsGroup.appendChild(path);
+      } else if (action.type === 'pass' && action.from && action.to) {
+        const fromPos = action.fromPos || positions[action.from];
+        const toPos = positions[action.to];
+        if (fromPos && toPos) {
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', fromPos.x);
+          line.setAttribute('y1', fromPos.y);
+          line.setAttribute('x2', fromPos.x);
+          line.setAttribute('y2', fromPos.y);
+          line.style.stroke = '#333';
+          line.style.strokeWidth = '2';
+          line.style.strokeDasharray = '6, 4';
+          line.setAttribute('marker-end', 'url(#arrowhead)');
+          actionsGroup.appendChild(line);
+          // Animate line to endpoint
+          setTimeout(() => {
+            line.setAttribute('x2', toPos.x);
+            line.setAttribute('y2', toPos.y);
+            line.style.transition = 'all 0.4s ease-out';
+          }, 50);
+        }
+      } else if (action.type === 'screen') {
+        const screener = positions[action.player];
+        if (screener) {
+          const screenLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          screenLine.setAttribute('x1', screener.x - 15);
+          screenLine.setAttribute('y1', screener.y);
+          screenLine.setAttribute('x2', screener.x + 15);
+          screenLine.setAttribute('y2', screener.y);
+          screenLine.style.stroke = '#333';
+          screenLine.style.strokeWidth = '4';
+          screenLine.style.strokeLinecap = 'round';
+          screenLine.style.opacity = '0';
+          screenLine.style.animation = 'fadeIn 0.3s ease-out forwards';
+          actionsGroup.appendChild(screenLine);
+        }
+      }
+    }
+
+    // Replay a play (animate it)
+    function replayPlay(playId) {
+      const play = plays[playId];
+      if (play) {
+        animatePlay(playId, play);
+      }
+    }
+
+    // Render all plays for current chapter
+    function renderPlays() {
+      const container = document.getElementById('plays-container');
+      container.innerHTML = '';
+
+      const chapterPlays = Object.entries(plays).filter(([id, play]) => play.chapter === currentChapter);
+
+      if (chapterPlays.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">No plays in this chapter yet.</p>';
+        return;
+      }
+
+      chapterPlays.forEach(([playId, play], index) => {
+        const card = renderPlayCard(playId, play, index);
+        container.appendChild(card);
+
+        // Render static diagram (all actions visible)
+        setTimeout(() => renderStaticPlay(playId, play), 100);
+      });
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      // Tab switching
+      document.querySelectorAll('.section-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+          currentChapter = this.dataset.chapter;
+          renderPlays();
+        });
+      });
+
+      renderPlays();
+    });
+
+  </script>
+</body>
+</html>
