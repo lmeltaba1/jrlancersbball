@@ -527,6 +527,13 @@
       card.className = 'play-card';
       card.id = `play-${playId}`;
 
+      // Generate phase indicators for multi-phase plays
+      const phaseCount = play.phases ? play.phases.length : 0;
+      const phaseIndicators = phaseCount > 1 ?
+        `<div class="phase-indicator" id="phases-${playId}">
+          ${play.phases.map((_, i) => `<div class="phase-dot${i === 0 ? ' active' : ''}" data-phase="${i}"></div>`).join('')}
+        </div>` : '';
+
       card.innerHTML = `
         <div class="play-card-header">
           <h3>${play.name}</h3>
@@ -541,6 +548,8 @@
           <div class="court-container" id="court-${playId}">
             ${generateCourtSVG()}
           </div>
+          ${phaseIndicators}
+          <div class="phase-description-text" id="phase-text-${playId}" style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); min-height: 20px; margin-top: 8px;"></div>
           ${generatePlayDescription(play)}
         </div>
       `;
@@ -554,7 +563,34 @@
         return play.description ? `<p style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; margin-top: 8px;">${play.description}</p>` : '';
       }
 
-      // Build step-by-step description from phases
+      // Check if phases have description arrays (detailed play from video)
+      const hasPhaseDescriptions = play.phases.some(p => p.description && p.description.length > 0);
+
+      if (hasPhaseDescriptions) {
+        // Use provided phase descriptions
+        let allDescriptions = [];
+        play.phases.forEach((phase, i) => {
+          if (phase.description && phase.description.length > 0) {
+            phase.description.forEach(desc => {
+              if (!allDescriptions.includes(desc)) {
+                allDescriptions.push(desc);
+              }
+            });
+          }
+        });
+
+        if (allDescriptions.length === 0) return '';
+
+        return `
+          <div class="play-description" style="counter-reset: step;">
+            <ul class="play-steps" style="flex-direction: column; gap: 6px;">
+              ${allDescriptions.map(desc => `<li style="white-space: normal;">${desc}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+
+      // Fall back to auto-generating from actions
       let steps = [];
       play.phases.forEach((phase, i) => {
         if (i === 0) return; // Skip initial positioning phase
@@ -845,6 +881,10 @@
         let currentPositions = play.phases[0].positions;
         renderPlayers(svg, currentPositions, play.phases[0].ball);
 
+        // Update phase indicator
+        updatePhaseIndicator(playId, 0);
+        updatePhaseText(playId, play.phases[0].description);
+
         // Animate through each phase
         for (let i = 1; i < play.phases.length; i++) {
           await new Promise(resolve => {
@@ -853,6 +893,10 @@
 
           const phase = play.phases[i];
           const prevPhase = play.phases[i - 1];
+
+          // Update phase indicator
+          updatePhaseIndicator(playId, i);
+          updatePhaseText(playId, phase.description);
 
           // Clear previous actions before drawing new ones
           actionsGroup.innerHTML = '';
@@ -888,6 +932,11 @@
       // Animation complete - restore static view and update button to Replay
       await new Promise(resolve => setTimeout(resolve, 800));
       renderStaticPlay(playId, play);
+
+      // Reset phase indicator to show all as inactive
+      updatePhaseIndicator(playId, -1);
+      // Clear phase text
+      updatePhaseText(playId, null);
 
       if (btn) {
         btn.innerHTML = `
@@ -1201,6 +1250,32 @@
           vBar.style.animation = 'fadeIn 0.3s ease-out forwards';
           actionsGroup.appendChild(vBar);
         }
+      }
+    }
+
+    // Update phase indicator dots
+    function updatePhaseIndicator(playId, activePhase) {
+      const container = document.getElementById(`phases-${playId}`);
+      if (!container) return;
+
+      container.querySelectorAll('.phase-dot').forEach((dot, i) => {
+        if (i === activePhase) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+    }
+
+    // Update phase description text
+    function updatePhaseText(playId, descriptions) {
+      const textEl = document.getElementById(`phase-text-${playId}`);
+      if (!textEl) return;
+
+      if (descriptions && descriptions.length > 0) {
+        textEl.innerHTML = descriptions.map(d => `<div>${d}</div>`).join('');
+      } else {
+        textEl.innerHTML = '';
       }
     }
 

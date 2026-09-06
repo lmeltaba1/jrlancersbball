@@ -519,56 +519,172 @@ const plays = {
   'zone-high': {
     name: 'High',
     chapter: 'zone',
-    description: 'Attack zone from high post',
+    description: 'Options from high post entry vs zone',
     phases: [
+      // ========== VIDEO PHASE 1 ==========
       {
+        description: [],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 260 },
-          3: { x: 336, y: 260 },
-          4: { x: 120, y: 116 },
-          5: { x: 200, y: 196 }    // High post
+          1: { x: 300, y: 320 },   // PG right side below 3pt (has ball)
+          2: { x: 100, y: 320 },   // SG left side below 3pt
+          3: { x: 350, y: 200 },   // SF right wing
+          4: { x: 50, y: 200 },    // PF left wing
+          5: { x: 200, y: 200 }    // C high post
         },
         ball: 1,
         actions: []
       },
       {
+        description: [
+          '1 passes to 5 in the high post',
+          '5 could look to drive here since there isn\'t a lot of help'
+        ],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 260 },
-          3: { x: 336, y: 260 },
-          4: { x: 120, y: 116 },
-          5: { x: 200, y: 196 }
+          1: { x: 300, y: 320 },
+          2: { x: 100, y: 320 },
+          3: { x: 350, y: 200 },
+          4: { x: 50, y: 200 },
+          5: { x: 200, y: 200 }
         },
         ball: 5,
         actions: [
           { type: 'pass', from: 1, to: 5 }
         ]
       },
+      // ========== VIDEO PHASE 2 ==========
       {
+        description: ['1 screens away for 3'],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 140 },    // SG baseline cut
-          3: { x: 336, y: 260 },
-          4: { x: 120, y: 116 },
-          5: { x: 200, y: 196 }
+          1: { x: 320, y: 200 },   // PG moves to screen position near 3
+          2: { x: 100, y: 320 },
+          3: { x: 350, y: 200 },
+          4: { x: 50, y: 200 },
+          5: { x: 200, y: 200 }
         },
         ball: 5,
         actions: [
-          { type: 'cut', player: 2, path: 'M64,260 L64,140' }
+          { type: 'cut', player: 1, from: { x: 300, y: 320 }, to: { x: 320, y: 200 } },
+          { type: 'screen', player: 1 }
         ]
       },
       {
+        description: ['3 curls tight to the rim'],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 140 },
-          3: { x: 336, y: 260 },
-          4: { x: 120, y: 116 },
-          5: { x: 200, y: 196 }
+          1: { x: 320, y: 200 },
+          2: { x: 100, y: 320 },
+          3: { x: 230, y: 45 },    // SF curls to rim
+          4: { x: 50, y: 200 },
+          5: { x: 200, y: 200 }
         },
-        ball: 2,
+        ball: 5,
         actions: [
-          { type: 'pass', from: 5, to: 2 }
+          { type: 'cut', player: 3, path: 'M350,200 Q380,140 300,80 Q250,45 230,45' }
+        ]
+      },
+      // ========== VIDEO PHASE 3 ==========
+      {
+        description: ['1, 2, 3, and 4 rotate to their next spots'],
+        positions: {
+          1: { x: 350, y: 200 },   // PG right wing
+          2: { x: 290, y: 320 },   // SG right low
+          3: { x: 50, y: 200 },    // SF left wing
+          4: { x: 110, y: 320 },   // PF left low
+          5: { x: 200, y: 200 }    // C high post
+        },
+        ball: 5,
+        actions: [
+          { type: 'cut', player: 1, from: { x: 320, y: 200 }, to: { x: 350, y: 200 } },
+          { type: 'cut', player: 2, path: 'M100,320 Q200,340 290,320' },
+          { type: 'cut', player: 4, path: 'M50,200 Q80,260 110,320' },
+          { type: 'cut', player: 3, path: 'M230,45 Q140,100 50,200' }
+        ]
+      },
+      // ========== VIDEO PHASE 4 ==========
+      {
+        description: ['If nothing is there, 5 can run a dribble handoff with 1'],
+        positions: {
+          1: { x: 350, y: 200 },
+          2: { x: 290, y: 320 },
+          3: { x: 50, y: 200 },
+          4: { x: 110, y: 320 },
+          5: { x: 320, y: 200 }    // C dribbles to 1
+        },
+        ball: 5,
+        actions: [
+          { type: 'dribble', player: 5, from: { x: 200, y: 200 }, to: { x: 320, y: 200 } }
+        ]
+      },
+      {
+        description: [],
+        positions: {
+          1: { x: 330, y: 210 },   // PG cuts to meet 5
+          2: { x: 290, y: 320 },
+          3: { x: 50, y: 200 },
+          4: { x: 110, y: 320 },
+          5: { x: 320, y: 200 }
+        },
+        ball: 5,
+        actions: [
+          { type: 'cut', player: 1, path: 'M350,200 Q340,205 330,210' }
+        ]
+      },
+      // ========== VIDEO PHASE 5 ==========
+      {
+        description: ['1 gets the handoff and drives'],
+        positions: {
+          1: { x: 200, y: 140 },   // PG drives into paint
+          2: { x: 290, y: 320 },
+          3: { x: 50, y: 200 },
+          4: { x: 110, y: 320 },
+          5: { x: 320, y: 200 }
+        },
+        ball: 1,
+        actions: [
+          { type: 'dribble', player: 1, from: { x: 330, y: 210 }, to: { x: 200, y: 140 } }
+        ]
+      },
+      {
+        description: ['5 rolls'],
+        positions: {
+          1: { x: 200, y: 140 },
+          2: { x: 290, y: 320 },
+          3: { x: 50, y: 200 },
+          4: { x: 110, y: 320 },
+          5: { x: 250, y: 45 }     // C rolls to basket
+        },
+        ball: 1,
+        actions: [
+          { type: 'cut', player: 5, from: { x: 320, y: 200 }, to: { x: 250, y: 45 } }
+        ]
+      },
+      {
+        description: ['2, 4, and 3 rotate to their next spots'],
+        positions: {
+          1: { x: 200, y: 140 },
+          2: { x: 110, y: 320 },   // SG to left low
+          3: { x: 50, y: 50 },     // SF to corner
+          4: { x: 50, y: 200 },    // PF to left wing
+          5: { x: 250, y: 45 }
+        },
+        ball: 1,
+        actions: [
+          { type: 'cut', player: 3, path: 'M50,200 Q50,120 50,50' },
+          { type: 'cut', player: 4, from: { x: 110, y: 320 }, to: { x: 50, y: 200 } },
+          { type: 'cut', player: 2, from: { x: 290, y: 320 }, to: { x: 110, y: 320 } }
+        ]
+      },
+      {
+        description: ['1 makes the read'],
+        positions: {
+          1: { x: 200, y: 140 },
+          2: { x: 110, y: 320 },
+          3: { x: 50, y: 50 },
+          4: { x: 50, y: 200 },
+          5: { x: 250, y: 45 }
+        },
+        ball: 5,
+        actions: [
+          { type: 'pass', from: 1, to: 5 }
         ]
       }
     ]
