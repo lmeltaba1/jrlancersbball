@@ -32,16 +32,52 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    <!-- Hero Banner -->
-    <div class="hero-banner">
+    <!-- Player Banner (shown when logged in with a player) -->
+    <div id="player-banner" class="card" style="display: none; background: linear-gradient(135deg, var(--lancers-gold) 0%, #B8860B 100%); border: none;">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="background: var(--lancers-black); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <span id="player-number" style="font-size: 1.5rem; font-weight: 800; color: var(--lancers-gold);">--</span>
+        </div>
+        <div style="flex: 1;">
+          <div id="player-name" style="font-size: 1.25rem; font-weight: 800; color: var(--lancers-black);">Player Name</div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="player-position-badge" class="position-badge" style="font-size: 0.7rem;">PG</span>
+            <span id="player-position-name" style="font-size: 0.85rem; color: rgba(0,0,0,0.7);">Point Guard</span>
+          </div>
+        </div>
+        <a href="roster.html" style="color: var(--lancers-black);">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 24px; height: 24px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Coach Banner (shown when logged in as coach without player) -->
+    <div id="coach-banner" class="card" style="display: none; background: linear-gradient(135deg, var(--lancers-gold) 0%, #B8860B 100%); border: none;">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="background: var(--lancers-black); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--lancers-gold)" style="width: 32px; height: 32px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div style="flex: 1;">
+          <div id="coach-name" style="font-size: 1.25rem; font-weight: 800; color: var(--lancers-black);">Coach Name</div>
+          <div id="coach-role" style="font-size: 0.85rem; color: rgba(0,0,0,0.7);">Head Coach</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero Banner (shown when not logged in) -->
+    <div id="hero-banner" class="hero-banner">
       <h2>Go Lancers!</h2>
       <p id="welcome-text">5th Grade Basketball</p>
     </div>
 
-    <!-- Next Game Card -->
-    <div class="card" id="next-game-card" style="display: none;">
-      <div class="card-title">Next Game</div>
-      <div id="next-game-content"></div>
+    <!-- Next Event Card -->
+    <div class="card" id="next-event-card" style="display: none;">
+      <div class="card-title" id="next-event-title">Next Event</div>
+      <div id="next-event-content"></div>
     </div>
 
     <!-- Season Record -->
@@ -130,54 +166,209 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
-  <script src="js/app.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', async function() {
-      // Load next game
-      try {
-        const nextGame = await getNextGame();
-        if (nextGame) {
-          const gameCard = document.getElementById('next-game-card');
-          const gameContent = document.getElementById('next-game-content');
-          const dateInfo = formatDate(nextGame.date);
+    // Inline functions to bypass caching
+    async function loadSchedule() {
+      const response = await fetch('data/schedule.json?v=' + Date.now());
+      return response.json();
+    }
 
-          gameContent.innerHTML = `
-            <div class="game-card" style="margin: 0;">
-              <div class="game-card-header ${nextGame.league}">
-                <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
-                <span class="league-badge ${nextGame.league}">${leagueNames[nextGame.league]}</span>
+    function formatDate(dateString) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return {
+        month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+        day: date.getDate(),
+        weekday: date.toLocaleDateString('en-US', { weekday: 'short' })
+      };
+    }
+
+    const leagueNames = { parkrock: 'Park Rock', cnr: 'CNR' };
+
+    async function getNextEvent() {
+      const data = await loadSchedule();
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      const allEvents = [];
+      for (const game of data.games) {
+        if (!game.result) {
+          allEvents.push({ ...game, eventType: 'game' });
+        }
+      }
+      if (data.events) {
+        for (const event of data.events) {
+          allEvents.push({ ...event, eventType: event.type });
+        }
+      }
+
+      allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      for (const event of allEvents) {
+        const [year, month, day] = event.date.split('-').map(Number);
+        const eventDate = new Date(year, month - 1, day);
+        if (eventDate >= now) {
+          return event;
+        }
+      }
+      return null;
+    }
+
+    async function getSeasonRecord() {
+      const data = await loadSchedule();
+      let wins = 0, losses = 0;
+      for (const game of data.games) {
+        if (game.result === 'W') wins++;
+        else if (game.result === 'L') losses++;
+      }
+      return { wins, losses };
+    }
+
+    function formatJerseyLabel(jersey) {
+      if (!jersey) return '';
+      if (jersey === 'parkrock') return 'PARK ROCK JERSEY';
+      if (jersey === 'home') return 'HOME JERSEY';
+      if (jersey === 'away') return 'AWAY JERSEY';
+      return jersey.toUpperCase() + ' JERSEY';
+    }
+
+    // Copy text to clipboard and show feedback
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(function() {
+        // Show brief toast notification
+        const toast = document.createElement('div');
+        toast.textContent = 'Address copied!';
+        toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--lancers-gold); color: black; padding: 10px 20px; border-radius: 8px; font-weight: 600; z-index: 9999;';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+      }).catch(function(err) {
+        console.error('Failed to copy:', err);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Load next event (practice, game, or event)
+      try {
+        const nextEvent = await getNextEvent();
+        if (nextEvent) {
+          const eventCard = document.getElementById('next-event-card');
+          const eventTitle = document.getElementById('next-event-title');
+          const eventContent = document.getElementById('next-event-content');
+          const dateInfo = formatDate(nextEvent.date);
+
+          if (nextEvent.eventType === 'game') {
+            // Display as game card
+            eventTitle.textContent = 'Next Game';
+            eventContent.innerHTML = `
+              <div class="game-card" style="margin: 0;">
+                <div class="game-card-header ${nextEvent.league}">
+                  <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
+                  <span class="league-badge ${nextEvent.league}">${leagueNames[nextEvent.league]}</span>
+                </div>
+                <div class="game-card-body">
+                  <div class="game-matchup">
+                    <span class="team-name">Lancers</span>
+                    <span class="vs-badge">VS</span>
+                    <span class="team-name">${nextEvent.opponent}</span>
+                  </div>
+                  <div class="game-details">
+                    <span class="game-detail">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      ${nextEvent.time}
+                    </span>
+                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--lancers-gold); cursor: pointer;">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      ${nextEvent.location}
+                    </span>
+                  </div>
+                  <div style="text-align: center; margin-top: 10px;">
+                    <span class="jersey-indicator ${nextEvent.jersey}">${formatJerseyLabel(nextEvent.jersey)}</span>
+                  </div>
+                </div>
               </div>
-              <div class="game-card-body">
-                <div class="game-matchup">
-                  <span class="team-name">Lancers</span>
-                  <span class="vs-badge">VS</span>
-                  <span class="team-name">${nextGame.opponent}</span>
+            `;
+          } else if (nextEvent.eventType === 'practice') {
+            // Display as practice card
+            eventTitle.textContent = 'Next Practice';
+            eventContent.innerHTML = `
+              <div class="game-card" style="margin: 0;">
+                <div class="game-card-header practice" style="background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);">
+                  <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
+                  <span class="league-badge" style="background: rgba(255,255,255,0.2); color: white;">Practice</span>
                 </div>
-                <div class="game-details">
-                  <span class="game-detail">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    ${nextGame.time}
-                  </span>
-                  <span class="game-detail">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    ${nextGame.location}
-                  </span>
-                </div>
-                <div style="text-align: center; margin-top: 10px;">
-                  <span class="jersey-indicator ${nextGame.jersey}">${nextGame.jersey.toUpperCase()} JERSEY</span>
+                <div class="game-card-body">
+                  <div style="text-align: center; font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">
+                    ${nextEvent.name}
+                  </div>
+                  <div class="game-details">
+                    <span class="game-detail">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      ${nextEvent.time}${nextEvent.endTime ? ' - ' + nextEvent.endTime : ''}
+                    </span>
+                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--lancers-gold); cursor: pointer;">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      ${nextEvent.location}
+                    </span>
+                  </div>
+                  ${nextEvent.notes ? `<div style="text-align: center; margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem;">${nextEvent.notes}</div>` : ''}
                 </div>
               </div>
-            </div>
-          `;
-          gameCard.style.display = 'block';
+            `;
+          } else {
+            // Display as general event card
+            eventTitle.textContent = 'Next Event';
+            eventContent.innerHTML = `
+              <div class="game-card" style="margin: 0;">
+                <div class="game-card-header event" style="background: linear-gradient(135deg, var(--lancers-gold) 0%, #B8860B 100%);">
+                  <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
+                  <span class="league-badge" style="background: rgba(0,0,0,0.3); color: white;">Event</span>
+                </div>
+                <div class="game-card-body">
+                  <div style="text-align: center; font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">
+                    ${nextEvent.name}
+                  </div>
+                  <div class="game-details">
+                    <span class="game-detail">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      ${nextEvent.time}${nextEvent.endTime ? ' - ' + nextEvent.endTime : ''}
+                    </span>
+                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--lancers-gold); cursor: pointer;">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      ${nextEvent.location}
+                    </span>
+                  </div>
+                  ${nextEvent.notes ? `<div style="text-align: center; margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem;">${nextEvent.notes}</div>` : ''}
+                </div>
+              </div>
+            `;
+          }
+          eventCard.style.display = 'block';
+
+          // Attach click handler for location copy
+          const locationEl = eventContent.querySelector('.location-copy');
+          if (locationEl) {
+            locationEl.addEventListener('click', function() {
+              copyToClipboard(this.dataset.location);
+            });
+          }
         }
       } catch (e) {
-        console.error('Error loading next game:', e);
+        console.error('Error loading next event:', e);
       }
 
       // Load season record
@@ -192,11 +383,34 @@
 
       // Check auth state
       if (auth) {
-        auth.onAuthStateChanged(function(user) {
+        auth.onAuthStateChanged(async function(user) {
           if (user && user.emailVerified) {
             document.getElementById('login-prompt').style.display = 'none';
+
+            // Load user info and show appropriate banner
+            const userInfo = await getPlayerFromRoster(user.email);
+
+            if (userInfo && userInfo.player) {
+              // Show player banner
+              document.getElementById('hero-banner').style.display = 'none';
+              document.getElementById('player-banner').style.display = 'block';
+              document.getElementById('player-number').textContent = userInfo.player.number || '-';
+              document.getElementById('player-name').textContent = userInfo.playerName;
+              document.getElementById('player-position-badge').textContent = userInfo.position;
+              document.getElementById('player-position-badge').className = 'position-badge pos-' + userInfo.position.toLowerCase();
+              document.getElementById('player-position-name').textContent = userInfo.positionName;
+            } else if (userInfo && userInfo.isCoach) {
+              // Show coach banner
+              document.getElementById('hero-banner').style.display = 'none';
+              document.getElementById('coach-banner').style.display = 'block';
+              document.getElementById('coach-name').textContent = userInfo.name;
+              document.getElementById('coach-role').textContent = 'Head Coach';
+            }
           } else {
             document.getElementById('login-prompt').style.display = 'block';
+            document.getElementById('hero-banner').style.display = 'block';
+            document.getElementById('player-banner').style.display = 'none';
+            document.getElementById('coach-banner').style.display = 'none';
           }
         });
       } else {

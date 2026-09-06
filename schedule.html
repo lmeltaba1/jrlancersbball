@@ -100,8 +100,23 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
-  <script src="js/app.js"></script>
   <script>
+    // Inline loadSchedule and formatDate to bypass caching
+    async function loadSchedule() {
+      const response = await fetch('data/schedule.json?v=' + Date.now());
+      return response.json();
+    }
+
+    function formatDate(dateString) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return {
+        month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+        day: date.getDate(),
+        weekday: date.toLocaleDateString('en-US', { weekday: 'short' })
+      };
+    }
+
     let allEvents = [];
     let volunteers = {};
     let currentFilter = 'all';
@@ -121,25 +136,10 @@
       try {
         const data = await loadSchedule();
         allEvents = data.games || [];
-        // Add events/practices if they exist
         if (data.events) {
           allEvents = allEvents.concat(data.events);
         }
-        // Sort by date
         allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        // Load volunteer data
-        if (db) {
-          try {
-            const snapshot = await db.collection('volunteers').get();
-            snapshot.forEach(doc => {
-              volunteers[doc.id] = doc.data();
-            });
-          } catch (e) {
-            console.log('Could not load volunteers:', e);
-          }
-        }
-
         renderSchedule();
         updateRecord();
       } catch (e) {
@@ -235,7 +235,7 @@
           }
 
           return `
-            <div class="game-card">
+            <div class="game-card" style="cursor: pointer;" onclick="window.location.href='game-detail.html?id=${event.id}'">
               <div class="game-card-header ${event.league}">
                 <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
                 <span class="league-badge ${event.league}">${leagueNames[event.league]}</span>
@@ -263,12 +263,11 @@
                 </div>
                 ${event.jersey ? `
                   <div style="text-align: center; margin-top: 10px;">
-                    <span class="jersey-indicator ${event.jersey}">${event.jersey.toUpperCase()} JERSEY</span>
+                    <span class="jersey-indicator ${event.jersey}">${event.jersey === 'parkrock' ? 'PARK ROCK' : event.jersey.toUpperCase()} JERSEY</span>
                   </div>
                 ` : ''}
                 ${resultHtml}
                 ${volunteerHtml}
-                ${event.result ? `<a href="stats-view.html?game=${event.id}" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">View Stats</a>` : ''}
               </div>
             </div>
           `;
@@ -288,7 +287,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    ${event.time}
+                    ${event.time}${event.endTime ? ' - ' + event.endTime : ''}
                   </span>
                   <span class="game-detail">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">

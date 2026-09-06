@@ -69,6 +69,76 @@ async function getNextGame() {
   return null;
 }
 
+// Get next upcoming event (practice, game, or event)
+async function getNextEvent() {
+  const data = await loadSchedule();
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  // Combine games and events into a single array
+  const allEvents = [];
+
+  // Add games
+  for (const game of data.games) {
+    if (!game.result) {
+      allEvents.push({
+        ...game,
+        eventType: 'game'
+      });
+    }
+  }
+
+  // Add events (practices and other events)
+  if (data.events) {
+    for (const event of data.events) {
+      allEvents.push({
+        ...event,
+        eventType: event.type // 'practice' or 'event'
+      });
+    }
+  }
+
+  // Sort by date and time
+  allEvents.sort((a, b) => {
+    const dateA = new Date(a.date + 'T' + convertTo24Hour(a.time));
+    const dateB = new Date(b.date + 'T' + convertTo24Hour(b.time));
+    return dateA - dateB;
+  });
+
+  // Find the next upcoming event
+  for (const event of allEvents) {
+    const [year, month, day] = event.date.split('-').map(Number);
+    const eventDate = new Date(year, month - 1, day);
+    if (eventDate >= now) {
+      return event;
+    }
+  }
+
+  return null;
+}
+
+// Convert time like "9:00 AM" to "09:00" for date parsing
+function convertTo24Hour(timeStr) {
+  const [time, period] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':').map(Number);
+
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+// Format jersey label for display
+function formatJerseyLabel(jersey) {
+  if (!jersey) return '';
+  switch (jersey) {
+    case 'parkrock': return 'PARK ROCK JERSEY';
+    case 'home': return 'HOME JERSEY';
+    case 'away': return 'AWAY JERSEY';
+    default: return jersey.toUpperCase() + ' JERSEY';
+  }
+}
+
 // Calculate season record
 async function getSeasonRecord() {
   const data = await loadSchedule();

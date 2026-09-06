@@ -1,6 +1,6 @@
 // Jr. Lancers Basketball - Service Worker
 
-const CACHE_NAME = 'lancers-v1';
+const CACHE_NAME = 'lancers-v8';
 const urlsToCache = [
   './',
   './index.html',
