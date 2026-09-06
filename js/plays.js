@@ -47,44 +47,43 @@ const plays = {
   'man-1': {
     name: 'Play #1',
     chapter: 'man',
-    description: 'Drive and kick for layup',
-    // Phase-based animation with player movement
+    description: 'Drive and kick for layup (right)',
     phases: [
       {
-        // Phase 1: Starting positions
+        // Phase 1: Starting positions - same for both plays 1 & 2
         positions: {
-          1: { x: 200, y: 370 },   // PG at half-court center
-          2: { x: 75, y: 250 },    // SG left wing
-          3: { x: 340, y: 160 },   // SF right wing (not corner yet)
-          4: { x: 125, y: 105 },   // PF left elbow
-          5: { x: 245, y: 75 }     // C right edge of paint, near rim
+          1: { x: 200, y: 370 },   // PG at top with ball
+          2: { x: 60, y: 200 },    // SG left wing on 3pt line
+          3: { x: 340, y: 200 },   // SF right wing on 3pt line
+          4: { x: 120, y: 80 },    // PF left block
+          5: { x: 280, y: 80 }     // C right block
         },
         ball: 1,
         actions: []
       },
       {
-        // Phase 2: Player 1 dribbles to right wing, Player 3 cuts to corner
+        // Phase 2: PG dribbles to where 3 is, 3 cuts to corner (SIMULTANEOUSLY)
         positions: {
-          1: { x: 310, y: 250 },   // PG moved to right wing
-          2: { x: 75, y: 250 },
-          3: { x: 365, y: 55 },    // SF cuts to corner
-          4: { x: 125, y: 105 },
-          5: { x: 245, y: 75 }
+          1: { x: 340, y: 200 },   // PG takes 3's spot
+          2: { x: 60, y: 200 },
+          3: { x: 365, y: 55 },    // SF cuts to right corner
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
         },
         ball: 1,
         actions: [
-          { type: 'dribble', player: 1, from: { x: 200, y: 370 }, to: { x: 310, y: 250 } },
-          { type: 'cut', player: 3, from: { x: 340, y: 160 }, to: { x: 365, y: 55 } }
+          { type: 'dribble', player: 1, from: { x: 200, y: 370 }, to: { x: 340, y: 200 } },
+          { type: 'cut', player: 3, from: { x: 340, y: 200 }, to: { x: 365, y: 55 } }
         ]
       },
       {
-        // Phase 3: Player 1 passes to Player 3 in corner
+        // Phase 3: PG passes to 3 in corner
         positions: {
-          1: { x: 310, y: 250 },
-          2: { x: 75, y: 250 },
+          1: { x: 340, y: 200 },
+          2: { x: 60, y: 200 },
           3: { x: 365, y: 55 },
-          4: { x: 125, y: 105 },
-          5: { x: 245, y: 75 }
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
         },
         ball: 3,
         actions: [
@@ -92,13 +91,13 @@ const plays = {
         ]
       },
       {
-        // Phase 4: Player 3 passes to Player 5
+        // Phase 4: 3 passes to 5 in post
         positions: {
-          1: { x: 310, y: 250 },
-          2: { x: 75, y: 250 },
+          1: { x: 340, y: 200 },
+          2: { x: 60, y: 200 },
           3: { x: 365, y: 55 },
-          4: { x: 125, y: 105 },
-          5: { x: 245, y: 75 }
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
         },
         ball: 5,
         actions: [
@@ -106,13 +105,13 @@ const plays = {
         ]
       },
       {
-        // Phase 5: Player 5 shoots from position
+        // Phase 5: 5 shoots layup
         positions: {
-          1: { x: 310, y: 250 },
-          2: { x: 75, y: 250 },
+          1: { x: 340, y: 200 },
+          2: { x: 60, y: 200 },
           3: { x: 365, y: 55 },
-          4: { x: 125, y: 105 },
-          5: { x: 245, y: 75 }
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
         },
         ball: 5,
         actions: [
@@ -125,26 +124,43 @@ const plays = {
   'man-2': {
     name: 'Play #2',
     chapter: 'man',
-    description: 'Wing entry with down screen',
+    description: 'Drive and kick for layup (left)',
     phases: [
       {
+        // Phase 1: Same starting positions as Play 1
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 280, y: 116 }
+          1: { x: 200, y: 370 },   // PG at top with ball
+          2: { x: 60, y: 200 },    // SG left wing on 3pt line
+          3: { x: 340, y: 200 },   // SF right wing on 3pt line
+          4: { x: 120, y: 80 },    // PF left block
+          5: { x: 280, y: 80 }     // C right block
         },
         ball: 1,
         actions: []
       },
       {
+        // Phase 2: PG dribbles to where 2 is, 2 cuts to corner (SIMULTANEOUSLY)
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 280, y: 116 }
+          1: { x: 60, y: 200 },    // PG takes 2's spot
+          2: { x: 35, y: 55 },     // SG cuts to left corner
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
+        },
+        ball: 1,
+        actions: [
+          { type: 'dribble', player: 1, from: { x: 200, y: 370 }, to: { x: 60, y: 200 } },
+          { type: 'cut', player: 2, from: { x: 60, y: 200 }, to: { x: 35, y: 55 } }
+        ]
+      },
+      {
+        // Phase 3: PG passes to 2 in corner
+        positions: {
+          1: { x: 60, y: 200 },
+          2: { x: 35, y: 55 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
         },
         ball: 2,
         actions: [
@@ -152,31 +168,31 @@ const plays = {
         ]
       },
       {
+        // Phase 4: 2 passes to 4 in post
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 300 },
-          3: { x: 280, y: 196 },   // SF uses screen
-          4: { x: 280, y: 240 },   // PF sets down screen
-          5: { x: 280, y: 116 }
+          1: { x: 60, y: 200 },
+          2: { x: 35, y: 55 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
         },
-        ball: 2,
+        ball: 4,
         actions: [
-          { type: 'screen', player: 4 },
-          { type: 'cut', player: 3, path: 'M336,300 L280,196' }
+          { type: 'pass', from: 2, to: 4 }
         ]
       },
       {
+        // Phase 5: 4 shoots layup
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 300 },
-          3: { x: 280, y: 196 },
-          4: { x: 336, y: 300 },   // PF pops out
-          5: { x: 280, y: 116 }
+          1: { x: 60, y: 200 },
+          2: { x: 35, y: 55 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
         },
-        ball: 3,
+        ball: 4,
         actions: [
-          { type: 'pass', from: 2, to: 3 },
-          { type: 'cut', player: 4, path: 'M280,240 L336,300' }
+          { type: 'shot', player: 4, target: { x: 200, y: 45 } }
         ]
       }
     ]
@@ -185,57 +201,74 @@ const plays = {
   'man-3': {
     name: 'Play #3',
     chapter: 'man',
-    description: 'Pick and roll action',
+    description: 'Give and go (right)',
     phases: [
       {
+        // Phase 1: Starting positions
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 280, y: 116 }
+          1: { x: 200, y: 300 },   // PG closer to FT line
+          2: { x: 60, y: 200 },    // SG left wing
+          3: { x: 340, y: 200 },   // SF right wing ON 3pt line
+          4: { x: 120, y: 80 },    // PF left block
+          5: { x: 280, y: 80 }     // C right block
         },
         ball: 1,
         actions: []
       },
       {
+        // Phase 2: 1 passes to 3 (3 stays put)
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 200, y: 340 }    // C comes up to set screen
+          1: { x: 200, y: 300 },
+          2: { x: 60, y: 200 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
         },
-        ball: 1,
+        ball: 3,
         actions: [
-          { type: 'cut', player: 5, path: 'M280,116 L200,340' }
+          { type: 'pass', from: 1, to: 3 }
         ]
       },
       {
+        // Phase 3: 1 cuts toward basket (in paint, not at rim)
         positions: {
-          1: { x: 280, y: 300 },   // PG uses screen, drives right
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 200, y: 340 }    // Screen position
+          1: { x: 200, y: 120 },   // PG in paint area
+          2: { x: 60, y: 200 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
         },
-        ball: 1,
+        ball: 3,
         actions: [
-          { type: 'screen', player: 5 },
-          { type: 'dribble', player: 1, path: 'M200,380 L280,300' }
+          { type: 'cut', player: 1, from: { x: 200, y: 300 }, to: { x: 200, y: 120 } }
         ]
       },
       {
+        // Phase 4: 3 passes to 1 in paint
         positions: {
-          1: { x: 280, y: 300 },
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 200, y: 180 }    // C rolls to basket
+          1: { x: 200, y: 120 },
+          2: { x: 60, y: 200 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
         },
         ball: 1,
         actions: [
-          { type: 'cut', player: 5, path: 'M200,340 L200,180' }
+          { type: 'pass', from: 3, to: 1 }
+        ]
+      },
+      {
+        // Phase 5: 1 shoots layup
+        positions: {
+          1: { x: 200, y: 120 },
+          2: { x: 60, y: 200 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
+        },
+        ball: 1,
+        actions: [
+          { type: 'shot', player: 1, target: { x: 200, y: 45 } }
         ]
       }
     ]
@@ -244,58 +277,74 @@ const plays = {
   'man-4': {
     name: 'Play #4',
     chapter: 'man',
-    description: 'Flex cut action',
+    description: 'Give and go (left)',
     phases: [
       {
+        // Phase 1: Same starting positions as Play 3
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 280, y: 116 }
+          1: { x: 200, y: 300 },   // PG closer to FT line
+          2: { x: 60, y: 200 },    // SG left wing ON 3pt line
+          3: { x: 340, y: 200 },   // SF right wing
+          4: { x: 120, y: 80 },    // PF left block
+          5: { x: 280, y: 80 }     // C right block
         },
         ball: 1,
         actions: []
       },
       {
+        // Phase 2: 1 passes to 2 (2 stays put)
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 280, y: 116 }
-        },
-        ball: 3,
-        actions: [
-          { type: 'pass', from: 1, to: 3 }
-        ]
-      },
-      {
-        positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 200, y: 100 },   // SG flex cuts across
-          3: { x: 336, y: 300 },
-          4: { x: 130, y: 180 },   // PF sets flex screen
-          5: { x: 280, y: 116 }
-        },
-        ball: 3,
-        actions: [
-          { type: 'screen', player: 4 },
-          { type: 'cut', player: 2, path: 'M64,300 L130,180 L200,100' }
-        ]
-      },
-      {
-        positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 200, y: 100 },
-          3: { x: 336, y: 300 },
-          4: { x: 64, y: 300 },    // PF pops out
-          5: { x: 280, y: 116 }
+          1: { x: 200, y: 300 },
+          2: { x: 60, y: 200 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
         },
         ball: 2,
         actions: [
-          { type: 'pass', from: 3, to: 2 },
-          { type: 'cut', player: 4, path: 'M130,180 L64,300' }
+          { type: 'pass', from: 1, to: 2 }
+        ]
+      },
+      {
+        // Phase 3: 1 cuts toward basket (in paint, not at rim)
+        positions: {
+          1: { x: 200, y: 120 },   // PG in paint area
+          2: { x: 60, y: 200 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
+        },
+        ball: 2,
+        actions: [
+          { type: 'cut', player: 1, from: { x: 200, y: 300 }, to: { x: 200, y: 120 } }
+        ]
+      },
+      {
+        // Phase 4: 2 passes to 1 in paint
+        positions: {
+          1: { x: 200, y: 120 },
+          2: { x: 60, y: 200 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
+        },
+        ball: 1,
+        actions: [
+          { type: 'pass', from: 2, to: 1 }
+        ]
+      },
+      {
+        // Phase 5: 1 shoots layup
+        positions: {
+          1: { x: 200, y: 120 },
+          2: { x: 60, y: 200 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 280, y: 80 }
+        },
+        ball: 1,
+        actions: [
+          { type: 'shot', player: 1, target: { x: 200, y: 45 } }
         ]
       }
     ]
@@ -304,44 +353,64 @@ const plays = {
   'man-5': {
     name: 'Play #5',
     chapter: 'man',
-    description: 'Horns set entry',
+    description: 'Curl off screen (right)',
+    // 5 sets screen, 3 curls AROUND screen from wing to elbow
+    defenders: {
+      1: { x: 285, y: 200 }   // Defender X1 on right side
+    },
     phases: [
       {
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 260 },
-          3: { x: 336, y: 260 },
-          4: { x: 136, y: 240 },   // Horns - left elbow
-          5: { x: 264, y: 240 }    // Horns - right elbow
+          1: { x: 200, y: 340 },   // PG at top with ball
+          2: { x: 75, y: 280 },    // SG left wing
+          3: { x: 325, y: 280 },   // SF right wing (will curl)
+          4: { x: 125, y: 90 },    // PF left block
+          5: { x: 260, y: 105 }    // C right elbow (screener)
         },
         ball: 1,
         actions: []
       },
       {
+        // Phase 2: 5 sets screen, 3 curls AROUND screen to elbow
         positions: {
-          1: { x: 264, y: 300 },   // PG uses screen right
-          2: { x: 64, y: 260 },
-          3: { x: 336, y: 260 },
-          4: { x: 136, y: 240 },
-          5: { x: 264, y: 240 }
+          1: { x: 200, y: 340 },
+          2: { x: 75, y: 280 },
+          3: { x: 235, y: 115 },   // SF curled to left of screen
+          4: { x: 125, y: 90 },
+          5: { x: 260, y: 105 }
         },
         ball: 1,
         actions: [
           { type: 'screen', player: 5 },
-          { type: 'dribble', player: 1, path: 'M200,380 L264,300' }
+          { type: 'cut', player: 3, path: 'M325,280 Q340,180 300,120 Q270,90 235,115' }
         ]
       },
       {
+        // Phase 3: 1 passes to 3
         positions: {
-          1: { x: 264, y: 300 },
-          2: { x: 64, y: 260 },
-          3: { x: 336, y: 260 },
-          4: { x: 136, y: 240 },
-          5: { x: 264, y: 140 }    // C rolls to basket
+          1: { x: 200, y: 340 },
+          2: { x: 75, y: 280 },
+          3: { x: 235, y: 115 },
+          4: { x: 125, y: 90 },
+          5: { x: 260, y: 105 }
         },
-        ball: 1,
+        ball: 3,
         actions: [
-          { type: 'cut', player: 5, path: 'M264,240 L264,140' }
+          { type: 'pass', from: 1, to: 3 }
+        ]
+      },
+      {
+        // Phase 4: 3 shoots
+        positions: {
+          1: { x: 200, y: 340 },
+          2: { x: 75, y: 280 },
+          3: { x: 235, y: 115 },
+          4: { x: 125, y: 90 },
+          5: { x: 260, y: 105 }
+        },
+        ball: 3,
+        actions: [
+          { type: 'shot', player: 3, target: { x: 200, y: 45 } }
         ]
       }
     ]
@@ -350,57 +419,64 @@ const plays = {
   'man-6': {
     name: 'Play #6',
     chapter: 'man',
-    description: 'High post handoff',
+    description: 'Curl off screen (left)',
+    // Mirror: 4 sets screen, 2 curls AROUND screen from wing to elbow
+    defenders: {
+      1: { x: 115, y: 200 }   // Defender X1 on left side
+    },
     phases: [
       {
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 200, y: 196 }    // C at high post
+          1: { x: 200, y: 340 },   // PG at top with ball
+          2: { x: 75, y: 280 },    // SG left wing (will curl)
+          3: { x: 325, y: 280 },   // SF right wing
+          4: { x: 140, y: 105 },   // PF left elbow (screener)
+          5: { x: 275, y: 90 }     // C right block
         },
         ball: 1,
         actions: []
       },
       {
+        // Phase 2: 4 sets screen, 2 curls AROUND screen to elbow
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 200, y: 196 }
-        },
-        ball: 5,
-        actions: [
-          { type: 'pass', from: 1, to: 5 }
-        ]
-      },
-      {
-        positions: {
-          1: { x: 260, y: 240 },   // PG handoff
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 200, y: 196 }
+          1: { x: 200, y: 340 },
+          2: { x: 165, y: 115 },   // SG curled to right of screen
+          3: { x: 325, y: 280 },
+          4: { x: 140, y: 105 },
+          5: { x: 275, y: 90 }
         },
         ball: 1,
         actions: [
-          { type: 'handoff', from: 5, to: 1 },
-          { type: 'cut', player: 1, path: 'M200,380 L200,220 L260,240' }
+          { type: 'screen', player: 4 },
+          { type: 'cut', player: 2, path: 'M75,280 Q60,180 100,120 Q130,90 165,115' }
         ]
       },
       {
+        // Phase 3: 1 passes to 2
         positions: {
-          1: { x: 260, y: 240 },
-          2: { x: 64, y: 300 },
-          3: { x: 336, y: 300 },
-          4: { x: 120, y: 116 },
-          5: { x: 200, y: 120 }    // C rolls to basket
+          1: { x: 200, y: 340 },
+          2: { x: 165, y: 115 },
+          3: { x: 325, y: 280 },
+          4: { x: 140, y: 105 },
+          5: { x: 275, y: 90 }
         },
-        ball: 1,
+        ball: 2,
         actions: [
-          { type: 'cut', player: 5, path: 'M200,196 L200,120' }
+          { type: 'pass', from: 1, to: 2 }
+        ]
+      },
+      {
+        // Phase 4: 2 shoots
+        positions: {
+          1: { x: 200, y: 340 },
+          2: { x: 165, y: 115 },
+          3: { x: 325, y: 280 },
+          4: { x: 140, y: 105 },
+          5: { x: 275, y: 90 }
+        },
+        ball: 2,
+        actions: [
+          { type: 'shot', player: 2, target: { x: 200, y: 45 } }
         ]
       }
     ]

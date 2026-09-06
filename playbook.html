@@ -544,18 +544,31 @@
 
           } else if (action.type === 'cut') {
             // Solid cut line with arrow (player movement without ball)
-            const from = action.from || prevPhase.positions[action.player];
-            const to = action.to || phase.positions[action.player];
+            // Support curved paths with 'path' property or straight line with from/to
+            if (action.path) {
+              // Curved path (SVG path string)
+              const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              path.setAttribute('d', action.path);
+              path.style.stroke = '#333';
+              path.style.strokeWidth = '2';
+              path.style.fill = 'none';
+              path.setAttribute('marker-end', 'url(#arrowhead)');
+              actionsGroup.appendChild(path);
+            } else {
+              // Straight line
+              const from = action.from || prevPhase.positions[action.player];
+              const to = action.to || phase.positions[action.player];
 
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', from.x);
-            line.setAttribute('y1', from.y);
-            line.setAttribute('x2', to.x);
-            line.setAttribute('y2', to.y);
-            line.style.stroke = '#333';
-            line.style.strokeWidth = '2';
-            line.setAttribute('marker-end', 'url(#arrowhead)');
-            actionsGroup.appendChild(line);
+              const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+              line.setAttribute('x1', from.x);
+              line.setAttribute('y1', from.y);
+              line.setAttribute('x2', to.x);
+              line.setAttribute('y2', to.y);
+              line.style.stroke = '#333';
+              line.style.strokeWidth = '2';
+              line.setAttribute('marker-end', 'url(#arrowhead)');
+              actionsGroup.appendChild(line);
+            }
 
           } else if (action.type === 'pass') {
             // Dashed pass line from sender to receiver
@@ -609,18 +622,77 @@
             actionsGroup.appendChild(cross2);
 
           } else if (action.type === 'screen') {
-            // Screen indicator bar
+            // Screen indicator - T shape (horizontal bar + vertical line below)
             const screener = prevPhase.positions[action.player];
-            const screenLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            screenLine.setAttribute('x1', screener.x - 12);
-            screenLine.setAttribute('y1', screener.y);
-            screenLine.setAttribute('x2', screener.x + 12);
-            screenLine.setAttribute('y2', screener.y);
-            screenLine.style.stroke = '#333';
-            screenLine.style.strokeWidth = '4';
-            screenLine.style.strokeLinecap = 'round';
-            actionsGroup.appendChild(screenLine);
+
+            // Horizontal bar
+            const hBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            hBar.setAttribute('x1', screener.x - 12);
+            hBar.setAttribute('y1', screener.y - 8);
+            hBar.setAttribute('x2', screener.x + 12);
+            hBar.setAttribute('y2', screener.y - 8);
+            hBar.style.stroke = '#333';
+            hBar.style.strokeWidth = '3';
+            hBar.style.strokeLinecap = 'round';
+            actionsGroup.appendChild(hBar);
+
+            // Vertical line below
+            const vBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            vBar.setAttribute('x1', screener.x);
+            vBar.setAttribute('y1', screener.y - 8);
+            vBar.setAttribute('x2', screener.x);
+            vBar.setAttribute('y2', screener.y + 12);
+            vBar.style.stroke = '#333';
+            vBar.style.strokeWidth = '3';
+            vBar.style.strokeLinecap = 'round';
+            actionsGroup.appendChild(vBar);
           }
+        });
+      }
+
+      // Render defenders if defined
+      if (play.defenders) {
+        const defendersGroup = svg.querySelector('.defenders-group') || (() => {
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.classList.add('defenders-group');
+          svg.appendChild(g);
+          return g;
+        })();
+        defendersGroup.innerHTML = '';
+
+        Object.entries(play.defenders).forEach(([id, pos]) => {
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+          // Red X
+          const x1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          x1.setAttribute('x1', pos.x - 8);
+          x1.setAttribute('y1', pos.y - 8);
+          x1.setAttribute('x2', pos.x + 8);
+          x1.setAttribute('y2', pos.y + 8);
+          x1.style.stroke = '#DC2626';
+          x1.style.strokeWidth = '3';
+          g.appendChild(x1);
+
+          const x2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          x2.setAttribute('x1', pos.x + 8);
+          x2.setAttribute('y1', pos.y - 8);
+          x2.setAttribute('x2', pos.x - 8);
+          x2.setAttribute('y2', pos.y + 8);
+          x2.style.stroke = '#DC2626';
+          x2.style.strokeWidth = '3';
+          g.appendChild(x2);
+
+          // Subscript number
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          text.setAttribute('x', pos.x + 12);
+          text.setAttribute('y', pos.y + 14);
+          text.style.fill = '#DC2626';
+          text.style.fontSize = '12px';
+          text.style.fontWeight = '700';
+          text.textContent = id;
+          g.appendChild(text);
+
+          defendersGroup.appendChild(g);
         });
       }
     }
@@ -670,13 +742,15 @@
           // Clear previous actions before drawing new ones
           actionsGroup.innerHTML = '';
 
-          // Animate actions for this phase
-          for (const action of phase.actions) {
-            await animateAction(svg, action, prevPhase.positions, phase.positions);
-          }
-
-          // Move players to new positions and update ball holder
-          await animatePlayerMovement(svg, prevPhase.positions, phase.positions, phase.ball);
+          // Animate actions and player movements simultaneously
+          await Promise.all([
+            // All actions in this phase run together
+            ...phase.actions.map(action =>
+              animateAction(svg, action, prevPhase.positions, phase.positions)
+            ),
+            // Player movements happen at the same time
+            animatePlayerMovement(svg, prevPhase.positions, phase.positions, phase.ball)
+          ]);
           currentPositions = phase.positions;
 
           await new Promise(resolve => {
@@ -846,8 +920,9 @@
     // Animate players moving from one position to another
     async function animatePlayerMovement(svg, fromPositions, toPositions, newBallHolder) {
       const playersGroup = svg.querySelector('.players-group');
+      let hasMovement = false;
 
-      // Update each player position with transition
+      // Apply transitions to move players
       Object.keys(toPositions).forEach(num => {
         const playerEl = playersGroup.querySelector(`[data-player="${num}"]`);
         if (!playerEl) return;
@@ -857,12 +932,18 @@
 
         // Only animate if position changed
         if (from.x !== to.x || from.y !== to.y) {
+          hasMovement = true;
           playerEl.style.transition = 'transform 0.6s ease-in-out';
           playerEl.style.transform = `translate(${to.x - from.x}px, ${to.y - from.y}px)`;
         }
       });
 
-      // Update ball holder circle
+      // Wait for animation to complete before re-rendering
+      if (hasMovement) {
+        await new Promise(resolve => setTimeout(resolve, 600));
+      }
+
+      // Now redraw players at final positions (resets transforms)
       renderPlayers(svg, toPositions, newBallHolder);
     }
 
