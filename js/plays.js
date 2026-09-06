@@ -354,45 +354,60 @@ const plays = {
     name: 'Play #5',
     chapter: 'man',
     description: 'Curl off screen (right)',
-    // 5 sets screen, 3 curls AROUND screen from wing to elbow
+    // Defender X1 guards wing, 5 screens X1, 3 curls around
     defenders: {
-      1: { x: 285, y: 200 }   // Defender X1 on right side
+      1: { x: 300, y: 220 }   // Defender X1 guarding player 3
     },
     phases: [
       {
+        // Phase 1: Starting positions
         positions: {
-          1: { x: 200, y: 340 },   // PG at top with ball
-          2: { x: 75, y: 280 },    // SG left wing
-          3: { x: 325, y: 280 },   // SF right wing (will curl)
-          4: { x: 125, y: 90 },    // PF left block
-          5: { x: 260, y: 105 }    // C right elbow (screener)
+          1: { x: 200, y: 260 },   // PG at top of 3pt arc
+          2: { x: 60, y: 200 },    // SG left wing
+          3: { x: 340, y: 200 },   // SF right wing (will curl)
+          4: { x: 120, y: 80 },    // PF left block
+          5: { x: 250, y: 140 }    // C near elbow (will screen)
         },
         ball: 1,
         actions: []
       },
       {
-        // Phase 2: 5 sets screen, 3 curls AROUND screen to elbow
+        // Phase 2: 5 moves to set screen ON defender X1
         positions: {
-          1: { x: 200, y: 340 },
-          2: { x: 75, y: 280 },
-          3: { x: 235, y: 115 },   // SF curled to left of screen
-          4: { x: 125, y: 90 },
-          5: { x: 260, y: 105 }
+          1: { x: 200, y: 260 },
+          2: { x: 60, y: 200 },
+          3: { x: 340, y: 200 },
+          4: { x: 120, y: 80 },
+          5: { x: 300, y: 210 }    // 5 screens the defender
         },
         ball: 1,
         actions: [
-          { type: 'screen', player: 5 },
-          { type: 'cut', player: 3, path: 'M325,280 Q340,180 300,120 Q270,90 235,115' }
+          { type: 'cut', player: 5, from: { x: 250, y: 140 }, to: { x: 300, y: 210 } },
+          { type: 'screen', player: 5 }
         ]
       },
       {
-        // Phase 3: 1 passes to 3
+        // Phase 3: 3 curls AROUND the screen toward basket
         positions: {
-          1: { x: 200, y: 340 },
-          2: { x: 75, y: 280 },
-          3: { x: 235, y: 115 },
-          4: { x: 125, y: 90 },
-          5: { x: 260, y: 105 }
+          1: { x: 200, y: 260 },
+          2: { x: 60, y: 200 },
+          3: { x: 220, y: 100 },   // SF curled around screen
+          4: { x: 120, y: 80 },
+          5: { x: 300, y: 210 }
+        },
+        ball: 1,
+        actions: [
+          { type: 'cut', player: 3, path: 'M340,200 Q350,150 300,120 Q250,90 220,100' }
+        ]
+      },
+      {
+        // Phase 4: 1 passes to 3
+        positions: {
+          1: { x: 200, y: 260 },
+          2: { x: 60, y: 200 },
+          3: { x: 220, y: 100 },
+          4: { x: 120, y: 80 },
+          5: { x: 300, y: 210 }
         },
         ball: 3,
         actions: [
@@ -400,13 +415,13 @@ const plays = {
         ]
       },
       {
-        // Phase 4: 3 shoots
+        // Phase 5: 3 shoots
         positions: {
-          1: { x: 200, y: 340 },
-          2: { x: 75, y: 280 },
-          3: { x: 235, y: 115 },
-          4: { x: 125, y: 90 },
-          5: { x: 260, y: 105 }
+          1: { x: 200, y: 260 },
+          2: { x: 60, y: 200 },
+          3: { x: 220, y: 100 },
+          4: { x: 120, y: 80 },
+          5: { x: 300, y: 210 }
         },
         ball: 3,
         actions: [
@@ -420,45 +435,60 @@ const plays = {
     name: 'Play #6',
     chapter: 'man',
     description: 'Curl off screen (left)',
-    // Mirror: 4 sets screen, 2 curls AROUND screen from wing to elbow
+    // Mirror: Defender X1 guards wing, 4 screens X1, 2 curls around
     defenders: {
-      1: { x: 115, y: 200 }   // Defender X1 on left side
+      1: { x: 100, y: 220 }   // Defender X1 guarding player 2
     },
     phases: [
       {
+        // Phase 1: Starting positions (mirror of Play 5)
         positions: {
-          1: { x: 200, y: 340 },   // PG at top with ball
-          2: { x: 75, y: 280 },    // SG left wing (will curl)
-          3: { x: 325, y: 280 },   // SF right wing
-          4: { x: 140, y: 105 },   // PF left elbow (screener)
-          5: { x: 275, y: 90 }     // C right block
+          1: { x: 200, y: 260 },   // PG at top of 3pt arc
+          2: { x: 60, y: 200 },    // SG left wing (will curl)
+          3: { x: 340, y: 200 },   // SF right wing
+          4: { x: 150, y: 140 },   // PF near elbow (will screen)
+          5: { x: 280, y: 80 }     // C right block
         },
         ball: 1,
         actions: []
       },
       {
-        // Phase 2: 4 sets screen, 2 curls AROUND screen to elbow
+        // Phase 2: 4 moves to set screen ON defender X1
         positions: {
-          1: { x: 200, y: 340 },
-          2: { x: 165, y: 115 },   // SG curled to right of screen
-          3: { x: 325, y: 280 },
-          4: { x: 140, y: 105 },
-          5: { x: 275, y: 90 }
+          1: { x: 200, y: 260 },
+          2: { x: 60, y: 200 },
+          3: { x: 340, y: 200 },
+          4: { x: 100, y: 210 },   // 4 screens the defender
+          5: { x: 280, y: 80 }
         },
         ball: 1,
         actions: [
-          { type: 'screen', player: 4 },
-          { type: 'cut', player: 2, path: 'M75,280 Q60,180 100,120 Q130,90 165,115' }
+          { type: 'cut', player: 4, from: { x: 150, y: 140 }, to: { x: 100, y: 210 } },
+          { type: 'screen', player: 4 }
         ]
       },
       {
-        // Phase 3: 1 passes to 2
+        // Phase 3: 2 curls AROUND the screen toward basket
         positions: {
-          1: { x: 200, y: 340 },
-          2: { x: 165, y: 115 },
-          3: { x: 325, y: 280 },
-          4: { x: 140, y: 105 },
-          5: { x: 275, y: 90 }
+          1: { x: 200, y: 260 },
+          2: { x: 180, y: 100 },   // SG curled around screen
+          3: { x: 340, y: 200 },
+          4: { x: 100, y: 210 },
+          5: { x: 280, y: 80 }
+        },
+        ball: 1,
+        actions: [
+          { type: 'cut', player: 2, path: 'M60,200 Q50,150 100,120 Q150,90 180,100' }
+        ]
+      },
+      {
+        // Phase 4: 1 passes to 2
+        positions: {
+          1: { x: 200, y: 260 },
+          2: { x: 180, y: 100 },
+          3: { x: 340, y: 200 },
+          4: { x: 100, y: 210 },
+          5: { x: 280, y: 80 }
         },
         ball: 2,
         actions: [
@@ -466,13 +496,13 @@ const plays = {
         ]
       },
       {
-        // Phase 4: 2 shoots
+        // Phase 5: 2 shoots
         positions: {
-          1: { x: 200, y: 340 },
-          2: { x: 165, y: 115 },
-          3: { x: 325, y: 280 },
-          4: { x: 140, y: 105 },
-          5: { x: 275, y: 90 }
+          1: { x: 200, y: 260 },
+          2: { x: 180, y: 100 },
+          3: { x: 340, y: 200 },
+          4: { x: 100, y: 210 },
+          5: { x: 280, y: 80 }
         },
         ball: 2,
         actions: [

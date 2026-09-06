@@ -52,6 +52,30 @@
       color: var(--text-primary);
     }
 
+    /* Position Legend */
+    .position-legend {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      padding: 10px 16px;
+      margin: 0 16px 12px;
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend-item strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
     .court-svg {
       width: 100%;
       height: 100%;
@@ -269,6 +293,15 @@
       <button class="section-tab active" data-chapter="man">vs Man</button>
       <button class="section-tab" data-chapter="zone">vs Zone</button>
       <button class="section-tab" data-chapter="inbound">Inbound</button>
+    </div>
+
+    <!-- Position Legend -->
+    <div class="position-legend">
+      <span class="legend-item"><strong>1</strong> PG</span>
+      <span class="legend-item"><strong>2</strong> SG</span>
+      <span class="legend-item"><strong>3</strong> SF</span>
+      <span class="legend-item"><strong>4</strong> PF</span>
+      <span class="legend-item"><strong>5</strong> C</span>
     </div>
 
     <!-- Plays Container -->
@@ -622,28 +655,29 @@
             actionsGroup.appendChild(cross2);
 
           } else if (action.type === 'screen') {
-            // Screen indicator - T shape (horizontal bar + vertical line below)
-            const screener = prevPhase.positions[action.player];
+            // Screen indicator - T shape at screener's NEW position (after moving to set screen)
+            // Bar at bottom (facing defender), stem pointing up (toward basket)
+            const screener = phase.positions[action.player];
 
-            // Horizontal bar
+            // Horizontal bar at bottom (the screen blocking defender)
             const hBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            hBar.setAttribute('x1', screener.x - 12);
-            hBar.setAttribute('y1', screener.y - 8);
-            hBar.setAttribute('x2', screener.x + 12);
-            hBar.setAttribute('y2', screener.y - 8);
+            hBar.setAttribute('x1', screener.x - 14);
+            hBar.setAttribute('y1', screener.y + 10);
+            hBar.setAttribute('x2', screener.x + 14);
+            hBar.setAttribute('y2', screener.y + 10);
             hBar.style.stroke = '#333';
-            hBar.style.strokeWidth = '3';
+            hBar.style.strokeWidth = '4';
             hBar.style.strokeLinecap = 'round';
             actionsGroup.appendChild(hBar);
 
-            // Vertical line below
+            // Vertical line going up (stem of T)
             const vBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             vBar.setAttribute('x1', screener.x);
-            vBar.setAttribute('y1', screener.y - 8);
+            vBar.setAttribute('y1', screener.y + 10);
             vBar.setAttribute('x2', screener.x);
-            vBar.setAttribute('y2', screener.y + 12);
+            vBar.setAttribute('y2', screener.y - 14);
             vBar.style.stroke = '#333';
-            vBar.style.strokeWidth = '3';
+            vBar.style.strokeWidth = '4';
             vBar.style.strokeLinecap = 'round';
             actionsGroup.appendChild(vBar);
           }
@@ -914,6 +948,43 @@
         inner.setAttribute('r', '8');
 
         await new Promise(resolve => setTimeout(resolve, 300));
+      } else if (action.type === 'screen') {
+        // Screen indicator - T shape at screener's NEW position
+        const screener = toPositions[action.player];
+        if (screener) {
+          // Horizontal bar at bottom (the screen)
+          const hBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          hBar.setAttribute('x1', screener.x - 14);
+          hBar.setAttribute('y1', screener.y + 10);
+          hBar.setAttribute('x2', screener.x + 14);
+          hBar.setAttribute('y2', screener.y + 10);
+          hBar.style.stroke = '#333';
+          hBar.style.strokeWidth = '4';
+          hBar.style.strokeLinecap = 'round';
+          hBar.style.opacity = '0';
+          actionsGroup.appendChild(hBar);
+
+          // Vertical line going up (stem of T)
+          const vBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          vBar.setAttribute('x1', screener.x);
+          vBar.setAttribute('y1', screener.y + 10);
+          vBar.setAttribute('x2', screener.x);
+          vBar.setAttribute('y2', screener.y - 14);
+          vBar.style.stroke = '#333';
+          vBar.style.strokeWidth = '4';
+          vBar.style.strokeLinecap = 'round';
+          vBar.style.opacity = '0';
+          actionsGroup.appendChild(vBar);
+
+          // Animate fade in
+          await new Promise(resolve => setTimeout(resolve, 50));
+          hBar.style.transition = 'opacity 0.3s ease-out';
+          vBar.style.transition = 'opacity 0.3s ease-out';
+          hBar.style.opacity = '1';
+          vBar.style.opacity = '1';
+
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
       }
     }
 
@@ -1021,19 +1092,33 @@
           }, 50);
         }
       } else if (action.type === 'screen') {
-        const screener = positions[action.player];
+        const screener = toPositions[action.player];
         if (screener) {
-          const screenLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          screenLine.setAttribute('x1', screener.x - 15);
-          screenLine.setAttribute('y1', screener.y);
-          screenLine.setAttribute('x2', screener.x + 15);
-          screenLine.setAttribute('y2', screener.y);
-          screenLine.style.stroke = '#333';
-          screenLine.style.strokeWidth = '4';
-          screenLine.style.strokeLinecap = 'round';
-          screenLine.style.opacity = '0';
-          screenLine.style.animation = 'fadeIn 0.3s ease-out forwards';
-          actionsGroup.appendChild(screenLine);
+          // Horizontal bar at bottom (the screen)
+          const hBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          hBar.setAttribute('x1', screener.x - 14);
+          hBar.setAttribute('y1', screener.y + 10);
+          hBar.setAttribute('x2', screener.x + 14);
+          hBar.setAttribute('y2', screener.y + 10);
+          hBar.style.stroke = '#333';
+          hBar.style.strokeWidth = '4';
+          hBar.style.strokeLinecap = 'round';
+          hBar.style.opacity = '0';
+          hBar.style.animation = 'fadeIn 0.3s ease-out forwards';
+          actionsGroup.appendChild(hBar);
+
+          // Vertical line going up (stem of T)
+          const vBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          vBar.setAttribute('x1', screener.x);
+          vBar.setAttribute('y1', screener.y + 10);
+          vBar.setAttribute('x2', screener.x);
+          vBar.setAttribute('y2', screener.y - 14);
+          vBar.style.stroke = '#333';
+          vBar.style.strokeWidth = '4';
+          vBar.style.strokeLinecap = 'round';
+          vBar.style.opacity = '0';
+          vBar.style.animation = 'fadeIn 0.3s ease-out forwards';
+          actionsGroup.appendChild(vBar);
         }
       }
     }
