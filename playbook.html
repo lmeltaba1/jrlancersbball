@@ -170,10 +170,15 @@
 
     /* Action paths */
     .action-path {
-      fill: none;
+      fill: none !important;
       stroke-width: 3;
       stroke-linecap: round;
       stroke-linejoin: round;
+    }
+
+    /* Ensure all paths in actions group have no fill */
+    .actions-group path {
+      fill: none !important;
     }
 
     .action-path.cut {
@@ -513,9 +518,9 @@
             <line x1="243" y1="140" x2="253" y2="140" class="court-line-thin" />
           </g>
 
-          <!-- Players and actions will be added here -->
-          <g class="players-group"></g>
+          <!-- Actions first (underneath), then players on top -->
           <g class="actions-group"></g>
+          <g class="players-group"></g>
           <g class="ball-group"></g>
         </svg>
       `;
@@ -679,16 +684,23 @@
 
         phase.actions.forEach(action => {
           if (action.type === 'dribble') {
-            // Wavy dribble line from start to end position
-            const from = action.from || prevPhase.positions[action.player];
-            const to = action.to || phase.positions[action.player];
-            const wavyPath = createWavyPath(from.x, from.y, to.x, to.y);
-
+            // Wavy dribble line - supports curved path or straight from/to
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', wavyPath);
-            path.style.stroke = '#333';
-            path.style.strokeWidth = '2.5';
-            path.style.fill = 'none';
+
+            if (action.path) {
+              // Curved path (SVG path string)
+              path.setAttribute('d', action.path);
+            } else {
+              // Straight line with wavy effect
+              const from = action.from || prevPhase.positions[action.player];
+              const to = action.to || phase.positions[action.player];
+              const wavyPath = createWavyPath(from.x, from.y, to.x, to.y);
+              path.setAttribute('d', wavyPath);
+            }
+
+            path.setAttribute('stroke', '#333');
+            path.setAttribute('stroke-width', '2.5');
+            path.setAttribute('fill', 'none');
             path.setAttribute('marker-end', 'url(#arrowhead)');
             actionsGroup.appendChild(path);
 
@@ -699,9 +711,9 @@
               // Curved path (SVG path string)
               const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
               path.setAttribute('d', action.path);
-              path.style.stroke = '#333';
-              path.style.strokeWidth = '2';
-              path.style.fill = 'none';
+              path.setAttribute('stroke', '#333');
+              path.setAttribute('stroke-width', '2');
+              path.setAttribute('fill', 'none');
               path.setAttribute('marker-end', 'url(#arrowhead)');
               actionsGroup.appendChild(path);
             } else {
@@ -772,11 +784,16 @@
             actionsGroup.appendChild(cross2);
 
           } else if (action.type === 'screen') {
-            // Screen indicator - T shape at screener's NEW position (after moving to set screen)
-            // Bar at bottom (facing defender), stem pointing up (toward basket)
+            // Screen indicator - T shape at screener's position, rotated by angle
+            // angle: 0=down, 90=right, 180=up, 270=left (direction screen faces)
             const screener = phase.positions[action.player];
+            const angle = action.angle || 0;
 
-            // Horizontal bar at bottom (the screen blocking defender)
+            // Create a group for the screen indicator and rotate it
+            const screenGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            screenGroup.setAttribute('transform', `rotate(${angle}, ${screener.x}, ${screener.y})`);
+
+            // Horizontal bar (the screen blocking defender)
             const hBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             hBar.setAttribute('x1', screener.x - 14);
             hBar.setAttribute('y1', screener.y + 10);
@@ -785,18 +802,20 @@
             hBar.style.stroke = '#333';
             hBar.style.strokeWidth = '4';
             hBar.style.strokeLinecap = 'round';
-            actionsGroup.appendChild(hBar);
+            screenGroup.appendChild(hBar);
 
-            // Vertical line going up (stem of T)
+            // Vertical line (stem of T, pointing toward cutter)
             const vBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             vBar.setAttribute('x1', screener.x);
             vBar.setAttribute('y1', screener.y + 10);
             vBar.setAttribute('x2', screener.x);
-            vBar.setAttribute('y2', screener.y - 14);
+            vBar.setAttribute('y2', screener.y + 24);
             vBar.style.stroke = '#333';
             vBar.style.strokeWidth = '4';
             vBar.style.strokeLinecap = 'round';
-            actionsGroup.appendChild(vBar);
+            screenGroup.appendChild(vBar);
+
+            actionsGroup.appendChild(screenGroup);
           }
         });
       }
@@ -907,8 +926,8 @@
             ...phase.actions.map(action =>
               animateAction(svg, action, prevPhase.positions, phase.positions)
             ),
-            // Player movements happen at the same time
-            animatePlayerMovement(svg, prevPhase.positions, phase.positions, phase.ball)
+            // Player movements happen at the same time (pass actions for curved paths)
+            animatePlayerMovement(svg, prevPhase.positions, phase.positions, phase.ball, phase.actions)
           ]);
           currentPositions = phase.positions;
 
@@ -955,21 +974,28 @@
       const actionsGroup = svg.querySelector('.actions-group');
 
       if (action.type === 'dribble') {
-        const from = action.from || fromPositions[action.player];
-        const to = action.to || toPositions[action.player];
-        const wavyPath = createWavyPath(from.x, from.y, to.x, to.y);
-
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', wavyPath);
-        path.style.stroke = '#333';
-        path.style.strokeWidth = '2.5';
-        path.style.fill = 'none';
+
+        if (action.path) {
+          // Curved path (SVG path string)
+          path.setAttribute('d', action.path);
+        } else {
+          // Straight line with wavy effect
+          const from = action.from || fromPositions[action.player];
+          const to = action.to || toPositions[action.player];
+          const wavyPath = createWavyPath(from.x, from.y, to.x, to.y);
+          path.setAttribute('d', wavyPath);
+        }
+
+        path.setAttribute('stroke', '#333');
+        path.setAttribute('stroke-width', '2.5');
+        path.setAttribute('fill', 'none');
         path.setAttribute('marker-end', 'url(#arrowhead)');
 
         // Animate drawing
         const length = path.getTotalLength ? path.getTotalLength() : 300;
-        path.style.strokeDasharray = length;
-        path.style.strokeDashoffset = length;
+        path.setAttribute('stroke-dasharray', length);
+        path.setAttribute('stroke-dashoffset', length);
         actionsGroup.appendChild(path);
 
         // Trigger animation
@@ -1002,26 +1028,53 @@
         await new Promise(resolve => setTimeout(resolve, 500));
       } else if (action.type === 'cut') {
         // Player cut - solid line with arrow (player movement without ball)
-        const from = action.from || fromPositions[action.player];
-        const to = action.to || toPositions[action.player];
+        if (action.path) {
+          // Use curved SVG path for cuts around screens
+          const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          pathEl.setAttribute('d', action.path);
+          pathEl.setAttribute('stroke', '#333');
+          pathEl.setAttribute('stroke-width', '2');
+          pathEl.setAttribute('fill', 'none');
+          pathEl.classList.add('action-path');
+          pathEl.setAttribute('marker-end', 'url(#arrowhead)');
 
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', from.x);
-        line.setAttribute('y1', from.y);
-        line.setAttribute('x2', from.x);
-        line.setAttribute('y2', from.y);
-        line.style.stroke = '#333';
-        line.style.strokeWidth = '2';
-        line.setAttribute('marker-end', 'url(#arrowhead)');
-        actionsGroup.appendChild(line);
+          // Get path length for animation
+          actionsGroup.appendChild(pathEl);
+          const pathLength = pathEl.getTotalLength();
 
-        // Animate line extending
-        await new Promise(resolve => setTimeout(resolve, 50));
-        line.style.transition = 'all 0.5s ease-out';
-        line.setAttribute('x2', to.x);
-        line.setAttribute('y2', to.y);
+          // Set up dash animation (start hidden)
+          pathEl.setAttribute('stroke-dasharray', pathLength);
+          pathEl.setAttribute('stroke-dashoffset', pathLength);
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+          // Animate path drawing
+          await new Promise(resolve => setTimeout(resolve, 50));
+          pathEl.style.transition = 'stroke-dashoffset 0.6s ease-out';
+          pathEl.setAttribute('stroke-dashoffset', '0');
+
+          await new Promise(resolve => setTimeout(resolve, 600));
+        } else {
+          // Straight line for simple cuts
+          const from = action.from || fromPositions[action.player];
+          const to = action.to || toPositions[action.player];
+
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', from.x);
+          line.setAttribute('y1', from.y);
+          line.setAttribute('x2', from.x);
+          line.setAttribute('y2', from.y);
+          line.style.stroke = '#333';
+          line.style.strokeWidth = '2';
+          line.setAttribute('marker-end', 'url(#arrowhead)');
+          actionsGroup.appendChild(line);
+
+          // Animate line extending
+          await new Promise(resolve => setTimeout(resolve, 50));
+          line.style.transition = 'all 0.5s ease-out';
+          line.setAttribute('x2', to.x);
+          line.setAttribute('y2', to.y);
+
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       } else if (action.type === 'shot') {
         // Shot - dashed line from player to target (rim)
         const from = fromPositions[action.player];
@@ -1079,10 +1132,18 @@
 
         await new Promise(resolve => setTimeout(resolve, 300));
       } else if (action.type === 'screen') {
-        // Screen indicator - T shape at screener's NEW position
+        // Screen indicator - T shape at screener's position, rotated by angle
         const screener = toPositions[action.player];
         if (screener) {
-          // Horizontal bar at bottom (the screen)
+          const angle = action.angle || 0;
+
+          // Create a group for the screen indicator and rotate it
+          const screenGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          screenGroup.setAttribute('transform', `rotate(${angle}, ${screener.x}, ${screener.y})`);
+          screenGroup.style.opacity = '0';
+          actionsGroup.appendChild(screenGroup);
+
+          // Horizontal bar (the screen)
           const hBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
           hBar.setAttribute('x1', screener.x - 14);
           hBar.setAttribute('y1', screener.y + 10);
@@ -1091,27 +1152,23 @@
           hBar.style.stroke = '#333';
           hBar.style.strokeWidth = '4';
           hBar.style.strokeLinecap = 'round';
-          hBar.style.opacity = '0';
-          actionsGroup.appendChild(hBar);
+          screenGroup.appendChild(hBar);
 
-          // Vertical line going up (stem of T)
+          // Vertical line (stem of T, pointing toward cutter)
           const vBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
           vBar.setAttribute('x1', screener.x);
           vBar.setAttribute('y1', screener.y + 10);
           vBar.setAttribute('x2', screener.x);
-          vBar.setAttribute('y2', screener.y - 14);
+          vBar.setAttribute('y2', screener.y + 24);
           vBar.style.stroke = '#333';
           vBar.style.strokeWidth = '4';
           vBar.style.strokeLinecap = 'round';
-          vBar.style.opacity = '0';
-          actionsGroup.appendChild(vBar);
+          screenGroup.appendChild(vBar);
 
           // Animate fade in
           await new Promise(resolve => setTimeout(resolve, 50));
-          hBar.style.transition = 'opacity 0.3s ease-out';
-          vBar.style.transition = 'opacity 0.3s ease-out';
-          hBar.style.opacity = '1';
-          vBar.style.opacity = '1';
+          screenGroup.style.transition = 'opacity 0.3s ease-out';
+          screenGroup.style.opacity = '1';
 
           await new Promise(resolve => setTimeout(resolve, 300));
         }
@@ -1119,9 +1176,18 @@
     }
 
     // Animate players moving from one position to another
-    async function animatePlayerMovement(svg, fromPositions, toPositions, newBallHolder) {
+    async function animatePlayerMovement(svg, fromPositions, toPositions, newBallHolder, actions = []) {
       const playersGroup = svg.querySelector('.players-group');
       let hasMovement = false;
+      const pathAnimations = [];
+
+      // Build a map of players with curved paths (cuts or dribbles)
+      const playerPaths = {};
+      actions.forEach(action => {
+        if ((action.type === 'cut' || action.type === 'dribble') && action.path && action.player) {
+          playerPaths[action.player] = action.path;
+        }
+      });
 
       // Apply transitions to move players
       Object.keys(toPositions).forEach(num => {
@@ -1134,8 +1200,50 @@
         // Only animate if position changed
         if (from.x !== to.x || from.y !== to.y) {
           hasMovement = true;
-          playerEl.style.transition = 'transform 0.6s ease-in-out';
-          playerEl.style.transform = `translate(${to.x - from.x}px, ${to.y - from.y}px)`;
+
+          // Check if this player has a curved path
+          if (playerPaths[num]) {
+            // Animate along the curved path using JS and getPointAtLength
+            const pathData = playerPaths[num];
+
+            // Create temporary invisible path to sample points
+            const tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            tempPath.setAttribute('d', pathData);
+            tempPath.setAttribute('fill', 'none');
+            tempPath.setAttribute('stroke', 'none');
+            tempPath.style.visibility = 'hidden';
+            svg.appendChild(tempPath);
+            const pathLength = tempPath.getTotalLength();
+
+            // Animate player along the path
+            const duration = 600;
+            const startTime = performance.now();
+
+            const animateAlongPath = () => {
+              const elapsed = performance.now() - startTime;
+              const progress = Math.min(elapsed / duration, 1);
+              // Ease in-out
+              const eased = progress < 0.5
+                ? 2 * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+              const point = tempPath.getPointAtLength(eased * pathLength);
+              playerEl.setAttribute('transform', `translate(${point.x}, ${point.y})`);
+
+              if (progress < 1) {
+                requestAnimationFrame(animateAlongPath);
+              } else {
+                // Clean up temp path
+                svg.removeChild(tempPath);
+              }
+            };
+
+            requestAnimationFrame(animateAlongPath);
+          } else {
+            // Straight line movement using CSS transition
+            playerEl.style.transition = 'transform 0.6s ease-in-out';
+            playerEl.style.transform = `translate(${to.x - from.x}px, ${to.y - from.y}px)`;
+          }
         }
       });
 
@@ -1144,11 +1252,11 @@
         await new Promise(resolve => setTimeout(resolve, 600));
       }
 
-      // Now redraw players at final positions (resets transforms)
+      // Now redraw players at final positions (resets transforms and animations)
       renderPlayers(svg, toPositions, newBallHolder);
     }
 
-    // Create wavy path for dribble
+    // Create wavy path for dribble (straight line version)
     function createWavyPath(x1, y1, x2, y2) {
       const segments = 10;
       const amplitude = 6;
@@ -1171,6 +1279,11 @@
       return path;
     }
 
+    // For dribble paths (curved SVG paths), just return as-is with thicker stroke
+    function makeWavyPath(svgPath) {
+      return svgPath;
+    }
+
     // Animate a single action
     function animateSingleAction(svg, action, positions, index) {
       const actionsGroup = svg.querySelector('.actions-group');
@@ -1179,26 +1292,29 @@
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const wavyPath = makeWavyPath(action.path);
         path.setAttribute('d', wavyPath);
-        path.style.stroke = '#333';
-        path.style.strokeWidth = '2.5';
-        path.style.fill = 'none';
+        path.setAttribute('stroke', '#333');
+        path.setAttribute('stroke-width', '2.5');
+        path.setAttribute('fill', 'none');
         path.setAttribute('marker-end', 'url(#arrowhead)');
         // Animate drawing
         const length = path.getTotalLength ? path.getTotalLength() : 200;
-        path.style.strokeDasharray = length;
-        path.style.strokeDashoffset = length;
+        path.setAttribute('stroke-dasharray', length);
+        path.setAttribute('stroke-dashoffset', length);
         path.style.animation = 'drawPath 0.6s ease-out forwards';
         actionsGroup.appendChild(path);
       } else if (action.type === 'cut' && action.path) {
+        // Curved cut path - animate drawing along the path
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', action.path);
-        path.style.stroke = '#333';
-        path.style.strokeWidth = '2';
-        path.style.strokeDasharray = '8, 4';
-        path.style.fill = 'none';
+        path.setAttribute('stroke', '#333');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('fill', 'none');
         path.setAttribute('marker-end', 'url(#arrowhead)');
-        path.style.opacity = '0';
-        path.style.animation = 'fadeIn 0.4s ease-out forwards';
+        // Animate drawing the path
+        const length = path.getTotalLength ? path.getTotalLength() : 200;
+        path.setAttribute('stroke-dasharray', length);
+        path.setAttribute('stroke-dashoffset', length);
+        path.style.animation = 'drawPath 0.6s ease-out forwards';
         actionsGroup.appendChild(path);
       } else if (action.type === 'pass' && action.from && action.to) {
         const fromPos = action.fromPos || positions[action.from];
@@ -1224,7 +1340,16 @@
       } else if (action.type === 'screen') {
         const screener = toPositions[action.player];
         if (screener) {
-          // Horizontal bar at bottom (the screen)
+          const angle = action.angle || 0;
+
+          // Create a group for the screen indicator and rotate it
+          const screenGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          screenGroup.setAttribute('transform', `rotate(${angle}, ${screener.x}, ${screener.y})`);
+          screenGroup.style.opacity = '0';
+          screenGroup.style.animation = 'fadeIn 0.3s ease-out forwards';
+          actionsGroup.appendChild(screenGroup);
+
+          // Horizontal bar (the screen)
           const hBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
           hBar.setAttribute('x1', screener.x - 14);
           hBar.setAttribute('y1', screener.y + 10);
@@ -1233,22 +1358,18 @@
           hBar.style.stroke = '#333';
           hBar.style.strokeWidth = '4';
           hBar.style.strokeLinecap = 'round';
-          hBar.style.opacity = '0';
-          hBar.style.animation = 'fadeIn 0.3s ease-out forwards';
-          actionsGroup.appendChild(hBar);
+          screenGroup.appendChild(hBar);
 
-          // Vertical line going up (stem of T)
+          // Vertical line (stem of T, pointing toward cutter)
           const vBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
           vBar.setAttribute('x1', screener.x);
           vBar.setAttribute('y1', screener.y + 10);
           vBar.setAttribute('x2', screener.x);
-          vBar.setAttribute('y2', screener.y - 14);
+          vBar.setAttribute('y2', screener.y + 24);
           vBar.style.stroke = '#333';
           vBar.style.strokeWidth = '4';
           vBar.style.strokeLinecap = 'round';
-          vBar.style.opacity = '0';
-          vBar.style.animation = 'fadeIn 0.3s ease-out forwards';
-          actionsGroup.appendChild(vBar);
+          screenGroup.appendChild(vBar);
         }
       }
     }

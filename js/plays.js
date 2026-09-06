@@ -383,7 +383,7 @@ const plays = {
         ball: 1,
         actions: [
           { type: 'cut', player: 5, from: { x: 250, y: 140 }, to: { x: 300, y: 210 } },
-          { type: 'screen', player: 5 }
+          { type: 'screen', player: 5, angle: 90 }  // Screen faces right toward 3
         ]
       },
       {
@@ -397,7 +397,8 @@ const plays = {
         },
         ball: 1,
         actions: [
-          { type: 'cut', player: 3, path: 'M340,200 Q350,150 300,120 Q250,90 220,100' }
+          // Curved cut AROUND the screen (5 is at 300,210) - curl behind then to basket
+          { type: 'cut', player: 3, path: 'M340,200 Q290,220 260,180 Q240,140 220,100' }
         ]
       },
       {
@@ -464,7 +465,7 @@ const plays = {
         ball: 1,
         actions: [
           { type: 'cut', player: 4, from: { x: 150, y: 140 }, to: { x: 100, y: 210 } },
-          { type: 'screen', player: 4 }
+          { type: 'screen', player: 4, angle: 270 }  // Screen faces left toward 2
         ]
       },
       {
@@ -478,7 +479,8 @@ const plays = {
         },
         ball: 1,
         actions: [
-          { type: 'cut', player: 2, path: 'M60,200 Q50,150 100,120 Q150,90 180,100' }
+          // Curved cut AROUND the screen (4 is at 100,210) - curl behind then to basket
+          { type: 'cut', player: 2, path: 'M60,200 Q110,220 140,180 Q160,140 180,100' }
         ]
       },
       {
@@ -551,7 +553,7 @@ const plays = {
           { type: 'pass', from: 1, to: 5 }
         ]
       },
-      // ========== VIDEO PHASE 2 ==========
+      // ========== VIDEO PHASE 2: SCREEN ==========
       {
         description: ['1 screens away for 3'],
         positions: {
@@ -564,9 +566,10 @@ const plays = {
         ball: 5,
         actions: [
           { type: 'cut', player: 1, from: { x: 300, y: 320 }, to: { x: 320, y: 200 } },
-          { type: 'screen', player: 1 }
+          { type: 'screen', player: 1, angle: 90 }  // Screen faces right toward 3
         ]
       },
+      // ========== VIDEO PHASE 2: CURL ==========
       {
         description: ['3 curls tight to the rim'],
         positions: {
@@ -578,7 +581,8 @@ const plays = {
         },
         ball: 5,
         actions: [
-          { type: 'cut', player: 3, path: 'M350,200 Q380,140 300,80 Q250,45 230,45' }
+          // Curved cut AROUND the screen (1 is at 320,200) - curl behind/around then to basket
+          { type: 'cut', player: 3, path: 'M350,200 Q310,220 280,180 Q250,100 230,45' }
         ]
       },
       // ========== VIDEO PHASE 3 ==========
@@ -599,7 +603,7 @@ const plays = {
           { type: 'cut', player: 3, path: 'M230,45 Q140,100 50,200' }
         ]
       },
-      // ========== VIDEO PHASE 4 ==========
+      // ========== VIDEO PHASE 4: DRIBBLE HANDOFF ==========
       {
         description: ['If nothing is there, 5 can run a dribble handoff with 1'],
         positions: {
@@ -611,21 +615,23 @@ const plays = {
         },
         ball: 5,
         actions: [
-          { type: 'dribble', player: 5, from: { x: 200, y: 200 }, to: { x: 320, y: 200 } }
+          { type: 'dribble', player: 5, from: { x: 200, y: 200 }, to: { x: 320, y: 200 } },
+          { type: 'screen', player: 5, angle: 180 }  // Screen faces up - DHO screen for 1
         ]
       },
       {
-        description: [],
+        description: ['1 curls around the handoff'],
         positions: {
-          1: { x: 330, y: 210 },   // PG cuts to meet 5
+          1: { x: 290, y: 180 },   // PG curls around 5
           2: { x: 290, y: 320 },
           3: { x: 50, y: 200 },
           4: { x: 110, y: 320 },
           5: { x: 320, y: 200 }
         },
-        ball: 5,
+        ball: 1,
         actions: [
-          { type: 'cut', player: 1, path: 'M350,200 Q340,205 330,210' }
+          // 1 curls around 5's screen (5 at 320,200), going left/up around
+          { type: 'cut', player: 1, path: 'M350,200 Q340,220 310,210 Q290,200 290,180' }
         ]
       },
       // ========== VIDEO PHASE 5 ==========
@@ -640,7 +646,7 @@ const plays = {
         },
         ball: 1,
         actions: [
-          { type: 'dribble', player: 1, from: { x: 330, y: 210 }, to: { x: 200, y: 140 } }
+          { type: 'dribble', player: 1, from: { x: 290, y: 180 }, to: { x: 200, y: 140 } }
         ]
       },
       {
@@ -693,56 +699,149 @@ const plays = {
   'zone-dive': {
     name: 'Dive',
     chapter: 'zone',
-    description: 'Attack gaps with dive cuts',
+    description: 'Dive cut off high post screen',
     phases: [
+      // ========== INITIAL POSITIONS ==========
       {
+        description: [],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 280 },
-          3: { x: 336, y: 280 },
-          4: { x: 120, y: 116 },
-          5: { x: 280, y: 116 }
+          1: { x: 330, y: 310 },   // PG right side with ball
+          2: { x: 170, y: 310 },   // SG left of center
+          3: { x: 370, y: 200 },   // SF right wing
+          4: { x: 60, y: 200 },    // PF left wing
+          5: { x: 200, y: 220 }    // C high post
         },
         ball: 1,
         actions: []
       },
+      // ========== VIDEO PHASE 1 ==========
       {
+        description: ['1 passes to 2'],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 280 },
-          3: { x: 336, y: 280 },
-          4: { x: 120, y: 116 },
-          5: { x: 280, y: 116 }
+          1: { x: 330, y: 310 },
+          2: { x: 170, y: 310 },
+          3: { x: 370, y: 200 },
+          4: { x: 60, y: 200 },
+          5: { x: 200, y: 220 }
         },
         ball: 2,
         actions: [
           { type: 'pass', from: 1, to: 2 }
         ]
       },
+      // ========== VIDEO PHASE 2: SCREEN ==========
       {
+        description: ['5 screens 1 on his cut to the rim'],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 280 },
-          3: { x: 200, y: 120 },   // SF dives to gap
-          4: { x: 120, y: 116 },
-          5: { x: 280, y: 116 }
+          1: { x: 330, y: 310 },
+          2: { x: 170, y: 310 },
+          3: { x: 370, y: 200 },
+          4: { x: 60, y: 200 },
+          5: { x: 280, y: 280 }    // 5 moves to screen position
         },
         ball: 2,
         actions: [
-          { type: 'cut', player: 3, path: 'M336,280 L200,120' }
+          { type: 'cut', player: 5, from: { x: 200, y: 220 }, to: { x: 280, y: 280 } },
+          { type: 'screen', player: 5, angle: 45 }  // Screen faces down-right toward 1 at (330,310)
         ]
       },
+      // ========== VIDEO PHASE 2: CUT ==========
       {
+        description: [],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 280 },
-          3: { x: 200, y: 120 },
-          4: { x: 120, y: 116 },
-          5: { x: 280, y: 116 }
+          1: { x: 200, y: 60 },    // 1 cuts to rim
+          2: { x: 170, y: 310 },
+          3: { x: 370, y: 200 },
+          4: { x: 60, y: 200 },
+          5: { x: 280, y: 280 }
         },
-        ball: 3,
+        ball: 2,
         actions: [
-          { type: 'pass', from: 2, to: 3 }
+          // Curved cut AROUND the screen - goes LEFT of screen (280,280) to wrap around it
+          { type: 'cut', player: 1, path: 'M330,310 Q240,330 220,260 Q200,150 200,60' }
+        ]
+      },
+      // ========== VIDEO PHASE 3 ==========
+      {
+        description: ['3 and 1 fill the open slots'],
+        positions: {
+          1: { x: 350, y: 170 },   // 1 fills to right wing
+          2: { x: 170, y: 310 },
+          3: { x: 360, y: 270 },   // 3 fills to right low
+          4: { x: 60, y: 200 },
+          5: { x: 280, y: 250 }    // 5 drifts slightly
+        },
+        ball: 2,
+        actions: [
+          // 1 curves from rim out to wing
+          { type: 'cut', player: 1, path: 'M200,60 Q260,100 320,140 Q340,160 350,170' },
+          // 3 curves from wing down to low
+          { type: 'cut', player: 3, path: 'M370,200 Q370,235 365,255 Q362,265 360,270' }
+        ]
+      },
+      // ========== VIDEO PHASE 4: BALL SCREEN ==========
+      {
+        description: ['Now, 5 sets a ball screen for 2'],
+        positions: {
+          1: { x: 350, y: 170 },
+          2: { x: 170, y: 310 },
+          3: { x: 360, y: 270 },
+          4: { x: 60, y: 200 },
+          5: { x: 220, y: 290 }    // 5 moves to ball screen position
+        },
+        ball: 2,
+        actions: [
+          { type: 'cut', player: 5, from: { x: 280, y: 250 }, to: { x: 220, y: 290 } },
+          { type: 'screen', player: 5, angle: 270 }  // Screen faces left toward ball handler 2
+        ]
+      },
+      // ========== VIDEO PHASE 4: DRIBBLE + CUTS ==========
+      {
+        description: ['2 attacks off the dribble', '3 and 1 move in the direction of the drive'],
+        positions: {
+          1: { x: 360, y: 80 },    // 1 moves toward corner
+          2: { x: 290, y: 230 },   // 2 dribbles right using screen
+          3: { x: 360, y: 200 },   // 3 moves up toward wing
+          4: { x: 60, y: 200 },
+          5: { x: 220, y: 290 }
+        },
+        ball: 2,
+        actions: [
+          // 2 curves around the screen (goes right of screen at 220,290)
+          { type: 'dribble', player: 2, path: 'M170,310 Q200,320 240,300 Q270,270 290,230' },
+          { type: 'cut', player: 1, path: 'M350,170 Q355,125 360,80' },
+          { type: 'cut', player: 3, path: 'M360,270 Q360,235 360,200' }
+        ]
+      },
+      // ========== VIDEO PHASE 5: ROLL + REPLACE ==========
+      {
+        description: ['2 reads the ball screen, 5 rolls, 4 replaces'],
+        positions: {
+          1: { x: 360, y: 80 },
+          2: { x: 290, y: 210 },
+          3: { x: 360, y: 200 },
+          4: { x: 170, y: 280 },   // 4 replaces (moves down/right)
+          5: { x: 200, y: 100 }    // 5 rolls to basket
+        },
+        ball: 2,
+        actions: [
+          { type: 'cut', player: 5, path: 'M220,290 Q200,200 200,100' },
+          { type: 'cut', player: 4, path: 'M60,200 Q100,240 170,280' }
+        ]
+      },
+      // ========== VIDEO PHASE 5: READ ==========
+      {
+        description: ['2 makes the proper read'],
+        positions: {
+          1: { x: 360, y: 80 },
+          2: { x: 290, y: 210 },
+          3: { x: 360, y: 200 },
+          4: { x: 170, y: 280 },
+          5: { x: 200, y: 100 }
+        },
+        ball: 5,
+        actions: [
+          { type: 'pass', from: 2, to: 5 }
         ]
       }
     ]
@@ -1032,9 +1131,10 @@ const plays = {
         },
         ball: 1,
         actions: [
-          { type: 'screen', player: 3 },
-          { type: 'screen', player: 4 },
-          { type: 'cut', player: 2, path: 'M280,100 L120,140 L64,160' }
+          { type: 'screen', player: 3, angle: 90 },  // Screen faces right toward cutter
+          { type: 'screen', player: 4, angle: 90 },  // Screen faces right toward cutter
+          // Curved cut AROUND the double screen (screens at 120,140 and 120,180)
+          { type: 'cut', player: 2, path: 'M280,100 Q180,130 130,160 Q90,170 64,160' }
         ]
       },
       {
