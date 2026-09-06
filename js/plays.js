@@ -72,7 +72,7 @@ const plays = {
         },
         ball: 1,
         actions: [
-          { type: 'dribble', player: 1, from: { x: 200, y: 370 }, to: { x: 340, y: 200 } },
+          { type: 'dribble', player: 1, path: 'M200,370 Q270,285 340,200' },
           { type: 'cut', player: 3, from: { x: 340, y: 200 }, to: { x: 365, y: 55 } }
         ]
       },
@@ -149,7 +149,7 @@ const plays = {
         },
         ball: 1,
         actions: [
-          { type: 'dribble', player: 1, from: { x: 200, y: 370 }, to: { x: 60, y: 200 } },
+          { type: 'dribble', player: 1, path: 'M200,370 Q130,285 60,200' },
           { type: 'cut', player: 2, from: { x: 60, y: 200 }, to: { x: 35, y: 55 } }
         ]
       },
@@ -615,7 +615,7 @@ const plays = {
         },
         ball: 5,
         actions: [
-          { type: 'dribble', player: 5, from: { x: 200, y: 200 }, to: { x: 320, y: 200 } },
+          { type: 'dribble', player: 5, path: 'M200,200 Q260,200 320,200' },
           { type: 'screen', player: 5, angle: 180 }  // Screen faces up - DHO screen for 1
         ]
       },
@@ -646,7 +646,7 @@ const plays = {
         },
         ball: 1,
         actions: [
-          { type: 'dribble', player: 1, from: { x: 290, y: 180 }, to: { x: 200, y: 140 } }
+          { type: 'dribble', player: 1, path: 'M290,180 Q245,160 200,140' }
         ]
       },
       {
@@ -850,56 +850,139 @@ const plays = {
   'zone-ball': {
     name: 'Ball',
     chapter: 'zone',
-    description: 'Ball reversal attack',
+    description: 'Ball screen action with dive cut and rotation',
     phases: [
+      // ========== INITIAL POSITIONS ==========
       {
+        description: [],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 280 },
-          3: { x: 336, y: 280 },
-          4: { x: 120, y: 140 },
-          5: { x: 280, y: 140 }
+          1: { x: 320, y: 320 },   // PG right side below 3pt (has ball)
+          2: { x: 70, y: 230 },    // SG left wing
+          3: { x: 360, y: 220 },   // SF right wing
+          4: { x: 170, y: 330 },   // PF left low
+          5: { x: 290, y: 120 }    // C right block
         },
         ball: 1,
         actions: []
       },
+      // ========== PHASE 1: PASS AND CUT ==========
       {
+        description: ['1 passes to 3'],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 280 },
-          3: { x: 336, y: 280 },
-          4: { x: 120, y: 140 },
-          5: { x: 280, y: 140 }
-        },
-        ball: 2,
-        actions: [
-          { type: 'pass', from: 1, to: 2 }
-        ]
-      },
-      {
-        positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 280 },
-          3: { x: 336, y: 280 },
-          4: { x: 120, y: 140 },
-          5: { x: 280, y: 140 }
-        },
-        ball: 1,
-        actions: [
-          { type: 'pass', from: 2, to: 1 }
-        ]
-      },
-      {
-        positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 280 },
-          3: { x: 336, y: 280 },
-          4: { x: 120, y: 140 },
-          5: { x: 280, y: 140 }
+          1: { x: 320, y: 320 },
+          2: { x: 70, y: 230 },
+          3: { x: 360, y: 220 },
+          4: { x: 170, y: 330 },
+          5: { x: 290, y: 120 }
         },
         ball: 3,
         actions: [
           { type: 'pass', from: 1, to: 3 }
+        ]
+      },
+      {
+        description: [],
+        positions: {
+          1: { x: 200, y: 100 },   // 1 cuts to basket
+          2: { x: 70, y: 230 },
+          3: { x: 360, y: 220 },
+          4: { x: 170, y: 330 },
+          5: { x: 290, y: 120 }
+        },
+        ball: 3,
+        actions: [
+          // 1 curves down toward basket after passing
+          { type: 'cut', player: 1, path: 'M320,320 Q260,280 230,200 Q210,140 200,100' }
+        ]
+      },
+      // ========== PHASE 2: FILL OPEN SPOTS ==========
+      {
+        description: ['Players all fill the open spots'],
+        positions: {
+          1: { x: 70, y: 180 },    // 1 fills to left wing
+          2: { x: 170, y: 320 },   // 2 rotates to left low
+          3: { x: 360, y: 240 },   // 3 stays at right wing
+          4: { x: 310, y: 330 },   // 4 moves across to right low
+          5: { x: 330, y: 150 }    // 5 drifts up slightly
+        },
+        ball: 3,
+        actions: [
+          // 1 fills out to left wing from basket
+          { type: 'cut', player: 1, path: 'M200,100 Q140,130 100,160 Q85,170 70,180' },
+          // 2 curves down from left wing to left low
+          { type: 'cut', player: 2, path: 'M70,230 Q100,270 140,300 Q155,310 170,320' },
+          // 4 moves across from left low to right low
+          { type: 'cut', player: 4, from: { x: 170, y: 330 }, to: { x: 310, y: 330 } }
+        ]
+      },
+      // ========== PHASE 3: BALL SCREEN ==========
+      {
+        description: [
+          '5 sets a ball screen for 3',
+          '5 rolls in this diagram but could also pop to the corner'
+        ],
+        positions: {
+          1: { x: 70, y: 180 },
+          2: { x: 170, y: 320 },
+          3: { x: 360, y: 240 },
+          4: { x: 310, y: 330 },
+          5: { x: 340, y: 220 }    // 5 moves to screen position
+        },
+        ball: 3,
+        actions: [
+          { type: 'cut', player: 5, from: { x: 330, y: 150 }, to: { x: 340, y: 220 } },
+          { type: 'screen', player: 5, angle: 270 }  // Screen faces left for 3 to use
+        ]
+      },
+      {
+        description: ['4, 2, and 1 all rotate in the direction of the ball'],
+        positions: {
+          1: { x: 60, y: 60 },     // 1 rotates to left corner
+          2: { x: 70, y: 230 },    // 2 rotates up to left wing
+          3: { x: 280, y: 260 },   // 3 dribbles off screen toward paint
+          4: { x: 170, y: 320 },   // 4 rotates back left
+          5: { x: 340, y: 220 }    // 5 at screen position
+        },
+        ball: 3,
+        actions: [
+          // 3 dribbles around the screen
+          { type: 'dribble', player: 3, path: 'M360,240 Q340,250 310,260 Q295,260 280,260' },
+          // 1 rotates to left corner
+          { type: 'cut', player: 1, path: 'M70,180 Q65,120 60,60' },
+          // 2 rotates up to left wing
+          { type: 'cut', player: 2, path: 'M170,320 Q120,280 70,230' },
+          // 4 rotates back left
+          { type: 'cut', player: 4, from: { x: 310, y: 330 }, to: { x: 170, y: 320 } }
+        ]
+      },
+      // ========== PHASE 4: ROLL AND FINISH ==========
+      {
+        description: ['5 rolls to the rim'],
+        positions: {
+          1: { x: 60, y: 60 },
+          2: { x: 70, y: 230 },
+          3: { x: 280, y: 260 },
+          4: { x: 170, y: 320 },
+          5: { x: 260, y: 100 }    // 5 rolls to basket
+        },
+        ball: 3,
+        actions: [
+          // 5 rolls hard to the basket
+          { type: 'cut', player: 5, path: 'M340,220 Q300,180 280,140 Q270,120 260,100' }
+        ]
+      },
+      {
+        description: ['3 looks for 5 on the roll to the rim but also has kickout options in 1, 2, and 4'],
+        positions: {
+          1: { x: 60, y: 60 },
+          2: { x: 70, y: 230 },
+          3: { x: 280, y: 260 },
+          4: { x: 170, y: 320 },
+          5: { x: 260, y: 100 }
+        },
+        ball: 5,
+        actions: [
+          { type: 'pass', from: 3, to: 5 }
         ]
       }
     ]
@@ -908,56 +991,110 @@ const plays = {
   'zone-oppo': {
     name: 'Oppo',
     chapter: 'zone',
-    description: 'Opposite action',
+    description: 'Opposite block cut on ball reversal',
     phases: [
+      // ========== INITIAL POSITIONS ==========
       {
+        description: [],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 280 },
-          3: { x: 336, y: 280 },
-          4: { x: 120, y: 140 },
-          5: { x: 200, y: 180 }
+          1: { x: 360, y: 320 },   // PG right side with ball
+          2: { x: 170, y: 320 },   // SG left side
+          3: { x: 380, y: 200 },   // SF right wing
+          4: { x: 60, y: 200 },    // PF left wing
+          5: { x: 170, y: 80 }     // C LEFT block
         },
         ball: 1,
         actions: []
       },
+      // ========== PHASE 1: PASS ==========
       {
+        description: [
+          '1 passes to 2',
+          'As soon as the ball changes sides, 5 goes behind the rim and to the opposite ballside block'
+        ],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 280 },
-          3: { x: 336, y: 280 },
-          4: { x: 120, y: 140 },
-          5: { x: 200, y: 180 }
-        },
-        ball: 3,
-        actions: [
-          { type: 'pass', from: 1, to: 3 }
-        ]
-      },
-      {
-        positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 336, y: 140 },   // SG opposite cut
-          3: { x: 336, y: 280 },
-          4: { x: 120, y: 140 },
-          5: { x: 200, y: 180 }
-        },
-        ball: 3,
-        actions: [
-          { type: 'cut', player: 2, path: 'M64,280 L200,200 L336,140' }
-        ]
-      },
-      {
-        positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 336, y: 140 },
-          3: { x: 336, y: 280 },
-          4: { x: 120, y: 140 },
-          5: { x: 200, y: 180 }
+          1: { x: 360, y: 300 },
+          2: { x: 170, y: 320 },
+          3: { x: 380, y: 200 },
+          4: { x: 60, y: 200 },
+          5: { x: 170, y: 80 }
         },
         ball: 2,
         actions: [
-          { type: 'pass', from: 3, to: 2 }
+          { type: 'pass', from: 1, to: 2 }
+        ]
+      },
+      // ========== PHASE 1: 5 CUTS BEHIND RIM ==========
+      {
+        description: [],
+        positions: {
+          1: { x: 360, y: 300 },
+          2: { x: 170, y: 320 },
+          3: { x: 380, y: 200 },
+          4: { x: 60, y: 200 },
+          5: { x: 350, y: 80 }     // 5 cuts to RIGHT block (opposite of ball)
+        },
+        ball: 2,
+        actions: [
+          // 5 cuts from LEFT block, behind rim (baseline), to RIGHT block
+          { type: 'cut', player: 5, path: 'M170,80 Q200,30 270,30 Q340,30 350,80' }
+        ]
+      },
+      // ========== PHASE 2: DRIVE ==========
+      {
+        description: [
+          '2 drives to the rim',
+          '1, 3, and 4 circle move in the direction of the drive',
+          '5 cuts to the opposite block'
+        ],
+        positions: {
+          1: { x: 360, y: 300 },
+          2: { x: 280, y: 180 },   // 2 drives to paint
+          3: { x: 380, y: 200 },
+          4: { x: 60, y: 200 },
+          5: { x: 350, y: 80 }
+        },
+        ball: 2,
+        actions: [
+          // 2 dribbles hard to the rim
+          { type: 'dribble', player: 2, path: 'M170,320 Q200,260 240,200 Q260,180 280,180' }
+        ]
+      },
+      // ========== PHASE 2: CIRCLE MOVEMENT ==========
+      {
+        description: [],
+        positions: {
+          1: { x: 380, y: 180 },   // 1 rotates to right wing
+          2: { x: 280, y: 180 },
+          3: { x: 380, y: 60 },    // 3 rotates to right corner
+          4: { x: 170, y: 320 },   // 4 rotates down to left low
+          5: { x: 170, y: 80 }     // 5 back to LEFT block (opposite of ball)
+        },
+        ball: 2,
+        actions: [
+          // 1 circles to right wing
+          { type: 'cut', player: 1, path: 'M360,300 Q370,240 380,180' },
+          // 3 circles up to right corner
+          { type: 'cut', player: 3, path: 'M380,200 Q380,130 380,60' },
+          // 4 circles down to left low
+          { type: 'cut', player: 4, path: 'M60,200 Q100,260 170,320' },
+          // 5 cuts back behind rim to LEFT block (opposite of where ball went)
+          { type: 'cut', player: 5, path: 'M350,80 Q340,30 270,30 Q200,30 170,80' }
+        ]
+      },
+      // ========== FINISH ==========
+      {
+        description: ['2 makes the read to 5'],
+        positions: {
+          1: { x: 380, y: 180 },
+          2: { x: 280, y: 180 },
+          3: { x: 380, y: 60 },
+          4: { x: 170, y: 320 },
+          5: { x: 170, y: 80 }
+        },
+        ball: 5,
+        actions: [
+          { type: 'pass', from: 2, to: 5 }
         ]
       }
     ]
@@ -966,43 +1103,92 @@ const plays = {
   'zone-off': {
     name: 'Off',
     chapter: 'zone',
-    description: 'Offset overload',
+    description: 'Screen away with tight curl to rim',
     phases: [
+      // ========== INITIAL POSITIONS ==========
       {
+        description: [],
         positions: {
-          1: { x: 200, y: 380 },
-          2: { x: 64, y: 280 },
-          3: { x: 336, y: 280 },
-          4: { x: 64, y: 140 },
-          5: { x: 200, y: 160 }
+          1: { x: 340, y: 340 },   // PG right side with ball
+          2: { x: 200, y: 340 },   // SG left low
+          3: { x: 360, y: 240 },   // SF right wing
+          4: { x: 60, y: 200 },    // PF left wing
+          5: { x: 340, y: 80 }     // C right block
         },
         ball: 1,
         actions: []
       },
+      // ========== PHASE 1: PASS ==========
       {
+        description: ['1 passes to 2'],
         positions: {
-          1: { x: 100, y: 340 },   // PG overload left
-          2: { x: 64, y: 280 },
-          3: { x: 336, y: 280 },
-          4: { x: 64, y: 140 },
-          5: { x: 200, y: 160 }
+          1: { x: 340, y: 340 },
+          2: { x: 200, y: 340 },
+          3: { x: 360, y: 240 },
+          4: { x: 60, y: 200 },
+          5: { x: 340, y: 80 }
         },
-        ball: 1,
+        ball: 3,
         actions: [
-          { type: 'dribble', player: 1, path: 'M200,380 L100,340' }
+          { type: 'pass', from: 1, to: 3 }
+        ]
+      },
+      // ========== PHASE 2: SCREEN AWAY ==========
+      {
+        description: [
+          'Instead of cutting to the rim, 1 screens away for 2',
+          '2 tight curls to the rim'
+        ],
+        positions: {
+          1: { x: 260, y: 290 },   // 1 sets screen
+          2: { x: 200, y: 340 },
+          3: { x: 360, y: 240 },
+          4: { x: 60, y: 200 },
+          5: { x: 340, y: 80 }
+        },
+        ball: 3,
+        actions: [
+          // 1 moves to set screen for 2
+          { type: 'cut', player: 1, from: { x: 340, y: 340 }, to: { x: 260, y: 290 } },
+          { type: 'screen', player: 1, angle: 180 }  // Screen faces up for 2 to curl
         ]
       },
       {
+        description: [],
         positions: {
-          1: { x: 100, y: 340 },
-          2: { x: 64, y: 280 },
-          3: { x: 336, y: 280 },
-          4: { x: 64, y: 140 },
-          5: { x: 200, y: 160 }
+          1: { x: 260, y: 290 },
+          2: { x: 260, y: 130 },   // 2 curls tight to rim
+          3: { x: 360, y: 240 },
+          4: { x: 60, y: 200 },
+          5: { x: 340, y: 80 }
         },
-        ball: 4,
+        ball: 3,
         actions: [
-          { type: 'pass', from: 1, to: 4 }
+          // 2 curls tight around 1's screen to the rim
+          { type: 'cut', player: 2, path: 'M200,340 Q220,310 250,290 Q270,260 270,200 Q265,150 260,130' }
+        ]
+      },
+      // ========== PHASE 3: FILL SPOTS ==========
+      {
+        description: [
+          'Everyone else fills the next open spot',
+          '1 comes back to the ball, 4 replaces 1, 2 replaces 4'
+        ],
+        positions: {
+          1: { x: 340, y: 310 },   // 1 comes back to ball (right low)
+          2: { x: 60, y: 200 },    // 2 replaces 4 (left wing)
+          3: { x: 360, y: 240 },   // 3 stays (ball)
+          4: { x: 200, y: 310 },   // 4 replaces 1 (left low)
+          5: { x: 340, y: 80 }     // 5 stays (right block)
+        },
+        ball: 3,
+        actions: [
+          // 1 comes back to the ball (right side)
+          { type: 'cut', player: 1, path: 'M260,290 Q300,300 340,310' },
+          // 4 rotates down to replace 1's original spot
+          { type: 'cut', player: 4, path: 'M60,200 Q100,260 200,310' },
+          // 2 rotates out to replace 4's spot (left wing)
+          { type: 'cut', player: 2, path: 'M260,130 Q160,150 60,200' }
         ]
       }
     ]

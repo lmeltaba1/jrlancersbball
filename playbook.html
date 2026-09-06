@@ -684,12 +684,13 @@
 
         phase.actions.forEach(action => {
           if (action.type === 'dribble') {
-            // Wavy dribble line - supports curved path or straight from/to
+            // Squiggly dribble line - supports curved path or straight from/to
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 
             if (action.path) {
-              // Curved path (SVG path string)
-              path.setAttribute('d', action.path);
+              // Curved path - convert to squiggly
+              const wavyPath = makeWavyPath(action.path, svg);
+              path.setAttribute('d', wavyPath);
             } else {
               // Straight line with wavy effect
               const from = action.from || prevPhase.positions[action.player];
@@ -977,8 +978,9 @@
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 
         if (action.path) {
-          // Curved path (SVG path string)
-          path.setAttribute('d', action.path);
+          // Curved path - convert to squiggly
+          const wavyPath = makeWavyPath(action.path, svg);
+          path.setAttribute('d', wavyPath);
         } else {
           // Straight line with wavy effect
           const from = action.from || fromPositions[action.player];
@@ -1279,9 +1281,48 @@
       return path;
     }
 
-    // For dribble paths (curved SVG paths), just return as-is with thicker stroke
-    function makeWavyPath(svgPath) {
-      return svgPath;
+    // Convert an SVG path to a squiggly/wavy dribble path
+    function makeWavyPath(svgPath, svg) {
+      // Create temporary path to sample points
+      const tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      tempPath.setAttribute('d', svgPath);
+      tempPath.style.visibility = 'hidden';
+      svg.appendChild(tempPath);
+
+      const totalLength = tempPath.getTotalLength();
+      const segments = Math.max(20, Math.floor(totalLength / 8));  // More segments for smoother curve
+      const amplitude = 5;  // Squiggle amplitude
+
+      let wavyPath = '';
+
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const point = tempPath.getPointAtLength(t * totalLength);
+
+        // Get direction at this point (tangent)
+        const delta = 0.1;
+        const nextT = Math.min(1, t + delta / segments);
+        const nextPoint = tempPath.getPointAtLength(nextT * totalLength);
+
+        // Calculate perpendicular direction
+        const dx = nextPoint.x - point.x;
+        const dy = nextPoint.y - point.y;
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+
+        // Perpendicular offset (alternating)
+        const offset = (i % 2 === 0 ? 1 : -1) * amplitude;
+        const px = point.x + (-dy / len) * offset;
+        const py = point.y + (dx / len) * offset;
+
+        if (i === 0) {
+          wavyPath = `M${px.toFixed(1)},${py.toFixed(1)}`;
+        } else {
+          wavyPath += ` L${px.toFixed(1)},${py.toFixed(1)}`;
+        }
+      }
+
+      svg.removeChild(tempPath);
+      return wavyPath;
     }
 
     // Animate a single action
@@ -1290,7 +1331,7 @@
 
       if (action.type === 'dribble' && action.path) {
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const wavyPath = makeWavyPath(action.path);
+        const wavyPath = makeWavyPath(action.path, svg);
         path.setAttribute('d', wavyPath);
         path.setAttribute('stroke', '#333');
         path.setAttribute('stroke-width', '2.5');
