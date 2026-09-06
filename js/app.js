@@ -216,15 +216,15 @@ function calculatePoints(playerStats) {
          ((playerStats.threePointersMade || 0) * 3);
 }
 
-// Register service worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(registration => {
-        console.log('SW registered:', registration);
-      })
-      .catch(error => {
-        console.log('SW registration failed:', error);
-      });
-  });
-}
+// Service worker disabled for cache reset - re-enable after v10 rollout
+// if ('serviceWorker' in navigator) {
+//   window.addEventListener('load', () => {
+//     navigator.serviceWorker.register('sw.js')
+//       .then(registration => {
+//         console.log('SW registered:', registration);
+//       })
+//       .catch(error => {
+//         console.log('SW registration failed:', error);
+//       });
+//   });
+// }

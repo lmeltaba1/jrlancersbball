@@ -2,7 +2,7 @@
    Black and Gold Theme - Nike Inspired
 */
 
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
 /* ========== DARK MODE (Default) - Black & Gold Theme ========== */
 :root {
@@ -103,7 +103,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background: #000000;
   color: var(--text-primary);
   min-height: 100vh;
@@ -114,7 +114,7 @@ body {
 
 /* Athletic Display Font */
 .display-font {
-  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-family: 'Oswald', sans-serif;
   letter-spacing: 0.02em;
 }
 
@@ -138,7 +138,7 @@ body {
 }
 
 .header h1 {
-  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 1.5rem;
   font-weight: 400;
   display: flex;
@@ -213,7 +213,7 @@ body.light-mode .theme-toggle .moon-icon { display: none; }
   align-items: center;
   text-decoration: none;
   color: rgba(255, 255, 255, 0.4);
-  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 11px;
   font-weight: 400;
   letter-spacing: 0.1em;
@@ -281,7 +281,7 @@ body.light-mode .nav-item.active {
 }
 
 .card-title {
-  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 0.9rem;
   font-weight: 400;
   margin-bottom: 16px;
@@ -323,7 +323,7 @@ body.light-mode .nav-item.active {
 }
 
 .hero-banner h2 {
-  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 3rem;
   font-weight: 400;
   margin-bottom: 8px;
@@ -349,7 +349,7 @@ body.light-mode .nav-item.active {
   justify-content: center;
   gap: 10px;
   padding: 16px 32px;
-  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 1rem;
   font-weight: 400;
   border: none;
@@ -392,7 +392,7 @@ body.light-mode .nav-item.active {
   align-items: center;
   padding: 6px 14px;
   border-radius: 0;
-  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 0.8rem;
   font-weight: 400;
   text-transform: uppercase;
@@ -552,7 +552,7 @@ body.light-mode .nav-item.active {
   justify-content: space-between;
   align-items: center;
   border-bottom: 3px solid var(--lancers-gold);
-  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 1rem;
   letter-spacing: 0.05em;
 }
@@ -588,7 +588,7 @@ body.light-mode .nav-item.active {
 }
 
 .team-name {
-  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-weight: 400;
   font-size: 1.5rem;
   letter-spacing: 0.02em;
@@ -984,7 +984,7 @@ body.light-mode .nav-item.active {
 }
 
 .quick-link span {
-  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-weight: 400;
   font-size: 0.9rem;
   letter-spacing: 0.1em;
