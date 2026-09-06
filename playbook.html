@@ -76,6 +76,54 @@
       font-weight: 700;
     }
 
+    /* Position Selector */
+    .position-selector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 16px;
+      margin: 0 16px 8px;
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .position-selector label {
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .position-selector select {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Highlighted player on court - cyan with pulse */
+    .player-highlighted text {
+      fill: #00BFFF !important;
+      font-weight: 900 !important;
+      font-size: 24px !important;
+      animation: pulse-highlight 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-highlight {
+      0%, 100% {
+        fill: #00BFFF;
+        filter: drop-shadow(0 0 4px #00BFFF);
+      }
+      50% {
+        fill: #00FFFF;
+        filter: drop-shadow(0 0 10px #00FFFF);
+      }
+    }
+
     .court-svg {
       width: 100%;
       height: 100%;
@@ -295,6 +343,20 @@
       <button class="section-tab" data-chapter="inbound">Inbound</button>
     </div>
 
+    <!-- Position Selector -->
+    <div class="position-selector">
+      <label for="highlight-position">Highlight:</label>
+      <select id="highlight-position" onchange="setHighlightPosition(this.value)">
+        <option value="">None</option>
+        <option value="1">1 - Point Guard</option>
+        <option value="2">2 - Shooting Guard</option>
+        <option value="3">3 - Small Forward</option>
+        <option value="4">4 - Power Forward</option>
+        <option value="5">5 - Center</option>
+      </select>
+      <span id="auto-position-label" style="display: none; margin-left: 8px; font-size: 0.75rem; color: var(--text-secondary);"></span>
+    </div>
+
     <!-- Position Legend -->
     <div class="position-legend">
       <span class="legend-item"><strong>1</strong> PG</span>
@@ -349,6 +411,9 @@
   </nav>
 
   <!-- Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/plays.js"></script>
   <script>
@@ -369,8 +434,18 @@
       5: 'C'
     };
 
+    // Position abbreviation to number mapping
+    const positionToNumber = {
+      'PG': 1,
+      'SG': 2,
+      'SF': 3,
+      'PF': 4,
+      'C': 5
+    };
+
     let currentChapter = 'man';
     let playAnimations = {};
+    let highlightedPosition = null;  // Position number to highlight (1-5)
 
     // Generate half-court SVG
     function generateCourtSVG() {
@@ -520,12 +595,18 @@
         player.classList.add('player');
         player.setAttribute('data-player', num);
 
+        // Add highlighted class if this position is being tracked
+        const isHighlighted = highlightedPosition && parseInt(num) === highlightedPosition;
+        if (isHighlighted) {
+          player.classList.add('player-highlighted');
+        }
+
         // Ball holder gets a circle around their number
         const hasBall = parseInt(num) === ballHolder;
 
         player.innerHTML = `
-          ${hasBall ? `<circle cx="${pos.x}" cy="${pos.y}" r="16" fill="none" stroke="#333" stroke-width="2" />` : ''}
-          <text x="${pos.x}" y="${pos.y}" class="player-label" style="fill: #333; font-size: 20px; font-weight: 700;">${num}</text>
+          ${hasBall ? `<circle cx="${pos.x}" cy="${pos.y}" r="16" fill="none" stroke="${isHighlighted ? '#00BFFF' : '#333'}" stroke-width="${isHighlighted ? '3' : '2'}" />` : ''}
+          <text x="${pos.x}" y="${pos.y}" class="player-label">${num}</text>
         `;
         playersGroup.appendChild(player);
       });
@@ -1148,7 +1229,31 @@
         container.appendChild(card);
 
         // Render static diagram (all actions visible)
-        setTimeout(() => renderStaticPlay(playId, play), 100);
+        setTimeout(() => {
+          renderStaticPlay(playId, play);
+          applyHighlighting();
+        }, 100);
+      });
+    }
+
+    // Set highlighted position and update all courts
+    function setHighlightPosition(position) {
+      highlightedPosition = position ? parseInt(position) : null;
+      // Hide the auto-detected label when user manually changes
+      document.getElementById('auto-position-label').style.display = 'none';
+      // Re-render plays to apply highlighting
+      renderPlays();
+    }
+
+    // Apply highlighting to all player elements on all courts
+    function applyHighlighting() {
+      document.querySelectorAll('.players-group .player').forEach(player => {
+        const playerNum = player.getAttribute('data-player');
+        if (highlightedPosition && parseInt(playerNum) === highlightedPosition) {
+          player.classList.add('player-highlighted');
+        } else {
+          player.classList.remove('player-highlighted');
+        }
       });
     }
 
@@ -1161,10 +1266,46 @@
           this.classList.add('active');
           currentChapter = this.dataset.chapter;
           renderPlays();
+          // Re-apply highlighting after rendering new plays
+          setTimeout(applyHighlighting, 150);
         });
       });
 
       renderPlays();
+
+      // Auto-detect user's position if logged in
+      if (typeof auth !== 'undefined' && auth) {
+        auth.onAuthStateChanged(async function(user) {
+          if (user && user.emailVerified) {
+            try {
+              const userInfo = await getPlayerFromRoster(user.email);
+              console.log('User info for playbook:', userInfo);
+
+              // Check for player position (works for parents)
+              if (userInfo && userInfo.player && userInfo.player.position) {
+                const posNum = positionToNumber[userInfo.player.position];
+                console.log('Detected position:', userInfo.player.position, '-> number:', posNum);
+                if (posNum) {
+                  // Set the dropdown and highlight
+                  const select = document.getElementById('highlight-position');
+                  select.value = posNum.toString();
+                  highlightedPosition = posNum;
+
+                  // Show label with player name
+                  const label = document.getElementById('auto-position-label');
+                  label.textContent = `(${userInfo.player.firstName}'s position)`;
+                  label.style.display = 'inline';
+
+                  // Re-render plays with highlighting
+                  renderPlays();
+                }
+              }
+            } catch (e) {
+              console.log('Could not detect user position:', e);
+            }
+          }
+        });
+      }
     });
 
   </script>
