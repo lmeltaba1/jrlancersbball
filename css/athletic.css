@@ -48,6 +48,11 @@
   --pos-sf: #999999;
   --pos-pf: #666666;
   --pos-c: #333333;
+
+  /* Legacy aliases for backwards compatibility */
+  --lancers-gold: var(--gold);
+  --lancers-gold-dark: var(--gold-dark);
+  --lancers-black: var(--black);
 }
 
 /* ========== LIGHT MODE ========== */

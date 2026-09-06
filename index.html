@@ -52,16 +52,16 @@
     </div>
 
     <!-- Coach Banner (shown when logged in as coach without player) -->
-    <div id="coach-banner" class="card" style="display: none; background: linear-gradient(135deg, var(--lancers-gold) 0%, #B8860B 100%); border: none;">
+    <div id="coach-banner" class="card" style="display: none; background: var(--bg-card); border: 1px solid var(--border-accent);">
       <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="background: var(--lancers-black); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--lancers-gold)" style="width: 32px; height: 32px;">
+        <div style="background: #ffffff; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#000000" style="width: 32px; height: 32px;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         </div>
         <div style="flex: 1;">
-          <div id="coach-name" style="font-size: 1.25rem; font-weight: 800; color: var(--lancers-black);">Coach Name</div>
-          <div id="coach-role" style="font-size: 0.85rem; color: rgba(0,0,0,0.7);">Head Coach</div>
+          <div id="coach-name" style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">Coach Name</div>
+          <div id="coach-role" style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">Head Coach</div>
         </div>
       </div>
     </div>
@@ -78,11 +78,39 @@
       <div id="next-event-content"></div>
     </div>
 
+    <!-- RSVP Reminder (shown when user hasn't responded to upcoming game) -->
+    <div id="rsvpReminderCard" class="card" style="display: none; border-left: 4px solid #EF4444;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <div style="width: 36px; height: 36px; background: #EF4444; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </div>
+        <div>
+          <div style="font-weight: 700; font-size: 0.95rem; color: #EF4444;">RSVP Needed</div>
+          <div id="rsvpGameInfo" style="font-size: 0.75rem; color: var(--text-secondary);"></div>
+        </div>
+      </div>
+      <p id="rsvpMessage" style="font-size: 0.9rem; color: var(--text-primary); margin: 0 0 12px 0;"></p>
+      <a id="rsvpLink" href="#" style="display: inline-block; padding: 10px 20px; background: #EF4444; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Respond Now</a>
+    </div>
+
+    <!-- Volunteer Status for Next 7 Days -->
+    <div class="card" id="volunteer-status-card" style="display: none;">
+      <div class="card-title" style="display: flex; align-items: center; justify-content: space-between;">
+        <span>Volunteer Needs</span>
+        <a href="volunteers.html" style="font-size: 0.75rem; color: var(--gold); text-decoration: none;">View All</a>
+      </div>
+      <div id="volunteer-status-content"></div>
+    </div>
+
     <!-- Season Record -->
     <div class="card">
       <div class="card-title">Season Record</div>
       <div id="season-record" style="text-align: center; padding: 10px 0;">
-        <span style="font-size: 2rem; font-weight: 800; color: var(--lancers-gold);">--</span>
+        <span style="font-size: 2rem; font-weight: 800; color: var(--gold);">--</span>
       </div>
     </div>
 
@@ -236,12 +264,139 @@
         // Show brief toast notification
         const toast = document.createElement('div');
         toast.textContent = 'Address copied!';
-        toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--lancers-gold); color: black; padding: 10px 20px; border-radius: 8px; font-weight: 600; z-index: 9999;';
+        toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--gold); color: black; padding: 10px 20px; border-radius: 8px; font-weight: 600; z-index: 9999;';
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 2000);
       }).catch(function(err) {
         console.error('Failed to copy:', err);
       });
+    }
+
+    // Check for RSVP reminder - show if user hasn't responded to upcoming game
+    async function checkRsvpReminder(playerId, playerName) {
+      if (!playerId || !db) return;
+
+      try {
+        const data = await loadSchedule();
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        // Find next upcoming game
+        const upcomingGames = data.games.filter(game => {
+          const [year, month, day] = game.date.split('-').map(Number);
+          const gameDate = new Date(year, month - 1, day);
+          return gameDate >= now && !game.result;
+        }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        if (upcomingGames.length === 0) return;
+
+        const nextGame = upcomingGames[0];
+
+        // Check if player has responded
+        const docId = `${nextGame.id}_${playerId}`;
+        const doc = await db.collection('attendance').doc(docId).get();
+
+        if (!doc.exists) {
+          // Show reminder
+          const card = document.getElementById('rsvpReminderCard');
+          const gameInfo = document.getElementById('rsvpGameInfo');
+          const message = document.getElementById('rsvpMessage');
+          const link = document.getElementById('rsvpLink');
+
+          const dateInfo = formatDate(nextGame.date);
+          const gameTitle = `vs ${nextGame.opponent}`;
+
+          gameInfo.textContent = `${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day} at ${nextGame.time}`;
+          message.textContent = `Will ${playerName} attend ${gameTitle}? Let us know so we can plan accordingly.`;
+          link.href = `attendance.html?game=${nextGame.id}`;
+
+          card.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error checking RSVP:', error);
+      }
+    }
+
+    async function loadVolunteerStatus() {
+      const data = await loadSchedule();
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      // Get games in the next 7 days
+      const sevenDaysOut = new Date(now);
+      sevenDaysOut.setDate(sevenDaysOut.getDate() + 7);
+
+      const upcomingGames = data.games.filter(game => {
+        const [year, month, day] = game.date.split('-').map(Number);
+        const gameDate = new Date(year, month - 1, day);
+        return gameDate >= now && gameDate <= sevenDaysOut && !game.result;
+      }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      if (upcomingGames.length === 0) {
+        return; // No games in next 7 days, don't show the card
+      }
+
+      // Load volunteer data from Firestore
+      let volunteers = {};
+      if (typeof db !== 'undefined' && db) {
+        try {
+          const snapshot = await db.collection('volunteers').get();
+          snapshot.forEach(doc => {
+            volunteers[doc.id] = doc.data();
+          });
+        } catch (e) {
+          console.log('Could not load volunteer data:', e);
+        }
+      }
+
+      // Build the status display
+      const statusCard = document.getElementById('volunteer-status-card');
+      const statusContent = document.getElementById('volunteer-status-content');
+
+      const gamesHtml = upcomingGames.map(game => {
+        const dateInfo = formatDate(game.date);
+        const vol = volunteers[game.id] || {};
+        const isCNR = game.league === 'cnr';
+
+        const scorekeeperFilled = !!vol.scorekeeper;
+        const tableWorkerFilled = !!vol.tableWorker;
+
+        // Determine status
+        let allFilled = scorekeeperFilled && (!isCNR || tableWorkerFilled);
+        let openSlots = [];
+        if (!scorekeeperFilled) openSlots.push('Scorekeeper');
+        if (isCNR && !tableWorkerFilled) openSlots.push('Table Worker');
+
+        return `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+            <div>
+              <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary);">
+                ${dateInfo.weekday} ${dateInfo.month} ${dateInfo.day}
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                vs ${game.opponent}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              ${allFilled ? `
+                <span style="font-size: 0.75rem; color: #22C55E; font-weight: 600;">&#10003; All Filled</span>
+              ` : `
+                <span style="font-size: 0.75rem; color: #EF4444; font-weight: 600;">Needs: ${openSlots.join(', ')}</span>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      statusContent.innerHTML = gamesHtml;
+
+      // Remove border from last item
+      const lastItem = statusContent.lastElementChild;
+      if (lastItem) {
+        lastItem.style.borderBottom = 'none';
+      }
+
+      statusCard.style.display = 'block';
     }
 
     document.addEventListener('DOMContentLoaded', async function() {
@@ -276,7 +431,7 @@
                       </svg>
                       ${nextEvent.time}
                     </span>
-                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--lancers-gold); cursor: pointer;">
+                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--gold); cursor: pointer;">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -310,7 +465,7 @@
                       </svg>
                       ${nextEvent.time}${nextEvent.endTime ? ' - ' + nextEvent.endTime : ''}
                     </span>
-                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--lancers-gold); cursor: pointer;">
+                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--gold); cursor: pointer;">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -327,7 +482,7 @@
             eventTitle.textContent = 'Next Event';
             eventContent.innerHTML = `
               <div class="game-card" style="margin: 0;">
-                <div class="game-card-header event" style="background: linear-gradient(135deg, var(--lancers-gold) 0%, #B8860B 100%);">
+                <div class="game-card-header event" style="background: linear-gradient(135deg, var(--gold) 0%, #B8860B 100%);">
                   <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
                   <span class="league-badge" style="background: rgba(0,0,0,0.3); color: white;">Event</span>
                 </div>
@@ -342,7 +497,7 @@
                       </svg>
                       ${nextEvent.time}${nextEvent.endTime ? ' - ' + nextEvent.endTime : ''}
                     </span>
-                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--lancers-gold); cursor: pointer;">
+                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--gold); cursor: pointer;">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -373,10 +528,17 @@
       try {
         const record = await getSeasonRecord();
         document.getElementById('season-record').innerHTML = `
-          <span style="font-size: 2rem; font-weight: 800; color: var(--lancers-gold);">${record.wins} - ${record.losses}</span>
+          <span style="font-size: 2rem; font-weight: 800; color: var(--gold);">${record.wins} - ${record.losses}</span>
         `;
       } catch (e) {
         console.error('Error loading record:', e);
+      }
+
+      // Load volunteer status for next 7 days
+      try {
+        await loadVolunteerStatus();
+      } catch (e) {
+        console.error('Error loading volunteer status:', e);
       }
 
       // Check auth state
@@ -398,6 +560,9 @@
               document.getElementById('player-position-badge').textContent = userInfo.position;
               document.getElementById('player-position-badge').className = 'position-badge pos-' + userInfo.position.toLowerCase();
               document.getElementById('player-position-name').textContent = userInfo.positionName;
+
+              // Check if user needs to RSVP for upcoming game
+              checkRsvpReminder(userInfo.player.id, userInfo.playerName);
             } else if (userInfo && userInfo.isCoach) {
               // Show coach banner
               document.getElementById('hero-banner').style.display = 'none';

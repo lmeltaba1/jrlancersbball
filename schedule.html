@@ -119,6 +119,8 @@
 
     let allEvents = [];
     let volunteers = {};
+    let attendance = {}; // gameId -> { attending: N, notAttending: N, noResponse: N }
+    let totalPlayers = 0;
     let currentFilter = 'all';
 
     const leagueNames = {
@@ -132,14 +134,52 @@
     };
 
     document.addEventListener('DOMContentLoaded', async function() {
-      // Load schedule
+      // Load schedule and roster
       try {
-        const data = await loadSchedule();
-        allEvents = data.games || [];
-        if (data.events) {
-          allEvents = allEvents.concat(data.events);
+        const [scheduleData, rosterData] = await Promise.all([
+          loadSchedule(),
+          fetch('data/roster.json?v=' + Date.now()).then(r => r.json())
+        ]);
+
+        totalPlayers = (rosterData.players || []).length;
+
+        allEvents = scheduleData.games || [];
+        if (scheduleData.events) {
+          allEvents = allEvents.concat(scheduleData.events);
         }
         allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // Load attendance data from Firestore
+        if (db) {
+          try {
+            const attendanceSnapshot = await db.collection('attendance').get();
+            const attendanceByGame = {};
+            attendanceSnapshot.forEach(doc => {
+              const data = doc.data();
+              const gameId = data.gameId;
+              if (!attendanceByGame[gameId]) {
+                attendanceByGame[gameId] = { attending: 0, notAttending: 0, respondedIds: new Set() };
+              }
+              if (data.attending) {
+                attendanceByGame[gameId].attending++;
+              } else {
+                attendanceByGame[gameId].notAttending++;
+              }
+              attendanceByGame[gameId].respondedIds.add(data.playerId);
+            });
+
+            // Calculate no response for each game
+            for (const gameId in attendanceByGame) {
+              const responded = attendanceByGame[gameId].respondedIds.size;
+              attendanceByGame[gameId].noResponse = totalPlayers - responded;
+              delete attendanceByGame[gameId].respondedIds;
+            }
+            attendance = attendanceByGame;
+          } catch (e) {
+            console.log('Could not load attendance:', e);
+          }
+        }
+
         renderSchedule();
         updateRecord();
       } catch (e) {
@@ -234,6 +274,19 @@
             `;
           }
 
+          // Attendance status for upcoming games
+          let attendanceHtml = '';
+          if (!event.result) {
+            const att = attendance[event.id] || { attending: 0, notAttending: 0, noResponse: totalPlayers };
+            attendanceHtml = `
+              <div style="display: flex; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); font-size: 0.75rem;">
+                <span style="color: #22C55E;">&#10003; ${att.attending}</span>
+                <span style="color: #EF4444;">&#10007; ${att.notAttending}</span>
+                <span style="color: #6B7280;">? ${att.noResponse}</span>
+              </div>
+            `;
+          }
+
           return `
             <div class="game-card" style="cursor: pointer;" onclick="window.location.href='game-detail.html?id=${event.id}'">
               <div class="game-card-header ${event.league}">
@@ -268,14 +321,26 @@
                 ` : ''}
                 ${resultHtml}
                 ${volunteerHtml}
+                ${attendanceHtml}
               </div>
             </div>
           `;
         } else {
           // Render practice/event card
           const typeLabel = eventTypeNames[event.type] || 'Event';
+
+          // Attendance status for practices/events
+          const att = attendance[event.id] || { attending: 0, notAttending: 0, noResponse: totalPlayers };
+          const attendanceHtml = `
+            <div style="display: flex; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); font-size: 0.75rem;">
+              <span style="color: #22C55E;">&#10003; ${att.attending}</span>
+              <span style="color: #EF4444;">&#10007; ${att.notAttending}</span>
+              <span style="color: #6B7280;">? ${att.noResponse}</span>
+            </div>
+          `;
+
           return `
-            <div class="game-card">
+            <div class="game-card" style="cursor: pointer;" onclick="window.location.href='attendance.html?event=${event.id}'">
               <div class="game-card-header practice">
                 <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
                 <span class="league-badge practice">${typeLabel.toUpperCase()}</span>
@@ -298,6 +363,7 @@
                   </span>
                 </div>
                 ${event.notes ? `<p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 10px;">${event.notes}</p>` : ''}
+                ${attendanceHtml}
               </div>
             </div>
           `;

@@ -40,8 +40,8 @@
         Sign up to help at games! Each game needs:
       </p>
       <ul style="color: var(--text-secondary); font-size: 0.85rem; margin: 10px 0 0 20px; line-height: 1.8;">
-        <li><strong style="color: var(--lancers-gold);">Scorekeeper</strong> - Track stats in the app (ALL games)</li>
-        <li><strong style="color: var(--lancers-gold);">Table Worker</strong> - Run the scorer's table (CNR only)</li>
+        <li><strong style="color: var(--gold);">Scorekeeper</strong> - Track stats in the app (ALL games)</li>
+        <li><strong style="color: var(--gold);">Table Worker</strong> - Run the scorer's table (CNR only)</li>
       </ul>
     </div>
 
@@ -52,6 +52,37 @@
         Please log in to sign up for volunteer duties.
       </p>
       <a href="login.html" class="btn btn-primary">Log In</a>
+    </div>
+
+    <!-- Your Upcoming Sign-ups (logged in users only) -->
+    <div id="your-signups" style="display: none;">
+      <div class="card">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--gold)" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Your Upcoming Sign-ups
+        </div>
+        <div id="your-signups-list"></div>
+      </div>
+    </div>
+
+    <!-- Your Volunteer History (logged in users only) -->
+    <div id="your-history" style="display: none;">
+      <div class="card">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--silver)" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Your Volunteer History
+        </div>
+        <div id="your-history-list"></div>
+      </div>
+    </div>
+
+    <!-- Available Games Section Header -->
+    <div id="available-header" style="display: none; margin-top: 8px;">
+      <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">Available Games</h3>
     </div>
 
     <!-- Games List -->
@@ -123,6 +154,8 @@
     let userInfo = null;
     let volunteers = {};
     let allGames = [];
+    let pastGames = [];
+    let upcomingGames = [];
 
     const leagueNames = {
       parkrock: 'Park Rock',
@@ -155,15 +188,31 @@
       try {
         const schedule = await loadSchedule();
 
-        // Get upcoming games only
         const now = new Date();
         now.setHours(0, 0, 0, 0);
 
-        allGames = schedule.games.filter(g => {
-          const [year, month, day] = g.date.split('-').map(Number);
+        // Separate past and upcoming games
+        pastGames = [];
+        upcomingGames = [];
+
+        for (const game of schedule.games) {
+          const [year, month, day] = game.date.split('-').map(Number);
           const gameDate = new Date(year, month - 1, day);
-          return gameDate >= now && !g.result;
-        });
+
+          if (gameDate < now || game.result) {
+            pastGames.push(game);
+          } else {
+            upcomingGames.push(game);
+          }
+        }
+
+        // Sort past games by date descending (most recent first)
+        pastGames.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Sort upcoming games by date ascending
+        upcomingGames.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        allGames = upcomingGames;
 
         // Load volunteer data from Firestore
         if (db) {
@@ -173,7 +222,7 @@
           });
         }
 
-        renderGames();
+        renderAll();
 
       } catch (e) {
         console.error('Error loading volunteers:', e);
@@ -181,14 +230,108 @@
       }
     }
 
+    function renderAll() {
+      renderYourSignups();
+      renderYourHistory();
+      renderGames();
+    }
+
+    function renderYourSignups() {
+      // Find upcoming games where user is signed up
+      const userSignups = upcomingGames.filter(game => {
+        const vol = volunteers[game.id];
+        if (!vol) return false;
+        return (vol.scorekeeper && vol.scorekeeper.email === currentUser.email) ||
+               (vol.tableWorker && vol.tableWorker.email === currentUser.email);
+      });
+
+      const container = document.getElementById('your-signups');
+      const list = document.getElementById('your-signups-list');
+
+      if (userSignups.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      container.style.display = 'block';
+      list.innerHTML = userSignups.map(game => {
+        const dateInfo = formatDate(game.date);
+        const vol = volunteers[game.id];
+        const roles = [];
+        if (vol.scorekeeper && vol.scorekeeper.email === currentUser.email) roles.push('Scorekeeper');
+        if (vol.tableWorker && vol.tableWorker.email === currentUser.email) roles.push('Table Worker');
+
+        return `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg-elevated); border-radius: 8px; margin-top: 8px; border: 1px solid var(--border-color);">
+            <div>
+              <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">
+                ${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day} - vs ${game.opponent}
+              </div>
+              <div style="font-size: 0.8rem; color: var(--gold); margin-top: 4px;">
+                ${roles.join(' & ')}
+              </div>
+            </div>
+            <span class="league-badge ${game.league}" style="font-size: 0.65rem;">${leagueNames[game.league]}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderYourHistory() {
+      // Find past games where user volunteered
+      const userHistory = pastGames.filter(game => {
+        const vol = volunteers[game.id];
+        if (!vol) return false;
+        return (vol.scorekeeper && vol.scorekeeper.email === currentUser.email) ||
+               (vol.tableWorker && vol.tableWorker.email === currentUser.email);
+      });
+
+      const container = document.getElementById('your-history');
+      const list = document.getElementById('your-history-list');
+
+      if (userHistory.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      container.style.display = 'block';
+      list.innerHTML = userHistory.map(game => {
+        const dateInfo = formatDate(game.date);
+        const vol = volunteers[game.id];
+        const roles = [];
+        if (vol.scorekeeper && vol.scorekeeper.email === currentUser.email) roles.push('Scorekeeper');
+        if (vol.tableWorker && vol.tableWorker.email === currentUser.email) roles.push('Table Worker');
+
+        return `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg-elevated); border-radius: 8px; margin-top: 8px; border: 1px solid var(--border-color);">
+            <div>
+              <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">
+                ${dateInfo.month} ${dateInfo.day} - vs ${game.opponent}
+              </div>
+              <div style="font-size: 0.8rem; color: var(--silver); margin-top: 4px;">
+                ${roles.join(' & ')}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <span class="league-badge ${game.league}" style="font-size: 0.65rem;">${leagueNames[game.league]}</span>
+              ${game.result ? `<div style="font-size: 0.75rem; color: ${game.result === 'W' ? '#22C55E' : '#EF4444'}; margin-top: 4px; font-weight: 700;">${game.result}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
     function renderGames() {
       const container = document.getElementById('games-list');
+      const header = document.getElementById('available-header');
 
       if (allGames.length === 0) {
+        header.style.display = 'none';
         container.innerHTML = '<div class="card"><p style="color: var(--text-secondary); text-align: center;">No upcoming games</p></div>';
         return;
       }
 
+      header.style.display = 'block';
       container.innerHTML = allGames.map(game => {
         const dateInfo = formatDate(game.date);
         const vol = volunteers[game.id] || {};
@@ -221,7 +364,7 @@
             <div style="background: var(--bg-elevated); border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border-color);">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                  <div style="font-weight: 700; font-size: 0.85rem; color: var(--lancers-gold);">Scorekeeper</div>
+                  <div style="font-weight: 700; font-size: 0.85rem; color: var(--gold);">Scorekeeper</div>
                   <div style="font-size: 0.75rem; color: var(--text-secondary);">Track stats in the app</div>
                 </div>
                 ${scorekeeperFilled ? `
@@ -248,7 +391,7 @@
               <div style="background: var(--bg-elevated); border-radius: 10px; padding: 12px; border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <div>
-                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--lancers-gold);">Table Worker</div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--gold);">Table Worker</div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary);">Run the scorer's table</div>
                   </div>
                   ${tableWorkerFilled ? `

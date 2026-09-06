@@ -43,6 +43,20 @@
       <!-- Game Info Card -->
       <div class="card" id="game-info"></div>
 
+      <!-- Attendance Card (for upcoming games/events) -->
+      <div class="card" id="attendance-card" style="display: none;">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Attendance
+        </div>
+        <div id="attendance-content"></div>
+      </div>
+
       <!-- Volunteer Card (for upcoming games) -->
       <div class="card" id="volunteer-card" style="display: none;"></div>
 
@@ -178,7 +192,7 @@
       document.getElementById('error-message').style.display = 'block';
     }
 
-    function renderGame() {
+    async function renderGame() {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('game-content').style.display = 'block';
 
@@ -239,6 +253,87 @@
         </div>
       `;
       document.getElementById('game-info').innerHTML = gameInfoHtml;
+
+      // Attendance Card (for upcoming games/events only)
+      if (!isCompleted) {
+        const attendanceCard = document.getElementById('attendance-card');
+        attendanceCard.style.display = 'block';
+
+        // Load roster and attendance
+        try {
+          const rosterRes = await fetch('data/roster.json?v=' + Date.now());
+          const rosterData = await rosterRes.json();
+          const allPlayers = rosterData.players || [];
+
+          let attendanceData = {};
+          if (db) {
+            const attendanceSnapshot = await db.collection('attendance')
+              .where('gameId', '==', game.id)
+              .get();
+            attendanceSnapshot.forEach(doc => {
+              const d = doc.data();
+              attendanceData[d.playerId] = { attending: d.attending, name: d.playerName };
+            });
+          }
+
+          // Sort players into categories
+          const attending = [];
+          const notAttending = [];
+          const noResponse = [];
+
+          allPlayers.forEach(player => {
+            const name = player.firstName + ' ' + player.lastName.charAt(0) + '.';
+            const response = attendanceData[player.id];
+            if (response) {
+              if (response.attending) attending.push(name);
+              else notAttending.push(name);
+            } else {
+              noResponse.push(name);
+            }
+          });
+
+          // Build attendance HTML
+          let html = '';
+
+          // Attending section
+          html += `<div style="margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+              <span style="color: #22C55E; font-weight: 700;">&#10003; Attending (${attending.length})</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              ${attending.length > 0 ? attending.map(n => `<span style="background: rgba(34,197,94,0.2); color: #22C55E; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">${n}</span>`).join('') : '<span style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">None yet</span>'}
+            </div>
+          </div>`;
+
+          // Not attending section
+          html += `<div style="margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+              <span style="color: #EF4444; font-weight: 700;">&#10007; Not Attending (${notAttending.length})</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              ${notAttending.length > 0 ? notAttending.map(n => `<span style="background: rgba(239,68,68,0.2); color: #EF4444; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">${n}</span>`).join('') : '<span style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">None</span>'}
+            </div>
+          </div>`;
+
+          // No response section
+          html += `<div style="margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+              <span style="color: #6B7280; font-weight: 700;">? No Response (${noResponse.length})</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              ${noResponse.length > 0 ? noResponse.map(n => `<span style="background: rgba(107,114,128,0.2); color: #6B7280; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">${n}</span>`).join('') : '<span style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">Everyone responded!</span>'}
+            </div>
+          </div>`;
+
+          // RSVP button
+          html += `<a href="attendance.html?game=${game.id}" class="btn btn-primary" style="width: 100%; text-align: center; margin-top: 8px;">RSVP Now</a>`;
+
+          document.getElementById('attendance-content').innerHTML = html;
+        } catch (e) {
+          console.log('Could not load attendance:', e);
+          document.getElementById('attendance-content').innerHTML = `<a href="attendance.html?game=${game.id}" class="btn btn-primary" style="width: 100%; text-align: center;">RSVP Now</a>`;
+        }
+      }
 
       // Volunteer Card (for upcoming games only)
       if (!isCompleted) {
