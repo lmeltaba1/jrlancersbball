@@ -86,7 +86,7 @@
       </svg>
       <span>Chat</span>
     </a>
-    <a href="game-stats.html" class="nav-item">
+    <a href="stats-view.html" class="nav-item">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
       </svg>
@@ -276,9 +276,9 @@
           const typeLabel = eventTypeNames[event.type] || 'Event';
           return `
             <div class="game-card">
-              <div class="game-card-header" style="background: var(--bg-elevated);">
+              <div class="game-card-header practice">
                 <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
-                <span class="league-badge" style="background: var(--text-secondary);">${typeLabel}</span>
+                <span class="league-badge practice">${typeLabel.toUpperCase()}</span>
               </div>
               <div class="game-card-body">
                 <div style="font-weight: 700; font-size: 1rem; margin-bottom: 8px;">${event.name || typeLabel}</div>

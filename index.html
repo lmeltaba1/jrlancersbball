@@ -33,7 +33,7 @@
   <!-- Main Content -->
   <main class="main-content">
     <!-- Player Banner (shown when logged in with a player) -->
-    <div id="player-banner" class="card" style="display: none; background: linear-gradient(135deg, var(--lancers-gold) 0%, #B8860B 100%); border: none;">
+    <div id="player-banner" class="card" style="display: none; background: linear-gradient(135deg, var(--lancers-gold) 0%, #B8860B 100%); border: none; cursor: pointer;" onclick="goToPlayerProfile()">
       <div style="display: flex; align-items: center; gap: 16px;">
         <div style="background: var(--lancers-black); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
           <span id="player-number" style="font-size: 1.5rem; font-weight: 800; color: var(--lancers-gold);">--</span>
@@ -45,11 +45,9 @@
             <span id="player-position-name" style="font-size: 0.85rem; color: rgba(0,0,0,0.7);">Point Guard</span>
           </div>
         </div>
-        <a href="roster.html" style="color: var(--lancers-black);">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 24px; height: 24px;">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </a>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 24px; height: 24px; color: var(--lancers-black);">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
       </div>
     </div>
 
@@ -108,7 +106,7 @@
         </svg>
         <span>Volunteer</span>
       </a>
-      <a href="game-stats.html" class="quick-link">
+      <a href="stats-view.html" class="quick-link">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
@@ -152,7 +150,7 @@
       </svg>
       <span>Chat</span>
     </a>
-    <a href="game-stats.html" class="nav-item">
+    <a href="stats-view.html" class="nav-item">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
       </svg>
@@ -394,6 +392,7 @@
               // Show player banner
               document.getElementById('hero-banner').style.display = 'none';
               document.getElementById('player-banner').style.display = 'block';
+              window.currentPlayerNumber = userInfo.player.number;
               document.getElementById('player-number').textContent = userInfo.player.number || '-';
               document.getElementById('player-name').textContent = userInfo.playerName;
               document.getElementById('player-position-badge').textContent = userInfo.position;
@@ -417,6 +416,14 @@
         document.getElementById('login-prompt').style.display = 'block';
       }
     });
+
+    function goToPlayerProfile() {
+      if (window.currentPlayerNumber !== undefined) {
+        window.location.href = 'roster.html?number=' + window.currentPlayerNumber;
+      } else {
+        window.location.href = 'roster.html';
+      }
+    }
   </script>
 </body>
 </html>

@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>Season Stats - Jr. Lancers</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    .stats-table th, .stats-table td {
+      padding: 8px 6px;
+      text-align: center;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .stats-table th {
+      background: var(--bg-elevated);
+      color: var(--lancers-gold);
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+    }
+    .stats-table td:first-child, .stats-table th:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      background: var(--bg-card);
+      z-index: 1;
+    }
+    .stats-table th:first-child {
+      background: var(--bg-elevated);
+      z-index: 2;
+    }
+    .stats-table tr:hover td {
+      background: var(--bg-elevated);
+    }
+    .stats-table tr:hover td:first-child {
+      background: var(--bg-elevated);
+    }
+    .player-name-cell {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .stat-highlight {
+      color: var(--lancers-gold);
+      font-weight: 700;
+    }
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .filter-row select {
+      flex: 1;
+    }
+    .stat-card {
+      background: var(--bg-elevated);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-card-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--lancers-gold);
+    }
+    .stat-card-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <h1>
+        <a href="index.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 10px;">
+          <img src="images/lancers-logo.png" alt="Lancers" class="header-logo">
+          Season Stats
+        </a>
+      </h1>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Filter Card -->
+    <div class="card">
+      <div class="filter-row">
+        <select id="player-filter" class="form-input">
+          <option value="all">All Players</option>
+        </select>
+        <select id="game-filter" class="form-input">
+          <option value="all">All Games</option>
+        </select>
+      </div>
+      <a href="game-stats.html" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">
+        Track Live Game
+      </a>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" style="text-align: center; padding: 40px;">
+      <div class="spinner" style="margin: 0 auto;"></div>
+    </div>
+
+    <!-- No Stats Message -->
+    <div id="no-stats" class="card" style="display: none; text-align: center;">
+      <p style="color: var(--text-secondary);">No game stats recorded yet.</p>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 8px;">Stats will appear here after games are tracked.</p>
+    </div>
+
+    <!-- Stats Content -->
+    <div id="stats-content" style="display: none;">
+      <!-- Summary Stats -->
+      <div id="summary-stats" class="stats-grid"></div>
+
+      <!-- Game Header (shown when filtering by game) -->
+      <div id="game-header" class="card" style="display: none;"></div>
+
+      <!-- Stats Table -->
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="table-scroll">
+          <table class="stats-table" id="stats-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>GP</th>
+                <th>PTS</th>
+                <th>REB</th>
+                <th>AST</th>
+                <th>STL</th>
+                <th>BLK</th>
+                <th>TO</th>
+                <th>FLS</th>
+                <th>FG</th>
+                <th>3PT</th>
+                <th>FT</th>
+              </tr>
+            </thead>
+            <tbody id="stats-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Player Game Log (shown when filtering by player) -->
+      <div id="player-game-log" style="display: none;">
+        <h3 style="margin: 16px 0 8px; color: var(--text-primary);">Game Log</h3>
+        <div id="game-log-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      <span>Home</span>
+    </a>
+    <a href="roster.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <span>Roster</span>
+    </a>
+    <a href="schedule.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <span>Schedule</span>
+    </a>
+    <a href="chat.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+      <span>Chat</span>
+    </a>
+    <a href="stats-view.html" class="nav-item active">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span>Stats</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/theme.js"></script>
+  <script>
+    // Inline functions to bypass caching
+    async function loadSchedule() {
+      const response = await fetch('data/schedule.json?v=' + Date.now());
+      return response.json();
+    }
+
+    async function loadRoster() {
+      const response = await fetch('data/roster.json?v=' + Date.now());
+      return response.json();
+    }
+
+    function formatDate(dateString) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return {
+        month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+        day: date.getDate(),
+        weekday: date.toLocaleDateString('en-US', { weekday: 'short' })
+      };
+    }
+
+    const leagueNames = { parkrock: 'Park Rock', cnr: 'CNR' };
+
+    // Mock data for testing (used when no Firebase stats exist)
+    const MOCK_STATS = {
+      "1": {
+        gameId: 1,
+        isLive: false,
+        opponentScore: 28,
+        playerStats: {
+          "1": { name: "Raequan B.", points: 12, rebounds: 8, assists: 2, steals: 3, blocks: 1, turnovers: 2, fouls: 2, twoPointersMade: 4, threePointersMade: 1, freeThrowsMade: 1, freeThrowsAttempted: 2 },
+          "2": { name: "Camden K.", points: 8, rebounds: 2, assists: 5, steals: 4, blocks: 0, turnovers: 3, fouls: 1, twoPointersMade: 2, threePointersMade: 1, freeThrowsMade: 1, freeThrowsAttempted: 1 },
+          "3": { name: "Grant W.", points: 10, rebounds: 10, assists: 1, steals: 1, blocks: 3, turnovers: 1, fouls: 3, twoPointersMade: 5, threePointersMade: 0, freeThrowsMade: 0, freeThrowsAttempted: 1 },
+          "4": { name: "Rylan T.", points: 6, rebounds: 3, assists: 3, steals: 2, blocks: 0, turnovers: 2, fouls: 2, twoPointersMade: 1, threePointersMade: 1, freeThrowsMade: 1, freeThrowsAttempted: 2 },
+          "5": { name: "Ashton C.", points: 4, rebounds: 6, assists: 0, steals: 0, blocks: 2, turnovers: 1, fouls: 2, twoPointersMade: 2, threePointersMade: 0, freeThrowsMade: 0, freeThrowsAttempted: 0 },
+          "6": { name: "Dean M.", points: 5, rebounds: 2, assists: 2, steals: 1, blocks: 0, turnovers: 1, fouls: 1, twoPointersMade: 1, threePointersMade: 1, freeThrowsMade: 0, freeThrowsAttempted: 1 }
+        }
+      },
+      "2": {
+        gameId: 2,
+        isLive: false,
+        opponentScore: 32,
+        playerStats: {
+          "1": { name: "Raequan B.", points: 14, rebounds: 6, assists: 3, steals: 2, blocks: 2, turnovers: 3, fouls: 3, twoPointersMade: 5, threePointersMade: 1, freeThrowsMade: 1, freeThrowsAttempted: 3 },
+          "2": { name: "Camden K.", points: 10, rebounds: 3, assists: 6, steals: 5, blocks: 0, turnovers: 2, fouls: 2, twoPointersMade: 3, threePointersMade: 1, freeThrowsMade: 1, freeThrowsAttempted: 1 },
+          "3": { name: "Grant W.", points: 8, rebounds: 12, assists: 0, steals: 0, blocks: 4, turnovers: 2, fouls: 4, twoPointersMade: 4, threePointersMade: 0, freeThrowsMade: 0, freeThrowsAttempted: 2 },
+          "6": { name: "Dean M.", points: 7, rebounds: 1, assists: 4, steals: 2, blocks: 0, turnovers: 0, fouls: 1, twoPointersMade: 2, threePointersMade: 1, freeThrowsMade: 0, freeThrowsAttempted: 0 },
+          "7": { name: "Wyatt W.", points: 4, rebounds: 4, assists: 1, steals: 1, blocks: 1, turnovers: 1, fouls: 2, twoPointersMade: 2, threePointersMade: 0, freeThrowsMade: 0, freeThrowsAttempted: 1 },
+          "9": { name: "Jeevan S.", points: 2, rebounds: 1, assists: 2, steals: 1, blocks: 0, turnovers: 2, fouls: 1, twoPointersMade: 1, threePointersMade: 0, freeThrowsMade: 0, freeThrowsAttempted: 0 }
+        }
+      },
+      "3": {
+        gameId: 3,
+        isLive: false,
+        opponentScore: 24,
+        playerStats: {
+          "1": { name: "Raequan B.", points: 16, rebounds: 9, assists: 1, steals: 4, blocks: 2, turnovers: 1, fouls: 2, twoPointersMade: 6, threePointersMade: 1, freeThrowsMade: 1, freeThrowsAttempted: 2 },
+          "2": { name: "Camden K.", points: 6, rebounds: 2, assists: 7, steals: 3, blocks: 0, turnovers: 4, fouls: 2, twoPointersMade: 2, threePointersMade: 0, freeThrowsMade: 2, freeThrowsAttempted: 2 },
+          "3": { name: "Grant W.", points: 12, rebounds: 11, assists: 2, steals: 1, blocks: 5, turnovers: 0, fouls: 3, twoPointersMade: 6, threePointersMade: 0, freeThrowsMade: 0, freeThrowsAttempted: 1 },
+          "4": { name: "Rylan T.", points: 8, rebounds: 2, assists: 2, steals: 3, blocks: 0, turnovers: 1, fouls: 1, twoPointersMade: 2, threePointersMade: 1, freeThrowsMade: 1, freeThrowsAttempted: 2 },
+          "8": { name: "Peyton P.", points: 3, rebounds: 3, assists: 1, steals: 0, blocks: 0, turnovers: 2, fouls: 2, twoPointersMade: 0, threePointersMade: 1, freeThrowsMade: 0, freeThrowsAttempted: 0 },
+          "10": { name: "Easton M.", points: 2, rebounds: 5, assists: 0, steals: 1, blocks: 1, turnovers: 1, fouls: 3, twoPointersMade: 1, threePointersMade: 0, freeThrowsMade: 0, freeThrowsAttempted: 1 }
+        }
+      }
+    };
+
+    let players = [];
+    let games = [];
+    let allGameStats = {};
+    let currentPlayerFilter = 'all';
+    let currentGameFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        // Load roster and schedule
+        const [roster, schedule] = await Promise.all([loadRoster(), loadSchedule()]);
+        players = roster.players;
+        games = schedule.games;
+
+        // Populate player filter
+        const playerSelect = document.getElementById('player-filter');
+        players.forEach(p => {
+          const option = document.createElement('option');
+          option.value = p.id;
+          option.textContent = `#${p.number} ${p.firstName} ${p.lastName}`;
+          playerSelect.appendChild(option);
+        });
+
+        // Load all game stats from Firestore
+        if (db) {
+          try {
+            const snapshot = await db.collection('gameStats').get();
+            snapshot.forEach(doc => {
+              const data = doc.data();
+              if (data.playerStats && Object.keys(data.playerStats).length > 0) {
+                allGameStats[doc.id] = data;
+              }
+            });
+          } catch (e) {
+            console.log('Could not load from Firestore, using mock data');
+          }
+        }
+
+        // Use mock data if no stats found
+        if (Object.keys(allGameStats).length === 0) {
+          console.log('Using mock stats data for testing');
+          allGameStats = MOCK_STATS;
+        }
+
+        // Populate game filter with games that have stats
+        const gameSelect = document.getElementById('game-filter');
+        const gamesWithStats = games.filter(g => allGameStats[g.id.toString()]);
+
+        gamesWithStats.forEach(g => {
+          const dateInfo = formatDate(g.date);
+          const option = document.createElement('option');
+          option.value = g.id;
+          option.textContent = `${dateInfo.month} ${dateInfo.day} vs ${g.opponent}`;
+          gameSelect.appendChild(option);
+        });
+
+        // Check URL params for initial filter
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameParam = urlParams.get('game');
+        if (gameParam && allGameStats[gameParam]) {
+          currentGameFilter = gameParam;
+          document.getElementById('game-filter').value = gameParam;
+        }
+
+        // Setup filter listeners
+        playerSelect.addEventListener('change', function() {
+          currentPlayerFilter = this.value;
+          if (this.value !== 'all') {
+            document.getElementById('game-filter').value = 'all';
+            currentGameFilter = 'all';
+          }
+          renderStats();
+        });
+
+        gameSelect.addEventListener('change', function() {
+          currentGameFilter = this.value;
+          if (this.value !== 'all') {
+            document.getElementById('player-filter').value = 'all';
+            currentPlayerFilter = 'all';
+          }
+          renderStats();
+        });
+
+        document.getElementById('loading').style.display = 'none';
+
+        if (Object.keys(allGameStats).length === 0) {
+          document.getElementById('no-stats').style.display = 'block';
+        } else {
+          document.getElementById('stats-content').style.display = 'block';
+          renderStats();
+        }
+
+      } catch (e) {
+        console.error('Error loading stats:', e);
+        document.getElementById('loading').innerHTML = '<p style="color: var(--text-secondary);">Error loading stats</p>';
+      }
+    });
+
+    function renderStats() {
+      if (currentGameFilter !== 'all') {
+        renderGameStats();
+      } else if (currentPlayerFilter !== 'all') {
+        renderPlayerStats();
+      } else {
+        renderSeasonStats();
+      }
+    }
+
+    function renderSeasonStats() {
+      document.getElementById('game-header').style.display = 'none';
+      document.getElementById('player-game-log').style.display = 'none';
+
+      // Aggregate stats across all games
+      const seasonTotals = {};
+      const gamesPlayed = {};
+
+      players.forEach(p => {
+        seasonTotals[p.id] = {
+          points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0,
+          turnovers: 0, fouls: 0, twoPointersMade: 0, threePointersMade: 0,
+          freeThrowsMade: 0, freeThrowsAttempted: 0
+        };
+        gamesPlayed[p.id] = 0;
+      });
+
+      Object.values(allGameStats).forEach(gameData => {
+        if (!gameData.playerStats) return;
+        Object.entries(gameData.playerStats).forEach(([playerId, stats]) => {
+          if (!seasonTotals[playerId]) return;
+          gamesPlayed[playerId]++;
+          Object.keys(seasonTotals[playerId]).forEach(stat => {
+            seasonTotals[playerId][stat] += stats[stat] || 0;
+          });
+        });
+      });
+
+      // Calculate team totals
+      let teamPts = 0, teamReb = 0, teamAst = 0, teamStl = 0;
+      Object.values(seasonTotals).forEach(s => {
+        teamPts += s.points;
+        teamReb += s.rebounds;
+        teamAst += s.assists;
+        teamStl += s.steals;
+      });
+
+      const gamesCount = Object.keys(allGameStats).length;
+
+      document.getElementById('summary-stats').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-card-value">${gamesCount}</div>
+          <div class="stat-card-label">Games</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${teamPts}</div>
+          <div class="stat-card-label">Total PTS</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${teamReb}</div>
+          <div class="stat-card-label">Total REB</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${teamAst}</div>
+          <div class="stat-card-label">Total AST</div>
+        </div>
+      `;
+
+      renderStatsTable(seasonTotals, gamesPlayed);
+    }
+
+    function renderPlayerStats() {
+      document.getElementById('game-header').style.display = 'none';
+      document.getElementById('player-game-log').style.display = 'block';
+
+      const playerId = currentPlayerFilter;
+      const player = players.find(p => p.id == playerId);
+      if (!player) return;
+
+      // Get all games this player has stats in
+      const playerGameStats = [];
+      Object.entries(allGameStats).forEach(([gameId, gameData]) => {
+        if (gameData.playerStats && gameData.playerStats[playerId]) {
+          const game = games.find(g => g.id == gameId);
+          if (game) {
+            playerGameStats.push({
+              game: game,
+              stats: gameData.playerStats[playerId]
+            });
+          }
+        }
+      });
+
+      // Sort by date
+      playerGameStats.sort((a, b) => new Date(a.game.date) - new Date(b.game.date));
+
+      // Calculate season totals for this player
+      const totals = {
+        points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0,
+        turnovers: 0, fouls: 0, twoPointersMade: 0, threePointersMade: 0,
+        freeThrowsMade: 0, freeThrowsAttempted: 0
+      };
+
+      playerGameStats.forEach(pg => {
+        Object.keys(totals).forEach(stat => {
+          totals[stat] += pg.stats[stat] || 0;
+        });
+      });
+
+      const gp = playerGameStats.length;
+      const ppg = gp > 0 ? (totals.points / gp).toFixed(1) : '0.0';
+      const rpg = gp > 0 ? (totals.rebounds / gp).toFixed(1) : '0.0';
+
+      document.getElementById('summary-stats').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-card-value">${gp}</div>
+          <div class="stat-card-label">Games</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${ppg}</div>
+          <div class="stat-card-label">PPG</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${rpg}</div>
+          <div class="stat-card-label">RPG</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${totals.points}</div>
+          <div class="stat-card-label">Total PTS</div>
+        </div>
+      `;
+
+      // Single row table for this player
+      const seasonStats = { [playerId]: totals };
+      const gamesPlayed = { [playerId]: gp };
+      renderStatsTable(seasonStats, gamesPlayed, true);
+
+      // Game log
+      const gameLogHtml = playerGameStats.map(pg => {
+        const dateInfo = formatDate(pg.game.date);
+        const s = pg.stats;
+        return `
+          <div class="card" style="margin-bottom: 8px; cursor: pointer;" onclick="window.location.href='game-detail.html?id=${pg.game.id}'">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: 700;">${dateInfo.month} ${dateInfo.day} vs ${pg.game.opponent}</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">${leagueNames[pg.game.league]}</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 1.25rem; font-weight: 800; color: var(--lancers-gold);">${s.points || 0} PTS</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">${s.rebounds || 0} REB, ${s.assists || 0} AST</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('game-log-list').innerHTML = gameLogHtml || '<p style="color: var(--text-secondary);">No games recorded</p>';
+    }
+
+    function renderGameStats() {
+      document.getElementById('player-game-log').style.display = 'none';
+
+      const gameId = currentGameFilter;
+      const game = games.find(g => g.id == gameId);
+      const gameData = allGameStats[gameId];
+
+      if (!game || !gameData) return;
+
+      const dateInfo = formatDate(game.date);
+
+      // Show game header
+      const gameHeader = document.getElementById('game-header');
+      gameHeader.style.display = 'block';
+      gameHeader.innerHTML = `
+        <div class="game-header">
+          <div>
+            <div style="font-weight: 800; font-size: 1.1rem;">${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</div>
+            <div style="color: var(--text-secondary);">vs ${game.opponent}</div>
+          </div>
+          <span class="league-badge ${game.league}">${leagueNames[game.league]}</span>
+        </div>
+        <div style="display: flex; justify-content: center; gap: 40px; text-align: center;">
+          <div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--lancers-gold);">${calculateTeamScore(gameData)}</div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">Lancers</div>
+          </div>
+          <div style="align-self: center; color: var(--text-secondary);">-</div>
+          <div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary);">${gameData.opponentScore || 0}</div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">${game.opponent}</div>
+          </div>
+        </div>
+      `;
+
+      // Summary stats for this game
+      let totalPts = 0, totalReb = 0, totalAst = 0, totalStl = 0;
+      if (gameData.playerStats) {
+        Object.values(gameData.playerStats).forEach(s => {
+          totalPts += s.points || 0;
+          totalReb += s.rebounds || 0;
+          totalAst += s.assists || 0;
+          totalStl += s.steals || 0;
+        });
+      }
+
+      document.getElementById('summary-stats').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-card-value">${totalPts}</div>
+          <div class="stat-card-label">Points</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${totalReb}</div>
+          <div class="stat-card-label">Rebounds</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${totalAst}</div>
+          <div class="stat-card-label">Assists</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${totalStl}</div>
+          <div class="stat-card-label">Steals</div>
+        </div>
+      `;
+
+      // Box score for this game only
+      const gameStats = {};
+      const gamesPlayed = {};
+
+      if (gameData.playerStats) {
+        Object.entries(gameData.playerStats).forEach(([playerId, stats]) => {
+          gameStats[playerId] = stats;
+          gamesPlayed[playerId] = 1;
+        });
+      }
+
+      renderStatsTable(gameStats, gamesPlayed, false, true);
+    }
+
+    function calculateTeamScore(gameData) {
+      let total = 0;
+      if (gameData.playerStats) {
+        Object.values(gameData.playerStats).forEach(s => {
+          total += s.points || 0;
+        });
+      }
+      return total;
+    }
+
+    function renderStatsTable(stats, gamesPlayed, singlePlayer = false, isGameView = false) {
+      const tbody = document.getElementById('stats-body');
+
+      // Get players to show (only those with stats if game view)
+      let playersToShow = players;
+      if (singlePlayer) {
+        playersToShow = players.filter(p => p.id == currentPlayerFilter);
+      } else if (isGameView) {
+        playersToShow = players.filter(p => stats[p.id]);
+      }
+
+      // Sort by points
+      playersToShow = [...playersToShow].sort((a, b) => {
+        const ptsA = stats[a.id]?.points || 0;
+        const ptsB = stats[b.id]?.points || 0;
+        return ptsB - ptsA;
+      });
+
+      tbody.innerHTML = playersToShow.map(player => {
+        const s = stats[player.id] || {};
+        const gp = gamesPlayed[player.id] || 0;
+
+        if (gp === 0 && !isGameView) return '';
+
+        const fgMade = (s.twoPointersMade || 0) + (s.threePointersMade || 0);
+        const ftMade = s.freeThrowsMade || 0;
+        const ftAtt = s.freeThrowsAttempted || 0;
+        const ftPct = ftAtt > 0 ? Math.round((ftMade / ftAtt) * 100) : 0;
+
+        return `
+          <tr>
+            <td class="player-name-cell">#${player.number} ${player.firstName} ${player.lastName.charAt(0)}.</td>
+            <td>${gp}</td>
+            <td class="stat-highlight">${s.points || 0}</td>
+            <td>${s.rebounds || 0}</td>
+            <td>${s.assists || 0}</td>
+            <td>${s.steals || 0}</td>
+            <td>${s.blocks || 0}</td>
+            <td>${s.turnovers || 0}</td>
+            <td>${s.fouls || 0}</td>
+            <td>${fgMade}</td>
+            <td>${s.threePointersMade || 0}</td>
+            <td>${ftMade}/${ftAtt}</td>
+          </tr>
+        `;
+      }).filter(Boolean).join('');
+
+      // Add totals row for season/game view
+      if (!singlePlayer && playersToShow.length > 0) {
+        let totals = { points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0, turnovers: 0, fouls: 0, fg: 0, threes: 0, ftm: 0, fta: 0 };
+        playersToShow.forEach(p => {
+          const s = stats[p.id] || {};
+          totals.points += s.points || 0;
+          totals.rebounds += s.rebounds || 0;
+          totals.assists += s.assists || 0;
+          totals.steals += s.steals || 0;
+          totals.blocks += s.blocks || 0;
+          totals.turnovers += s.turnovers || 0;
+          totals.fouls += s.fouls || 0;
+          totals.fg += (s.twoPointersMade || 0) + (s.threePointersMade || 0);
+          totals.threes += s.threePointersMade || 0;
+          totals.ftm += s.freeThrowsMade || 0;
+          totals.fta += s.freeThrowsAttempted || 0;
+        });
+
+        tbody.innerHTML += `
+          <tr style="font-weight: 700; background: var(--bg-elevated);">
+            <td class="player-name-cell">TEAM</td>
+            <td>-</td>
+            <td class="stat-highlight">${totals.points}</td>
+            <td>${totals.rebounds}</td>
+            <td>${totals.assists}</td>
+            <td>${totals.steals}</td>
+            <td>${totals.blocks}</td>
+            <td>${totals.turnovers}</td>
+            <td>${totals.fouls}</td>
+            <td>${totals.fg}</td>
+            <td>${totals.threes}</td>
+            <td>${totals.ftm}/${totals.fta}</td>
+          </tr>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>

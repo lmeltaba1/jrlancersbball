@@ -10,32 +10,214 @@
   <link rel="stylesheet" href="css/styles.css">
   <link rel="manifest" href="manifest.json">
   <style>
-    /* Extra styles for stat tracking */
-    .stat-btn { touch-action: manipulation; }
-    .stat-btn:active { transform: scale(0.92); }
-    .player-stat-card.active { border-color: var(--lancers-gold); box-shadow: var(--glow-gold); }
-    .foul-count { display: inline-block; min-width: 20px; text-align: center; }
-    .foul-count.warning { color: #F59E0B; font-weight: 800; }
-    .foul-count.fouled-out { color: #EF4444; font-weight: 800; text-decoration: line-through; }
+    .player-row {
+      display: flex;
+      align-items: center;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border-color);
+      gap: 6px;
+    }
+    .player-row:last-child { border-bottom: none; }
+    .player-info {
+      width: 65px;
+      flex-shrink: 0;
+    }
+    .player-num {
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--lancers-gold);
+    }
+    .player-name {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .player-stats {
+      display: flex;
+      gap: 4px;
+      flex-wrap: nowrap;
+      flex: 1;
+    }
+    .mini-btn {
+      min-width: 36px;
+      height: 32px;
+      padding: 0 4px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+      flex-shrink: 0;
+    }
+    .mini-btn:active { transform: scale(0.9); }
+    .btn-pts { background: var(--lancers-gold); color: #000; }
+    .btn-pos { background: #22C55E; color: #fff; }
+    .btn-neg { background: #EF4444; color: #fff; }
+    .btn-opp { background: #6B7280; color: #fff; }
+    .stat-display {
+      min-width: 22px;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .stat-display.pts { color: var(--lancers-gold); font-size: 0.9rem; }
+    .foul-warn { color: #F59E0B !important; }
+    .foul-out { color: #EF4444 !important; text-decoration: line-through; }
+    .scoreboard-compact {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 60px;
+      padding: 10px 16px;
+      background: var(--bg-card);
+      border: 2px solid var(--lancers-gold);
+      border-radius: 12px;
+      margin-bottom: 8px;
+    }
+    .score-side {
+      text-align: center;
+      min-width: 80px;
+    }
+    .score-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+    .score-num {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--lancers-gold);
+    }
+    .score-num.opp { color: var(--text-primary); }
+    .opponent-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      margin-top: 8px;
+      gap: 8px;
+    }
+    .opp-btns {
+      display: flex;
+      gap: 6px;
+      flex: 1;
+    }
+    .opp-btns .mini-btn {
+      flex: 1;
+      min-width: 50px;
+      height: 40px;
+      font-size: 0.9rem;
+    }
+    .players-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+    .players-header {
+      display: flex;
+      padding: 6px 8px;
+      background: var(--bg-elevated);
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      gap: 6px;
+    }
+    .players-header .player-info { color: var(--lancers-gold); }
+    .header-stats {
+      display: flex;
+      gap: 4px;
+    }
+    .header-stat {
+      min-width: 22px;
+      text-align: center;
+    }
+    .undo-btn-small {
+      min-width: 32px;
+      height: 32px;
+      padding: 0 6px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    /* Live tracking mode - fill available space */
+    body.tracking-mode {
+      overflow: hidden;
+    }
+    body.tracking-mode .main-content {
+      position: fixed;
+      top: 60px;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 600px;
+      padding: 8px !important;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    body.tracking-mode #live-game {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    body.tracking-mode .scoreboard-compact {
+      flex-shrink: 0;
+      margin-bottom: 8px;
+    }
+    body.tracking-mode .players-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+    body.tracking-mode .players-header {
+      flex-shrink: 0;
+    }
+    body.tracking-mode #player-rows {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    body.tracking-mode .player-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      min-height: 36px;
+    }
+    body.tracking-mode .opponent-row {
+      flex-shrink: 0;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
-  <!-- Header -->
   <header class="header">
     <div class="header-content">
       <h1>
         <a href="index.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 10px;">
           <img src="images/lancers-logo.png" alt="Lancers" class="header-logo">
-          Game Stats
+          Live Stats
         </a>
       </h1>
       <div id="connection-status" style="width: 10px; height: 10px; border-radius: 50%; background: #22C55E;"></div>
     </div>
   </header>
 
-  <!-- Main Content -->
-  <main class="main-content" style="padding-bottom: 120px;">
-    <!-- Game Selector (when no game active) -->
+  <main class="main-content" style="padding-bottom: 80px;" id="main-content">
+    <!-- Game Selector -->
     <div id="game-selector" class="card">
       <div class="card-title">Select Game</div>
       <select id="game-select" class="form-input" style="margin-bottom: 12px;">
@@ -45,51 +227,50 @@
         Start Tracking
       </button>
       <p id="no-permission-msg" style="color: #F59E0B; font-size: 0.8rem; margin-top: 10px; display: none;">
-        You must be the coach or signed up as scorekeeper to track stats for this game.
+        You must be the coach or signed up as scorekeeper to track stats.
       </p>
     </div>
 
-    <!-- Live Scoreboard (during game) -->
+    <!-- Live Game -->
     <div id="live-game" style="display: none;">
-      <div class="scoreboard">
-        <div class="scoreboard-team">
-          <div class="team-label">Lancers</div>
-          <div class="score" id="lancers-score">0</div>
+      <!-- Scoreboard -->
+      <div class="scoreboard-compact">
+        <div class="score-side">
+          <div class="score-label">Lancers</div>
+          <div class="score-num" id="lancers-score">0</div>
         </div>
-        <div class="scoreboard-center">
-          <div class="quarter" id="quarter-display">Q1</div>
-          <div class="status" id="game-status">Live</div>
-        </div>
-        <div class="scoreboard-team">
-          <div class="team-label" id="opponent-name">Opponent</div>
-          <div class="score" id="opponent-score">0</div>
+        <div class="score-side">
+          <div class="score-label" id="opponent-name">Opponent</div>
+          <div class="score-num opp" id="opponent-score">0</div>
         </div>
       </div>
 
-      <!-- Game Controls -->
-      <div class="card" style="padding: 10px;">
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-secondary" style="flex: 1;" onclick="changeQuarter()">
-            Next Quarter
-          </button>
-          <button class="btn btn-primary" style="flex: 1;" onclick="endGame()">
-            End Game
-          </button>
+      <!-- Players -->
+      <div class="players-card">
+        <div class="players-header">
+          <div class="player-info">Player</div>
+          <div class="header-stats">
+            <div class="header-stat">P</div>
+            <div class="header-stat">R</div>
+            <div class="header-stat">A</div>
+            <div class="header-stat">S</div>
+            <div class="header-stat">T</div>
+            <div class="header-stat">F</div>
+          </div>
         </div>
+        <div id="player-rows"></div>
       </div>
 
-      <!-- Player Stats Cards -->
-      <div id="player-cards"></div>
-
-      <!-- Opponent Score -->
-      <div class="opponent-controls">
-        <h3>Opponent Score</h3>
-        <div class="stat-row">
-          <button class="stat-btn stat-btn-neutral" onclick="addOpponentScore(1)">+1</button>
-          <button class="stat-btn stat-btn-neutral" onclick="addOpponentScore(2)">+2</button>
-          <button class="stat-btn stat-btn-neutral" onclick="addOpponentScore(3)">+3</button>
-          <button class="stat-btn stat-btn-negative" onclick="addOpponentScore(-1)">-1</button>
+      <!-- Opponent Score + End Game -->
+      <div class="opponent-row">
+        <div class="opp-btns">
+          <span style="font-weight: 700; font-size: 0.75rem; margin-right: 6px;">OPP:</span>
+          <button class="mini-btn btn-opp" onclick="addOpponentScore(-1)">-1</button>
+          <button class="mini-btn btn-opp" onclick="addOpponentScore(1)">+1</button>
+          <button class="mini-btn btn-opp" onclick="addOpponentScore(2)">+2</button>
+          <button class="mini-btn btn-opp" onclick="addOpponentScore(3)">+3</button>
         </div>
+        <button class="btn btn-primary" style="padding: 6px 16px; font-size: 0.75rem;" onclick="endGame()">End Game</button>
       </div>
     </div>
 
@@ -103,7 +284,6 @@
     </div>
   </main>
 
-  <!-- Bottom Navigation -->
   <nav class="bottom-nav">
     <a href="index.html" class="nav-item">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -129,7 +309,7 @@
       </svg>
       <span>Chat</span>
     </a>
-    <a href="game-stats.html" class="nav-item active">
+    <a href="stats-view.html" class="nav-item active">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
       </svg>
@@ -137,25 +317,39 @@
     </a>
   </nav>
 
-  <!-- Scripts -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
-  <script src="js/app.js?v=3"></script>
   <script>
+    // Inline functions
+    async function loadSchedule() {
+      const response = await fetch('data/schedule.json?v=' + Date.now());
+      return response.json();
+    }
+    async function loadRoster() {
+      const response = await fetch('data/roster.json?v=' + Date.now());
+      return response.json();
+    }
+    function formatDate(dateString) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return {
+        month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+        day: date.getDate()
+      };
+    }
+
     let currentGameId = null;
     let currentGame = null;
     let players = [];
     let playerStats = {};
     let opponentScore = 0;
-    let currentQuarter = 1;
     let unsubscribe = null;
     let canEdit = false;
 
     document.addEventListener('DOMContentLoaded', async function() {
-      // Check auth
       if (!auth) {
         document.getElementById('game-selector').style.display = 'none';
         document.getElementById('login-required').style.display = 'block';
@@ -168,8 +362,6 @@
           document.getElementById('login-required').style.display = 'block';
           return;
         }
-
-        // Load games
         await loadGames();
       });
     });
@@ -178,15 +370,20 @@
       try {
         const schedule = await loadSchedule();
         const roster = await loadRoster();
-        players = roster.players;
+        // Custom sort order
+        const playerOrder = ['Camden', 'Rylan', 'Ashton', 'Dean', 'Raequan', 'Easton', 'Jeevan', 'Grant', 'Peyton', 'Wyatt'];
+        players = roster.players.sort((a, b) => {
+          const aIdx = playerOrder.indexOf(a.firstName);
+          const bIdx = playerOrder.indexOf(b.firstName);
+          if (aIdx === -1 && bIdx === -1) return a.number - b.number;
+          if (aIdx === -1) return 1;
+          if (bIdx === -1) return -1;
+          return aIdx - bIdx;
+        });
 
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-
-        // Get games that haven't been completed (no final result)
         const upcomingGames = schedule.games.filter(g => !g.result);
-
         const select = document.getElementById('game-select');
+
         if (upcomingGames.length === 0) {
           select.innerHTML = '<option value="">No upcoming games</option>';
           return;
@@ -195,290 +392,305 @@
         select.innerHTML = '<option value="">Select a game...</option>' +
           upcomingGames.map(g => {
             const dateInfo = formatDate(g.date);
-            return `<option value="${g.id}">${dateInfo.month} ${dateInfo.day} vs ${g.opponent} (${g.league.toUpperCase()})</option>`;
+            return `<option value="${g.id}">${dateInfo.month} ${dateInfo.day} vs ${g.opponent}</option>`;
           }).join('');
 
         select.addEventListener('change', async function() {
           const gameId = this.value;
           if (!gameId) {
             document.getElementById('start-tracking-btn').disabled = true;
-            document.getElementById('no-permission-msg').style.display = 'none';
             return;
           }
-
           currentGameId = parseInt(gameId);
           currentGame = schedule.games.find(g => g.id === currentGameId);
 
-          // Check permission
-          canEdit = await canTrackStats(currentGameId);
-          if (canEdit) {
-            document.getElementById('start-tracking-btn').disabled = false;
-            document.getElementById('no-permission-msg').style.display = 'none';
-          } else {
-            document.getElementById('start-tracking-btn').disabled = true;
-            document.getElementById('no-permission-msg').style.display = 'block';
-          }
+          // For now, allow anyone logged in to track (simplify for testing)
+          canEdit = true;
+          document.getElementById('start-tracking-btn').disabled = false;
         });
 
         document.getElementById('start-tracking-btn').addEventListener('click', startTracking);
-
       } catch (e) {
         console.error('Error loading games:', e);
       }
     }
 
     async function startTracking() {
-      if (!currentGameId || !canEdit) return;
+      if (!currentGameId) return;
 
+      // Fill available space between header and footer
+      document.body.classList.add('tracking-mode');
       document.getElementById('game-selector').style.display = 'none';
-      document.getElementById('live-game').style.display = 'block';
+      document.getElementById('live-game').style.display = 'flex';
       document.getElementById('opponent-name').textContent = currentGame.opponent;
 
-      // Initialize or load stats from Firestore
-      const docRef = db.collection('gameStats').doc(currentGameId.toString());
-      const doc = await docRef.get();
+      // Initialize or load stats
+      if (db) {
+        const docRef = db.collection('gameStats').doc(currentGameId.toString());
+        const doc = await docRef.get();
 
-      if (doc.exists) {
-        const data = doc.data();
-        playerStats = data.playerStats || {};
-        opponentScore = data.opponentScore || 0;
-        currentQuarter = data.quarter || 1;
+        if (doc.exists) {
+          const data = doc.data();
+          playerStats = data.playerStats || {};
+          opponentScore = data.opponentScore || 0;
+        } else {
+          playerStats = {};
+          players.forEach(p => {
+            playerStats[p.id] = {
+              name: p.firstName + ' ' + p.lastName.charAt(0) + '.',
+              points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0,
+              turnovers: 0, fouls: 0, twoPointersMade: 0, threePointersMade: 0,
+              freeThrowsMade: 0, freeThrowsAttempted: 0
+            };
+          });
+          opponentScore = 0;
+
+          await docRef.set({
+            gameId: currentGameId,
+            isLive: true,
+            opponentScore: 0,
+            playerStats: playerStats,
+            trackedBy: auth.currentUser.email,
+            startedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+
+        unsubscribe = docRef.onSnapshot(snapshot => {
+          if (snapshot.exists) {
+            const data = snapshot.data();
+            playerStats = data.playerStats || playerStats;
+            opponentScore = data.opponentScore || 0;
+            updateScoreboard();
+            updateAllRows();
+          }
+        });
       } else {
-        // Initialize fresh stats
-        playerStats = initializePlayerStats(players);
-        opponentScore = 0;
-        currentQuarter = 1;
-
-        await docRef.set({
-          gameId: currentGameId,
-          isLive: true,
-          quarter: 1,
-          opponentScore: 0,
-          playerStats: playerStats,
-          trackedBy: auth.currentUser.email,
-          startedAt: firebase.firestore.FieldValue.serverTimestamp()
+        // No Firebase - use local stats
+        playerStats = {};
+        players.forEach(p => {
+          playerStats[p.id] = {
+            name: p.firstName + ' ' + p.lastName.charAt(0) + '.',
+            points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0,
+            turnovers: 0, fouls: 0
+          };
         });
       }
 
-      renderPlayerCards();
+      renderPlayerRows();
       updateScoreboard();
-
-      // Listen for real-time updates
-      unsubscribe = docRef.onSnapshot(snapshot => {
-        if (snapshot.exists) {
-          const data = snapshot.data();
-          playerStats = data.playerStats || playerStats;
-          opponentScore = data.opponentScore || 0;
-          currentQuarter = data.quarter || 1;
-          updateScoreboard();
-          updatePlayerTotals();
-        }
-      });
     }
 
-    function renderPlayerCards() {
-      const container = document.getElementById('player-cards');
-      container.innerHTML = players.map(player => {
-        const stats = playerStats[player.id] || {};
+    let editingPlayerId = null;
+
+    function renderPlayerRows() {
+      const container = document.getElementById('player-rows');
+      container.innerHTML = players.map(p => {
+        const s = playerStats[p.id] || {};
+        const foulClass = (s.fouls || 0) >= 5 ? 'foul-out' : ((s.fouls || 0) >= 4 ? 'foul-warn' : '');
+        const isEditing = editingPlayerId === p.id;
+
+        if (isEditing) {
+          return `
+            <div class="player-row" id="row-${p.id}" style="background: var(--bg-elevated);">
+              <div class="player-info">
+                <div class="player-num">#${p.number}</div>
+                <div class="player-name">${p.firstName}</div>
+              </div>
+              <div class="player-stats">
+                <div class="stat-display pts">${s.points || 0}</div>
+                <div class="stat-display">${s.rebounds || 0}</div>
+                <div class="stat-display">${s.assists || 0}</div>
+                <div class="stat-display">${s.steals || 0}</div>
+                <div class="stat-display">${s.turnovers || 0}</div>
+                <div class="stat-display ${foulClass}">${s.fouls || 0}</div>
+                <button class="mini-btn btn-neg" onclick="subPts(${p.id}, 1)">-P</button>
+                <button class="mini-btn btn-neg" onclick="subStat(${p.id}, 'rebounds')">-R</button>
+                <button class="mini-btn btn-neg" onclick="subStat(${p.id}, 'assists')">-A</button>
+                <button class="mini-btn btn-neg" onclick="subStat(${p.id}, 'steals')">-S</button>
+                <button class="mini-btn btn-neg" onclick="subStat(${p.id}, 'turnovers')">-T</button>
+                <button class="mini-btn btn-neg" onclick="subStat(${p.id}, 'fouls')">-F</button>
+                <button class="undo-btn-small" onclick="toggleEdit(${p.id})" style="background: var(--lancers-gold); color: #000;">✓</button>
+              </div>
+            </div>
+          `;
+        }
+
         return `
-          <div class="player-stat-card" data-player="${player.id}">
-            <div class="player-header">
-              <div class="player-number">#${player.number}</div>
-              <div style="flex: 1;">
-                <div class="player-name">${player.firstName} ${player.lastName.charAt(0)}.</div>
-                <div class="player-totals" id="totals-${player.id}">
-                  <span class="stat-total">PTS: <strong>${stats.points || 0}</strong></span>
-                  <span class="stat-total">REB: <strong>${stats.rebounds || 0}</strong></span>
-                  <span class="stat-total">AST: <strong>${stats.assists || 0}</strong></span>
-                  <span class="stat-total">FLS: <strong class="foul-count ${(stats.fouls || 0) >= 4 ? ((stats.fouls || 0) >= 5 ? 'fouled-out' : 'warning') : ''}">${stats.fouls || 0}</strong></span>
-                </div>
-              </div>
+          <div class="player-row" id="row-${p.id}">
+            <div class="player-info">
+              <div class="player-num">#${p.number}</div>
+              <div class="player-name">${p.firstName}</div>
             </div>
-            <div class="stat-buttons">
-              <div class="stat-row">
-                <button class="stat-btn stat-btn-points" onclick="addStat(${player.id}, 'twoPointersMade', 2)">+2</button>
-                <button class="stat-btn stat-btn-points" onclick="addStat(${player.id}, 'threePointersMade', 3)">+3</button>
-                <button class="stat-btn stat-btn-points" onclick="showFTModal(${player.id})">FT</button>
-              </div>
-              <div class="stat-row">
-                <button class="stat-btn stat-btn-positive" onclick="addStat(${player.id}, 'rebounds', 0)">REB</button>
-                <button class="stat-btn stat-btn-positive" onclick="addStat(${player.id}, 'assists', 0)">AST</button>
-                <button class="stat-btn stat-btn-positive" onclick="addStat(${player.id}, 'steals', 0)">STL</button>
-                <button class="stat-btn stat-btn-positive" onclick="addStat(${player.id}, 'blocks', 0)">BLK</button>
-              </div>
-              <div class="stat-row">
-                <button class="stat-btn stat-btn-negative" onclick="addStat(${player.id}, 'turnovers', 0)">TO</button>
-                <button class="stat-btn stat-btn-negative" onclick="addFoul(${player.id})">FOUL</button>
-              </div>
+            <div class="player-stats">
+              <div class="stat-display pts" id="pts-${p.id}">${s.points || 0}</div>
+              <div class="stat-display" id="reb-${p.id}">${s.rebounds || 0}</div>
+              <div class="stat-display" id="ast-${p.id}">${s.assists || 0}</div>
+              <div class="stat-display" id="stl-${p.id}">${s.steals || 0}</div>
+              <div class="stat-display" id="to-${p.id}">${s.turnovers || 0}</div>
+              <div class="stat-display ${foulClass}" id="fls-${p.id}">${s.fouls || 0}</div>
+              <button class="mini-btn btn-pts" onclick="addPts(${p.id}, 2)">+2</button>
+              <button class="mini-btn btn-pts" onclick="addPts(${p.id}, 3)">+3</button>
+              <button class="mini-btn btn-pts" onclick="addFT(${p.id})">+1</button>
+              <button class="mini-btn btn-pos" onclick="addStat(${p.id}, 'rebounds')">R</button>
+              <button class="mini-btn btn-pos" onclick="addStat(${p.id}, 'assists')">A</button>
+              <button class="mini-btn btn-pos" onclick="addStat(${p.id}, 'steals')">S</button>
+              <button class="mini-btn btn-neg" onclick="addStat(${p.id}, 'turnovers')">T</button>
+              <button class="mini-btn btn-neg" onclick="addFoul(${p.id})">F</button>
+              <button class="undo-btn-small" onclick="toggleEdit(${p.id})">✎</button>
             </div>
-            <button class="undo-btn" onclick="undoLast(${player.id})">Undo Last</button>
           </div>
         `;
       }).join('');
     }
 
-    async function addStat(playerId, statType, pointValue) {
-      const stats = playerStats[playerId];
-      if (!stats) return;
+    function toggleEdit(playerId) {
+      editingPlayerId = editingPlayerId === playerId ? null : playerId;
+      renderPlayerRows();
+    }
 
-      // Increment stat
-      stats[statType] = (stats[statType] || 0) + 1;
-
-      // Update points if scoring
-      if (pointValue > 0) {
-        stats.points = (stats.points || 0) + pointValue;
-      }
-
-      // Store last action for undo
-      stats.lastAction = { type: statType, value: pointValue > 0 ? pointValue : 1 };
-
+    async function subPts(playerId, pts) {
+      const s = playerStats[playerId];
+      if (!s) return;
+      s.points = Math.max(0, (s.points || 0) - pts);
       await saveStats();
-      updatePlayerTotals();
+      renderPlayerRows();
       updateScoreboard();
+    }
+
+    async function subStat(playerId, stat) {
+      const s = playerStats[playerId];
+      if (!s) return;
+      s[stat] = Math.max(0, (s[stat] || 0) - 1);
+      await saveStats();
+      renderPlayerRows();
+    }
+
+    function updateAllRows() {
+      players.forEach(p => {
+        const s = playerStats[p.id] || {};
+        const ptsEl = document.getElementById(`pts-${p.id}`);
+        const rebEl = document.getElementById(`reb-${p.id}`);
+        const astEl = document.getElementById(`ast-${p.id}`);
+        const stlEl = document.getElementById(`stl-${p.id}`);
+        const toEl = document.getElementById(`to-${p.id}`);
+        const flsEl = document.getElementById(`fls-${p.id}`);
+        if (ptsEl) ptsEl.textContent = s.points || 0;
+        if (rebEl) rebEl.textContent = s.rebounds || 0;
+        if (astEl) astEl.textContent = s.assists || 0;
+        if (stlEl) stlEl.textContent = s.steals || 0;
+        if (toEl) toEl.textContent = s.turnovers || 0;
+        if (flsEl) {
+          flsEl.textContent = s.fouls || 0;
+          flsEl.className = 'stat-display ' + ((s.fouls || 0) >= 5 ? 'foul-out' : ((s.fouls || 0) >= 4 ? 'foul-warn' : ''));
+        }
+      });
+    }
+
+    async function addPts(playerId, pts) {
+      const s = playerStats[playerId];
+      if (!s) return;
+      s.points = (s.points || 0) + pts;
+      if (pts === 2) s.twoPointersMade = (s.twoPointersMade || 0) + 1;
+      if (pts === 3) s.threePointersMade = (s.threePointersMade || 0) + 1;
+      s.lastAction = { type: pts === 2 ? 'twoPointersMade' : 'threePointersMade', pts: pts };
+      await saveStats();
+      updateAllRows();
+      updateScoreboard();
+    }
+
+    async function addFT(playerId) {
+      const s = playerStats[playerId];
+      if (!s) return;
+      s.freeThrowsAttempted = (s.freeThrowsAttempted || 0) + 1;
+      s.freeThrowsMade = (s.freeThrowsMade || 0) + 1;
+      s.points = (s.points || 0) + 1;
+      s.lastAction = { type: 'freeThrowsMade', pts: 1 };
+      await saveStats();
+      updateAllRows();
+      updateScoreboard();
+    }
+
+    async function addStat(playerId, stat) {
+      const s = playerStats[playerId];
+      if (!s) return;
+      s[stat] = (s[stat] || 0) + 1;
+      s.lastAction = { type: stat, pts: 0 };
+      await saveStats();
+      updateAllRows();
     }
 
     async function addFoul(playerId) {
-      const stats = playerStats[playerId];
-      if (!stats) return;
-
-      stats.fouls = (stats.fouls || 0) + 1;
-      stats.lastAction = { type: 'fouls', value: 1 };
-
-      if (stats.fouls === 4) {
-        alert(`${stats.name} has 4 fouls! One more and they foul out.`);
-      } else if (stats.fouls === 5) {
-        alert(`${stats.name} has fouled out!`);
-      }
-
+      const s = playerStats[playerId];
+      if (!s) return;
+      s.fouls = (s.fouls || 0) + 1;
+      s.lastAction = { type: 'fouls', pts: 0 };
+      if (s.fouls === 4) alert(s.name + ' has 4 fouls!');
+      if (s.fouls === 5) alert(s.name + ' fouled out!');
       await saveStats();
-      updatePlayerTotals();
+      updateAllRows();
     }
 
-    function showFTModal(playerId) {
-      const made = confirm('Free throw MADE?');
-      const stats = playerStats[playerId];
-      if (!stats) return;
-
-      stats.freeThrowsAttempted = (stats.freeThrowsAttempted || 0) + 1;
-
-      if (made) {
-        stats.freeThrowsMade = (stats.freeThrowsMade || 0) + 1;
-        stats.points = (stats.points || 0) + 1;
-        stats.lastAction = { type: 'freeThrowsMade', value: 1 };
-      } else {
-        stats.lastAction = { type: 'freeThrowsAttempted', value: 0 };
-      }
-
-      saveStats();
-      updatePlayerTotals();
+    async function undo(playerId) {
+      const s = playerStats[playerId];
+      if (!s || !s.lastAction) return;
+      const { type, pts } = s.lastAction;
+      if (type && s[type] > 0) s[type]--;
+      if (pts > 0) s.points = Math.max(0, (s.points || 0) - pts);
+      delete s.lastAction;
+      await saveStats();
+      updateAllRows();
       updateScoreboard();
     }
 
-    async function undoLast(playerId) {
-      const stats = playerStats[playerId];
-      if (!stats || !stats.lastAction) return;
-
-      const { type, value } = stats.lastAction;
-
-      stats[type] = Math.max(0, (stats[type] || 0) - 1);
-
-      if (value > 0 && (type.includes('Made') || type.includes('Pointers'))) {
-        stats.points = Math.max(0, (stats.points || 0) - value);
-      }
-
-      delete stats.lastAction;
-
-      await saveStats();
-      updatePlayerTotals();
-      updateScoreboard();
-    }
-
-    async function addOpponentScore(points) {
-      opponentScore = Math.max(0, opponentScore + points);
+    async function addOpponentScore(pts) {
+      opponentScore = Math.max(0, opponentScore + pts);
       await saveStats();
       updateScoreboard();
     }
 
     function updateScoreboard() {
-      let lancersTotal = 0;
-      Object.values(playerStats).forEach(stats => {
-        lancersTotal += stats.points || 0;
-      });
-
-      document.getElementById('lancers-score').textContent = lancersTotal;
+      let total = 0;
+      Object.values(playerStats).forEach(s => total += s.points || 0);
+      document.getElementById('lancers-score').textContent = total;
       document.getElementById('opponent-score').textContent = opponentScore;
-      document.getElementById('quarter-display').textContent = currentQuarter <= 4 ? `Q${currentQuarter}` : 'OT';
-    }
-
-    function updatePlayerTotals() {
-      players.forEach(player => {
-        const stats = playerStats[player.id] || {};
-        const totalsEl = document.getElementById(`totals-${player.id}`);
-        if (totalsEl) {
-          const foulClass = (stats.fouls || 0) >= 5 ? 'fouled-out' : ((stats.fouls || 0) >= 4 ? 'warning' : '');
-          totalsEl.innerHTML = `
-            <span class="stat-total">PTS: <strong>${stats.points || 0}</strong></span>
-            <span class="stat-total">REB: <strong>${stats.rebounds || 0}</strong></span>
-            <span class="stat-total">AST: <strong>${stats.assists || 0}</strong></span>
-            <span class="stat-total">FLS: <strong class="foul-count ${foulClass}">${stats.fouls || 0}</strong></span>
-          `;
-        }
-      });
-    }
-
-    async function changeQuarter() {
-      currentQuarter++;
-      if (currentQuarter > 5) {
-        currentQuarter = 5; // Cap at OT
-      }
-      await saveStats();
-      updateScoreboard();
     }
 
     async function endGame() {
-      if (!confirm('End this game and finalize stats?')) return;
+      if (!confirm('End game and finalize stats?')) return;
+      let total = 0;
+      Object.values(playerStats).forEach(s => total += s.points || 0);
+      const result = total > opponentScore ? 'W' : 'L';
 
-      let lancersTotal = 0;
-      Object.values(playerStats).forEach(stats => {
-        lancersTotal += stats.points || 0;
-      });
-
-      const result = lancersTotal > opponentScore ? 'W' : 'L';
-
-      await db.collection('gameStats').doc(currentGameId.toString()).update({
-        isLive: false,
-        endedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      await db.collection('games').doc(currentGameId.toString()).set({
-        gameId: currentGameId,
-        result: result,
-        finalScore: { lancers: lancersTotal, opponent: opponentScore },
-        statsComplete: true
-      });
+      if (db) {
+        await db.collection('gameStats').doc(currentGameId.toString()).update({
+          isLive: false,
+          endedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await db.collection('games').doc(currentGameId.toString()).set({
+          gameId: currentGameId,
+          result: result,
+          finalScore: { lancers: total, opponent: opponentScore },
+          statsComplete: true
+        });
+      }
 
       if (unsubscribe) unsubscribe();
-
-      alert(`Game ended! Lancers ${result === 'W' ? 'WIN' : 'lose'} ${lancersTotal}-${opponentScore}`);
+      alert('Game ended! Lancers ' + (result === 'W' ? 'WIN' : 'lose') + ' ' + total + '-' + opponentScore);
       window.location.href = 'schedule.html';
     }
 
     async function saveStats() {
-      if (!currentGameId) return;
-
+      if (!currentGameId || !db) return;
       try {
         await db.collection('gameStats').doc(currentGameId.toString()).update({
           playerStats: playerStats,
           opponentScore: opponentScore,
-          quarter: currentQuarter,
           lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch (e) {
-        console.error('Error saving stats:', e);
+        console.error('Error saving:', e);
         document.getElementById('connection-status').style.background = '#EF4444';
-        setTimeout(() => {
-          document.getElementById('connection-status').style.background = '#22C55E';
-        }, 2000);
+        setTimeout(() => document.getElementById('connection-status').style.background = '#22C55E', 2000);
       }
     }
   </script>
