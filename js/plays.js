@@ -1304,105 +1304,106 @@ const plays = {
     chapter: 'inbound',
     description: 'Triangle formation with screen the screener action',
     phases: [
-      // ========== INITIAL: TRIANGLE FORMATION ==========
-      // Frame 1-20: 1 inbounder, triangle of 4/5/3, 2 at top
+      // ========== PHASE 1: TRIANGLE FORMATION ==========
+      // 1 inbounder, 4/5 on blocks, 3 at FT line, 2 at top as outlet
       {
-        description: ['Players 2, 4, and 5 set up in a triangle'],
+        description: ['Triangle formation: 3 at FT line, 4 and 5 on blocks'],
         positions: {
-          1: { x: 200, y: 10 },    // Inbounder at baseline (circled)
-          2: { x: 280, y: 340 },   // Below FT circle at top
-          3: { x: 200, y: 210 },   // Point of triangle at FT line
-          4: { x: 130, y: 90 },    // Left corner of triangle (high post)
-          5: { x: 270, y: 90 }     // Right corner of triangle (high post)
+          1: { x: 200, y: 10 },    // Inbounder at baseline center
+          2: { x: 200, y: 260 },   // Outlet/release at top of arc
+          3: { x: 200, y: 190 },   // Point of triangle at FT line
+          4: { x: 140, y: 80 },    // Left block
+          5: { x: 260, y: 80 }     // Right block
         },
         ball: 1,
         actions: []
       },
-      // ========== PHASE 1: SCREEN FOR OPEN SHOT ==========
-      // Frame 50-80: 3 becomes inbounder, 5 screens for 2
+      // ========== PHASE 2: SCREEN FOR OPEN SHOT ==========
+      // 5 sets screen for 3
       {
         description: [
           'The strong side center sets a screen for the shooter',
-          'Look for an open pass to #2 for a mid-range shot'
+          'Look for an open pass to #3 for a mid-range shot'
         ],
         positions: {
-          1: { x: 280, y: 340 },   // 1 at top of key
-          2: { x: 220, y: 180 },   // 2 in paint, will use 5's screen
-          3: { x: 200, y: 10 },    // 3 is now inbounder (circled)
-          4: { x: 130, y: 90 },    // 4 at left high post
-          5: { x: 270, y: 150 }    // 5 moves to set screen for 2
-        },
-        ball: 3,
-        actions: [
-          { type: 'cut', player: 5, from: { x: 270, y: 90 }, to: { x: 270, y: 150 } },
-          { type: 'screen', player: 5, angle: 270 }  // Screen faces left for 2
-        ]
-      },
-      {
-        description: [],
-        positions: {
-          1: { x: 280, y: 340 },
-          2: { x: 330, y: 130 },   // 2 curls around 5's screen to right elbow
-          3: { x: 200, y: 10 },
-          4: { x: 130, y: 90 },
-          5: { x: 270, y: 150 }
-        },
-        ball: 3,
-        actions: [
-          // 2 curls around 5's screen toward right elbow
-          { type: 'cut', player: 2, path: 'M220,180 Q250,160 280,145 Q305,135 330,130' }
-        ]
-      },
-      // ========== PHASE 2: SCREEN THE SCREENER ==========
-      // Frame 120-160: 4 screens for 5
-      {
-        description: [
-          'As soon as #2 takes the screen #4 comes up to set a back screen for #5'
-        ],
-        positions: {
-          1: { x: 280, y: 340 },
-          2: { x: 330, y: 130 },
-          3: { x: 200, y: 10 },
-          4: { x: 220, y: 180 },   // 4 moves to screen for 5
-          5: { x: 270, y: 150 }
-        },
-        ball: 3,
-        actions: [
-          { type: 'cut', player: 4, from: { x: 130, y: 90 }, to: { x: 220, y: 180 } },
-          { type: 'screen', player: 4, angle: 0 }  // Back screen for 5 cutting to basket
-        ]
-      },
-      {
-        description: [],
-        positions: {
-          1: { x: 280, y: 340 },
-          2: { x: 330, y: 130 },
-          3: { x: 200, y: 10 },
-          4: { x: 220, y: 180 },
-          5: { x: 200, y: 70 }     // 5 cuts to basket using 4's screen
-        },
-        ball: 3,
-        actions: [
-          // 5 uses 4's back screen to cut to basket
-          { type: 'cut', player: 5, path: 'M270,150 Q250,130 230,100 Q215,85 200,70' }
-        ]
-      },
-      // ========== PHASE 3: RELEASE VALVE ==========
-      // Frame 200-260: Pass to 1 as release valve
-      {
-        description: [
-          'If both options are well defended throw the ball to #1 as a release valve'
-        ],
-        positions: {
-          1: { x: 280, y: 340 },
-          2: { x: 330, y: 130 },
-          3: { x: 200, y: 10 },
-          4: { x: 220, y: 180 },
-          5: { x: 200, y: 70 }
+          1: { x: 200, y: 10 },
+          2: { x: 200, y: 260 },
+          3: { x: 200, y: 190 },
+          4: { x: 140, y: 80 },
+          5: { x: 240, y: 140 }    // 5 moves to set screen
         },
         ball: 1,
         actions: [
-          { type: 'pass', from: 3, to: 1 }
+          { type: 'cut', player: 5, from: { x: 260, y: 80 }, to: { x: 240, y: 140 } },
+          { type: 'screen', player: 5, angle: 270 }  // Screen faces left
+        ]
+      },
+      // 3 curls around 5's screen back toward inbounder
+      {
+        description: [],
+        positions: {
+          1: { x: 200, y: 10 },
+          2: { x: 200, y: 260 },
+          3: { x: 280, y: 50 },    // 3 cuts back toward inbounder
+          4: { x: 140, y: 80 },
+          5: { x: 240, y: 140 }
+        },
+        ball: 1,
+        actions: [
+          { type: 'cut', player: 3, path: 'M200,190 Q260,170 290,130 Q300,90 280,50' }
+        ]
+      },
+      // ========== PHASE 3: SCREEN THE SCREENER ==========
+      // 4 sets back screen for 5
+      {
+        description: [
+          'As soon as #3 uses the screen, #4 sets a back screen for #5'
+        ],
+        positions: {
+          1: { x: 200, y: 10 },
+          2: { x: 200, y: 260 },
+          3: { x: 280, y: 50 },
+          4: { x: 200, y: 160 },   // 4 moves to set back screen
+          5: { x: 240, y: 140 }
+        },
+        ball: 1,
+        actions: [
+          { type: 'cut', player: 4, from: { x: 140, y: 80 }, to: { x: 200, y: 160 } },
+          { type: 'screen', player: 4, angle: 180 }  // Back screen facing up
+        ]
+      },
+      // 5 curls around 4's screen back toward inbounder
+      {
+        description: [],
+        positions: {
+          1: { x: 200, y: 10 },
+          2: { x: 200, y: 260 },
+          3: { x: 280, y: 50 },
+          4: { x: 200, y: 160 },
+          5: { x: 120, y: 50 }     // 5 cuts back toward inbounder on left side
+        },
+        ball: 1,
+        actions: [
+          // 5 goes down around screen then cuts back up toward inbounder
+          { type: 'cut', player: 5, path: 'M240,140 Q220,180 180,190 Q140,170 120,120 Q110,80 120,50' }
+        ]
+      },
+      // ========== PHASE 4: RELEASE VALVE ==========
+      // If both options defended, pass to 2 as safety
+      {
+        description: [
+          'If both options are defended, pass to #2 as release valve'
+        ],
+        positions: {
+          1: { x: 200, y: 10 },
+          2: { x: 200, y: 260 },
+          3: { x: 280, y: 50 },
+          4: { x: 200, y: 160 },
+          5: { x: 120, y: 50 }
+        },
+        ball: 1,
+        actions: [
+          { type: 'pass', from: 1, to: 2 }
         ]
       }
     ]
