@@ -785,32 +785,47 @@
             actionsGroup.appendChild(cross2);
 
           } else if (action.type === 'screen') {
-            // Screen indicator - T shape at screener's position, rotated by angle
+            // Screen indicator - T-shape at screener's position
             // angle: 0=down, 90=right, 180=up, 270=left (direction screen faces)
             const screener = phase.positions[action.player];
+            if (!screener) return; // Skip if position not found
             const angle = action.angle || 0;
+
+            // If 'from' is provided, draw movement line WITHOUT arrowhead
+            if (action.from) {
+              const moveLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+              moveLine.setAttribute('x1', action.from.x);
+              moveLine.setAttribute('y1', action.from.y);
+              moveLine.setAttribute('x2', screener.x);
+              moveLine.setAttribute('y2', screener.y);
+              moveLine.style.stroke = '#333';
+              moveLine.style.strokeWidth = '2';
+              moveLine.style.strokeLinecap = 'round';
+              // NO marker-end (no arrowhead)
+              actionsGroup.appendChild(moveLine);
+            }
 
             // Create a group for the screen indicator and rotate it
             const screenGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             screenGroup.setAttribute('transform', `rotate(${angle}, ${screener.x}, ${screener.y})`);
 
-            // Horizontal bar (the screen blocking defender)
+            // T-shape screen indicator (horizontal bar blocking the defender)
             const hBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             hBar.setAttribute('x1', screener.x - 14);
-            hBar.setAttribute('y1', screener.y + 10);
+            hBar.setAttribute('y1', screener.y + 12);
             hBar.setAttribute('x2', screener.x + 14);
-            hBar.setAttribute('y2', screener.y + 10);
+            hBar.setAttribute('y2', screener.y + 12);
             hBar.style.stroke = '#333';
             hBar.style.strokeWidth = '4';
             hBar.style.strokeLinecap = 'round';
             screenGroup.appendChild(hBar);
 
-            // Vertical line (stem of T, pointing toward cutter)
+            // Vertical bar (stem of T - short line indicating direction)
             const vBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             vBar.setAttribute('x1', screener.x);
-            vBar.setAttribute('y1', screener.y + 10);
+            vBar.setAttribute('y1', screener.y + 12);
             vBar.setAttribute('x2', screener.x);
-            vBar.setAttribute('y2', screener.y + 24);
+            vBar.setAttribute('y2', screener.y + 22);
             vBar.style.stroke = '#333';
             vBar.style.strokeWidth = '4';
             vBar.style.strokeLinecap = 'round';
@@ -1134,10 +1149,22 @@
 
         await new Promise(resolve => setTimeout(resolve, 300));
       } else if (action.type === 'screen') {
-        // Screen indicator - T shape at screener's position, rotated by angle
         const screener = toPositions[action.player];
         if (screener) {
           const angle = action.angle || 0;
+
+          // If 'from' is provided, draw movement line WITHOUT arrowhead
+          if (action.from) {
+            const moveLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            moveLine.setAttribute('x1', action.from.x);
+            moveLine.setAttribute('y1', action.from.y);
+            moveLine.setAttribute('x2', screener.x);
+            moveLine.setAttribute('y2', screener.y);
+            moveLine.style.stroke = '#333';
+            moveLine.style.strokeWidth = '2';
+            moveLine.style.strokeLinecap = 'round';
+            actionsGroup.appendChild(moveLine);
+          }
 
           // Create a group for the screen indicator and rotate it
           const screenGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -1145,23 +1172,23 @@
           screenGroup.style.opacity = '0';
           actionsGroup.appendChild(screenGroup);
 
-          // Horizontal bar (the screen)
+          // T-shape screen indicator (horizontal bar blocking the defender)
           const hBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
           hBar.setAttribute('x1', screener.x - 14);
-          hBar.setAttribute('y1', screener.y + 10);
+          hBar.setAttribute('y1', screener.y + 12);
           hBar.setAttribute('x2', screener.x + 14);
-          hBar.setAttribute('y2', screener.y + 10);
+          hBar.setAttribute('y2', screener.y + 12);
           hBar.style.stroke = '#333';
           hBar.style.strokeWidth = '4';
           hBar.style.strokeLinecap = 'round';
           screenGroup.appendChild(hBar);
 
-          // Vertical line (stem of T, pointing toward cutter)
+          // Vertical bar (stem of T - short line indicating direction)
           const vBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
           vBar.setAttribute('x1', screener.x);
-          vBar.setAttribute('y1', screener.y + 10);
+          vBar.setAttribute('y1', screener.y + 12);
           vBar.setAttribute('x2', screener.x);
-          vBar.setAttribute('y2', screener.y + 24);
+          vBar.setAttribute('y2', screener.y + 22);
           vBar.style.stroke = '#333';
           vBar.style.strokeWidth = '4';
           vBar.style.strokeLinecap = 'round';
@@ -1379,9 +1406,22 @@
           }, 50);
         }
       } else if (action.type === 'screen') {
-        const screener = toPositions[action.player];
+        const screener = positions[action.player];
         if (screener) {
           const angle = action.angle || 0;
+
+          // If 'from' is provided, draw movement line WITHOUT arrowhead
+          if (action.from) {
+            const moveLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            moveLine.setAttribute('x1', action.from.x);
+            moveLine.setAttribute('y1', action.from.y);
+            moveLine.setAttribute('x2', screener.x);
+            moveLine.setAttribute('y2', screener.y);
+            moveLine.style.stroke = '#333';
+            moveLine.style.strokeWidth = '2';
+            moveLine.style.strokeLinecap = 'round';
+            actionsGroup.appendChild(moveLine);
+          }
 
           // Create a group for the screen indicator and rotate it
           const screenGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -1390,23 +1430,23 @@
           screenGroup.style.animation = 'fadeIn 0.3s ease-out forwards';
           actionsGroup.appendChild(screenGroup);
 
-          // Horizontal bar (the screen)
+          // T-shape screen indicator (horizontal bar blocking the defender)
           const hBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
           hBar.setAttribute('x1', screener.x - 14);
-          hBar.setAttribute('y1', screener.y + 10);
+          hBar.setAttribute('y1', screener.y + 12);
           hBar.setAttribute('x2', screener.x + 14);
-          hBar.setAttribute('y2', screener.y + 10);
+          hBar.setAttribute('y2', screener.y + 12);
           hBar.style.stroke = '#333';
           hBar.style.strokeWidth = '4';
           hBar.style.strokeLinecap = 'round';
           screenGroup.appendChild(hBar);
 
-          // Vertical line (stem of T, pointing toward cutter)
+          // Vertical bar (stem of T - short line indicating direction)
           const vBar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
           vBar.setAttribute('x1', screener.x);
-          vBar.setAttribute('y1', screener.y + 10);
+          vBar.setAttribute('y1', screener.y + 12);
           vBar.setAttribute('x2', screener.x);
-          vBar.setAttribute('y2', screener.y + 24);
+          vBar.setAttribute('y2', screener.y + 22);
           vBar.style.stroke = '#333';
           vBar.style.strokeWidth = '4';
           vBar.style.strokeLinecap = 'round';
