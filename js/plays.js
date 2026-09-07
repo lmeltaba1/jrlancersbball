@@ -1414,133 +1414,122 @@ const plays = {
     chapter: 'inbound',
     description: 'Double screen with lob and backdoor options',
     phases: [
-      // ========== INITIAL: DOUBLE SCREEN SETUP ==========
-      // Frame 1-30: 1 inbounder, 4/5 double screen left of rim, 3 right of rim, 2 right side
+      // ========== PHASE 1: INITIAL SETUP ==========
+      // 4 corners of paint
       {
-        description: [],
+        description: ['Players on 4 corners of paint'],
         positions: {
-          1: { x: 200, y: 10 },    // Inbounder at baseline (circled)
-          2: { x: 300, y: 200 },   // Right side below FT line
-          3: { x: 280, y: 100 },   // Right of rim, will use double screen
-          4: { x: 180, y: 100 },   // Left of rim (top of double screen)
-          5: { x: 180, y: 160 }    // Below 4 (bottom of double screen)
+          1: { x: 200, y: 10 },    // Inbounder at baseline center
+          2: { x: 260, y: 190 },   // Bottom right (right elbow)
+          3: { x: 260, y: 80 },    // Top right (right block)
+          4: { x: 140, y: 80 },    // Top left (left block)
+          5: { x: 140, y: 190 }    // Bottom left (left elbow)
         },
         ball: 1,
         actions: []
       },
-      // ========== PHASE 1: OPEN SHOT FOR #3 ==========
-      // Frame 30-70: 3 curls around double screen to left wing
+      // ========== PHASE 2: 5 MOVES TO FORM DOUBLE SCREEN ==========
       {
         description: [
-          'Our best shooter at #3 cuts to the strong side using the double screen for an open shot'
+          'Our best shooter #3 cuts around the double screen for an open shot'
         ],
         positions: {
           1: { x: 200, y: 10 },
-          2: { x: 300, y: 200 },
-          3: { x: 280, y: 100 },
-          4: { x: 180, y: 100 },   // Double screen
-          5: { x: 180, y: 160 }    // Double screen
+          2: { x: 260, y: 190 },
+          3: { x: 260, y: 80 },
+          4: { x: 140, y: 80 },
+          5: { x: 140, y: 110 }    // 5 moves up RIGHT NEXT to 4
         },
         ball: 1,
         actions: [
-          { type: 'screen', player: 4, angle: 270 },  // Screen faces left (toward baseline)
-          { type: 'screen', player: 5, angle: 270 }   // Screen faces left
+          { type: 'cut', player: 5, from: { x: 140, y: 190 }, to: { x: 140, y: 110 } },
+          { type: 'screen', player: 4, angle: 90, offsetX: 25 },  // Screen to RIGHT of 4
+          { type: 'screen', player: 5, angle: 90, offsetX: 25 }   // Screen to RIGHT of 5
         ]
       },
+      // 3 cuts around double screen to left corner
       {
         description: [],
         positions: {
           1: { x: 200, y: 10 },
-          2: { x: 300, y: 200 },
-          3: { x: 60, y: 120 },    // 3 curls to left wing
-          4: { x: 180, y: 100 },
-          5: { x: 180, y: 160 }
+          2: { x: 260, y: 190 },
+          3: { x: 60, y: 100 },    // 3 ends at left corner
+          4: { x: 140, y: 80 },
+          5: { x: 140, y: 110 }
         },
         ball: 1,
         actions: [
-          // 3 curls around double screen from right to left
-          { type: 'cut', player: 3, path: 'M280,100 Q230,90 180,100 Q130,110 90,115 Q75,118 60,120' }
+          { type: 'screen', player: 4, angle: 90, offsetX: 25 },  // Keep screens visible
+          { type: 'screen', player: 5, angle: 90, offsetX: 25 },
+          { type: 'cut', player: 3, path: 'M260,80 Q220,110 180,130 Q140,140 100,120 Q80,110 60,100' }
         ]
       },
-      // ========== PHASE 2: LOB FOR LAYUP ==========
-      // Frame 120: 5 pins for 4
+      // ========== PHASE 3: 5 SCREENS 4's DEFENDER ==========
+      // After 3 passes, 5 turns to screen 4's defender
       {
         description: [
-          '#5 pins down a defender to open #4 for a lob pass'
+          '#5 screens #4s defender so #4 can get open'
         ],
         positions: {
           1: { x: 200, y: 10 },
-          2: { x: 300, y: 200 },
-          3: { x: 60, y: 120 },
-          4: { x: 200, y: 100 },   // 4 near rim
-          5: { x: 200, y: 150 }    // 5 below 4, setting pin
+          2: { x: 260, y: 190 },
+          3: { x: 60, y: 100 },
+          4: { x: 140, y: 80 },
+          5: { x: 160, y: 90 }    // 5 pivots to screen 4's defender
         },
         ball: 1,
         actions: [
-          { type: 'screen', player: 5, angle: 0 }  // Pin down screen
+          { type: 'screen', player: 5, angle: 0 }  // Screen faces down toward basket
         ]
       },
+      // 4 cuts UP away from basket for pass
       {
         description: [],
         positions: {
           1: { x: 200, y: 10 },
-          2: { x: 300, y: 200 },
-          3: { x: 60, y: 120 },
-          4: { x: 160, y: 60 },    // 4 cuts to basket for lob
-          5: { x: 200, y: 150 }
+          2: { x: 260, y: 190 },
+          3: { x: 60, y: 100 },
+          4: { x: 120, y: 140 },   // 4 cuts UP away from basket
+          5: { x: 160, y: 90 }
         },
         ball: 1,
         actions: [
-          // 4 cuts around 5's pin toward basket
-          { type: 'cut', player: 4, path: 'M200,100 Q180,80 160,60' }
+          { type: 'screen', player: 5, angle: 0 },  // Keep screen visible
+          { type: 'cut', player: 4, path: 'M140,80 Q130,100 120,140' }
         ]
       },
-      // ========== PHASE 3: BACKDOOR CUT ==========
-      // Frame 180-250: 2 backdoor, 3 release valve
+      // ========== PHASE 4: BACKDOOR CUT ==========
+      // 2 fakes to 3pt then backdoors, 3 becomes outlet. 4 and 5 stay put.
       {
         description: [
-          '#2 moves to the 3-point line aggressively shouting for the ball before cutting backdoor to the basket',
-          '#3 falls back to the three point line to act as a release valve'
+          '#2 moves aggressively to 3pt line then cuts backdoor',
+          '#3 falls back to 3pt line as release valve'
         ],
         positions: {
           1: { x: 200, y: 10 },
-          2: { x: 300, y: 200 },
-          3: { x: 60, y: 120 },
-          4: { x: 160, y: 160 },   // 4 drifted left
-          5: { x: 220, y: 100 }    // 5 near rim
-        },
-        ball: 1,
-        actions: []
-      },
-      {
-        description: [],
-        positions: {
-          1: { x: 200, y: 10 },
-          2: { x: 280, y: 130 },   // 2 moves to 3pt line aggressively
-          3: { x: 60, y: 120 },
-          4: { x: 160, y: 160 },
-          5: { x: 220, y: 100 }
+          2: { x: 280, y: 140 },   // 2 moves up aggressively
+          3: { x: 60, y: 100 },
+          4: { x: 120, y: 140 },   // 4 stays
+          5: { x: 160, y: 90 }     // 5 stays
         },
         ball: 1,
         actions: [
-          { type: 'cut', player: 2, from: { x: 300, y: 200 }, to: { x: 280, y: 130 } }
+          { type: 'cut', player: 2, from: { x: 260, y: 190 }, to: { x: 280, y: 140 } }
         ]
       },
       {
         description: [],
         positions: {
           1: { x: 200, y: 10 },
-          2: { x: 220, y: 80 },    // 2 cuts backdoor to basket
-          3: { x: 100, y: 300 },   // 3 falls back to corner as release
-          4: { x: 160, y: 160 },
-          5: { x: 220, y: 100 }
+          2: { x: 260, y: 70 },    // 2 backdoors to basket
+          3: { x: 100, y: 280 },   // 3 falls back as outlet
+          4: { x: 120, y: 140 },   // 4 stays
+          5: { x: 160, y: 90 }     // 5 stays
         },
         ball: 1,
         actions: [
-          // 2 cuts backdoor to basket
-          { type: 'cut', player: 2, path: 'M280,130 Q260,110 240,95 Q230,87 220,80' },
-          // 3 falls back to corner as release valve
-          { type: 'cut', player: 3, from: { x: 60, y: 120 }, to: { x: 100, y: 300 } }
+          { type: 'cut', player: 2, path: 'M280,140 Q270,110 260,70' },
+          { type: 'cut', player: 3, from: { x: 60, y: 100 }, to: { x: 100, y: 280 } }
         ]
       }
     ]
