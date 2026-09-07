@@ -14,7 +14,10 @@ The app is fully functional with all core features implemented:
 2. **Roster (roster.html)** - Player cards, parent directory, player profile modals with stats and highlights, viewer management
 3. **Schedule (schedule.html)** - Season schedule with game cards
 4. **Game Detail (game-detail.html)** - Individual game info, attendance, volunteers, highlights
-5. **Chat (chat.html)** - Real-time team messaging via Firestore (parents/coaches only)
+5. **Messages (messages.html)** - 3-tab messaging hub (parents/coaches only):
+   - **Group Chat** - Real-time team messaging (default tab)
+   - **Posts** - Coach announcements (coaches can post, all can view)
+   - **Text** - Contact directory with SMS links to parents/coaches
 6. **Playbook (playbook.html)** - Interactive play diagrams with SVG animations (parents/coaches only)
 7. **Highlights (highlights.html)** - Photo/video uploads tagged by player/game
 8. **Attendance (attendance.html)** - RSVP tracking for games (parents/coaches only)
@@ -35,7 +38,8 @@ The app is fully functional with all core features implemented:
 - `volunteers` - Volunteer signups per game (scorekeeper, tableWorker)
 - `gameStats` - Player statistics per game
 - `highlights` - Media uploads with player/game tags
-- `messages` - Chat messages
+- `messages` - Group chat messages
+- `posts` - Coach announcements (with comments subcollection)
 - `viewers` - Invited viewers per player (managed by parents, includes blocklist)
 - `chatReadStatus` - Per-user chat read timestamps
 - `fcmTokens` - Push notification tokens
@@ -135,9 +139,9 @@ Recent plays added: Box, Stack, Triangle, Dub (inbound plays)
 
 ## Bottom Navigation (7 tabs)
 
-Order on all pages: Home → Roster → Schedule → Chat → Plays → Stats → Highlights
+Order on all pages: Home → Roster → Schedule → Messages → Plays → Stats → Highlights
 
-Note: Chat and Plays hidden for viewers via `hideViewerRestrictedNav()`
+Note: Messages and Plays hidden for viewers via `hideViewerRestrictedNav()`
 
 ## Firebase Deployment
 

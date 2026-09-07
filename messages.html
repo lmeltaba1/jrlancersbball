@@ -10,18 +10,13 @@
   <link rel="stylesheet" href="css/athletic.css">
   <link rel="manifest" href="manifest.json">
   <style>
-    .messages-main {
-      padding: 16px;
-      padding-bottom: 80px;
-    }
-
-    /* Tab Navigation */
     .tab-bar {
       display: flex;
       background: var(--bg-elevated);
       border-radius: 12px;
       padding: 4px;
-      margin-bottom: 16px;
+      margin: 16px;
+      margin-bottom: 0;
       gap: 4px;
     }
     .tab-btn {
@@ -34,18 +29,14 @@
       font-weight: 600;
       border-radius: 8px;
       cursor: pointer;
-      transition: all 0.2s;
     }
     .tab-btn.active {
       background: var(--lancers-gold);
       color: black;
     }
-    .tab-content {
-      display: none;
-    }
-    .tab-content.active {
-      display: block;
-    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .messages-main { padding: 16px; padding-bottom: 140px; }
 
     /* Posts */
     .post-card {
@@ -57,60 +48,11 @@
     .post-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
       margin-bottom: 8px;
     }
-    .post-author {
-      font-weight: 700;
-      color: var(--lancers-gold);
-    }
-    .post-time {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-    .post-text {
-      color: var(--text-primary);
-      line-height: 1.5;
-      margin-bottom: 12px;
-      white-space: pre-wrap;
-    }
-    .post-actions {
-      display: flex;
-      gap: 16px;
-      padding-top: 8px;
-      border-top: 1px solid var(--border-color);
-    }
-    .reaction-btn {
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .reaction-btn:hover {
-      background: var(--bg-hover);
-    }
-    .reaction-btn.active {
-      color: var(--lancers-gold);
-    }
-    .comment-btn {
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      cursor: pointer;
-      padding: 4px 8px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    /* New Post Button */
+    .post-author { font-weight: 700; color: var(--lancers-gold); }
+    .post-time { font-size: 0.8rem; color: var(--text-muted); }
+    .post-text { color: var(--text-primary); line-height: 1.5; }
     .new-post-btn {
       width: 100%;
       padding: 12px;
@@ -121,337 +63,41 @@
       font-size: 0.95rem;
       cursor: pointer;
       margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
     }
-    .new-post-btn:hover {
-      border-color: var(--lancers-gold);
-      color: var(--lancers-gold);
-    }
+    .empty-state { text-align: center; padding: 40px; color: var(--text-secondary); }
 
-    /* Post Modal */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.8);
-      z-index: 1000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .modal-overlay.active {
-      display: flex;
-    }
-    .modal-content {
-      background: var(--bg-body);
-      border-radius: 16px;
-      width: 100%;
-      max-width: 500px;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px;
-      border-bottom: 1px solid var(--border-color);
-    }
-    .modal-header h3 {
-      margin: 0;
-      color: var(--text-primary);
-    }
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      color: var(--text-secondary);
-      cursor: pointer;
-    }
-    .modal-body {
-      padding: 16px;
-    }
-    .post-textarea {
-      width: 100%;
-      min-height: 120px;
-      padding: 12px;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-      font-size: 1rem;
-      resize: vertical;
-      font-family: inherit;
-    }
-    .post-textarea:focus {
-      outline: none;
-      border-color: var(--lancers-gold);
-    }
-    .modal-footer {
-      padding: 16px;
-      border-top: 1px solid var(--border-color);
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-    }
-
-    /* Expanded Post View */
-    .post-expanded {
-      display: none;
-    }
-    .post-expanded.active {
-      display: block;
-    }
-    .back-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 0.95rem;
-      cursor: pointer;
-      margin-bottom: 16px;
-      padding: 0;
-    }
-    .back-btn:hover {
-      color: var(--lancers-gold);
-    }
-    .comments-section {
-      margin-top: 16px;
-    }
-    .comments-header {
-      font-weight: 600;
-      color: var(--text-secondary);
-      font-size: 0.85rem;
-      margin-bottom: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .comment-item {
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border-color);
-    }
-    .comment-item:last-child {
-      border-bottom: none;
-    }
-    .comment-author {
-      font-weight: 600;
-      color: var(--text-primary);
-      font-size: 0.9rem;
-    }
-    .comment-time {
-      color: var(--text-muted);
-      font-size: 0.75rem;
-      margin-left: 8px;
-    }
-    .comment-text {
-      color: var(--text-secondary);
-      margin-top: 4px;
-      font-size: 0.9rem;
-    }
-    .comment-input-bar {
-      display: flex;
-      gap: 10px;
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border-color);
-    }
-    .comment-input {
-      flex: 1;
-      padding: 10px 14px;
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-      font-size: 0.9rem;
-    }
-    .comment-input:focus {
-      outline: none;
-      border-color: var(--lancers-gold);
-    }
-    .comment-submit {
-      padding: 10px 16px;
-      background: var(--lancers-gold);
-      color: black;
-      border: none;
-      border-radius: 20px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    /* Group Chat Tab */
-    .chat-container {
-      padding-bottom: 80px;
-    }
-    .chat-messages {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .chat-message {
-      max-width: 80%;
-      padding: 10px 14px;
-      border-radius: 16px;
-      font-size: 0.9rem;
-      line-height: 1.4;
-    }
-    .chat-message.sent {
-      align-self: flex-end;
-      background: var(--lancers-gold);
-      color: black;
-      border-bottom-right-radius: 4px;
-    }
-    .chat-message.received {
-      align-self: flex-start;
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-      border-bottom-left-radius: 4px;
-    }
-    .chat-message .sender {
-      font-weight: 700;
-      font-size: 0.75rem;
-      margin-bottom: 4px;
-      color: var(--lancers-gold);
-    }
-    .chat-message.sent .sender {
-      color: rgba(0,0,0,0.6);
-    }
-    .chat-message .time {
-      font-size: 0.7rem;
-      margin-top: 4px;
-      opacity: 0.6;
-    }
-    .date-divider {
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 0.75rem;
-      font-weight: 500;
-      margin: 16px 0 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+    /* Chat */
+    .chat-messages { display: flex; flex-direction: column; gap: 8px; }
+    .chat-message { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 0.9rem; }
+    .chat-message.sent { align-self: flex-end; background: var(--lancers-gold); color: black; }
+    .chat-message.received { align-self: flex-start; background: var(--bg-elevated); color: var(--text-primary); }
+    .chat-message .sender { font-weight: 700; font-size: 0.75rem; margin-bottom: 4px; color: var(--lancers-gold); }
+    .chat-message.sent .sender { color: rgba(0,0,0,0.6); }
+    .chat-message .time { font-size: 0.7rem; margin-top: 4px; opacity: 0.6; }
     .chat-input-fixed {
       position: fixed;
       bottom: calc(60px + env(safe-area-inset-bottom, 0px));
-      left: 50%;
-      transform: translateX(-50%);
-      width: calc(100% - 24px);
-      max-width: 576px;
-      display: flex;
-      gap: 10px;
+      left: 50%; transform: translateX(-50%);
+      width: calc(100% - 24px); max-width: 576px;
+      display: flex; gap: 10px;
       background: var(--bg-elevated);
-      padding: 10px;
-      border-radius: 12px;
-      box-shadow: var(--shadow-md);
+      padding: 10px; border-radius: 12px;
       border: 1px solid var(--border-color);
       z-index: 100;
     }
-    .chat-input-fixed input {
-      flex: 1;
-      padding: 12px 16px;
-      border: 1px solid var(--border-color);
-      border-radius: 24px;
-      font-size: 16px;
-      outline: none;
-      background-color: var(--bg-body);
-      color: var(--text-primary);
-    }
-    .chat-input-fixed button {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: var(--lancers-gold);
-      color: black;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+    .chat-input-fixed input { flex: 1; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 24px; font-size: 16px; background: var(--bg-body); color: var(--text-primary); }
+    .chat-input-fixed button { width: 44px; height: 44px; border-radius: 50%; background: var(--lancers-gold); color: black; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-    /* Text Tab */
-    .search-input {
-      width: 100%;
-      padding: 12px 16px;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-      font-size: 1rem;
-      margin-bottom: 16px;
-    }
-    .search-input:focus {
-      outline: none;
-      border-color: var(--lancers-gold);
-    }
-    .contact-section-header {
-      font-weight: 600;
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin: 16px 0 8px;
-    }
-    .contact-card {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--bg-elevated);
-      padding: 14px 16px;
-      border-radius: 12px;
-      margin-bottom: 8px;
-    }
-    .contact-info h4 {
-      margin: 0 0 2px 0;
-      color: var(--text-primary);
-      font-size: 1rem;
-    }
-    .contact-info span {
-      color: var(--text-secondary);
-      font-size: 0.85rem;
-    }
-    .text-btn {
-      padding: 8px 16px;
-      background: var(--lancers-gold);
-      color: black;
-      border: none;
-      border-radius: 20px;
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      text-decoration: none;
-    }
-    .text-btn:hover {
-      opacity: 0.9;
-    }
-    .no-phone {
-      color: var(--text-muted);
-      font-size: 0.8rem;
-    }
-
-    /* Empty State */
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text-secondary);
-    }
-    .empty-state svg {
-      width: 48px;
-      height: 48px;
-      margin-bottom: 12px;
-      opacity: 0.5;
-    }
+    /* Contacts */
+    .contact-section-header { font-weight: 600; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; margin: 16px 0 8px; }
+    .contact-card { display: flex; justify-content: space-between; align-items: center; background: var(--bg-elevated); padding: 14px 16px; border-radius: 12px; margin-bottom: 8px; }
+    .contact-info h4 { margin: 0 0 2px 0; color: var(--text-primary); }
+    .contact-info span { color: var(--text-secondary); font-size: 0.85rem; }
+    .text-btn { padding: 8px 16px; background: var(--lancers-gold); color: black; border: none; border-radius: 20px; font-weight: 600; text-decoration: none; }
+    .search-input { width: 100%; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-elevated); color: var(--text-primary); font-size: 1rem; margin-bottom: 16px; }
   </style>
 </head>
 <body>
-  <!-- Header -->
   <header class="header">
     <div class="header-content">
       <h1>
@@ -461,93 +107,58 @@
         </a>
       </h1>
       <button class="theme-toggle" onclick="toggleTheme()">
-        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-        </svg>
-        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
       </button>
     </div>
   </header>
 
-  <!-- Main Content -->
+  <!-- Tab Bar -->
+  <div class="tab-bar" id="tabBar" style="display:none;">
+    <button class="tab-btn" onclick="switchTab('posts')">Posts</button>
+    <button class="tab-btn active" onclick="switchTab('chat')">Group Chat</button>
+    <button class="tab-btn" onclick="switchTab('text')">Text</button>
+  </div>
+
   <main class="main-content messages-main">
-    <!-- Loading state -->
     <div id="loadingState" class="card" style="text-align: center; padding: 40px;">
       <div class="spinner" style="margin: 0 auto;"></div>
     </div>
 
-    <!-- Auth required prompt -->
     <div id="authRequired" class="card" style="display: none;">
       <h2 class="card-title">Sign In Required</h2>
       <p style="margin-bottom: 16px; color: var(--text-secondary);">You need to sign in to access Messages.</p>
       <a href="login.html" class="btn btn-primary" style="width: 100%; display: block; text-align: center;">Sign In</a>
     </div>
 
-    <!-- Main Content Container -->
-    <div id="mainContainer" style="display: none;">
-      <!-- Tab Bar -->
-      <div class="tab-bar">
-        <button class="tab-btn active" data-tab="posts">Posts</button>
-        <button class="tab-btn" data-tab="chat">Group Chat</button>
-        <button class="tab-btn" data-tab="text">Text</button>
+    <!-- Posts Tab -->
+    <div id="postsTab" class="tab-content">
+      <button class="new-post-btn" id="newPostBtn" style="display:none;" onclick="alert('New post coming soon')">+ New Post</button>
+      <div id="postsList"></div>
+      <div id="postsEmpty" class="empty-state" style="display:none;">
+        <p>No posts yet</p>
+        <p style="font-size: 0.85rem;">Check back later for team announcements</p>
       </div>
+    </div>
 
-      <!-- Posts Tab -->
-      <div id="postsTab" class="tab-content active">
-        <div id="postsListView">
-          <button class="new-post-btn" id="newPostBtn" style="display: none;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            New Post
-          </button>
-          <div id="postsList"></div>
-          <div id="postsEmpty" class="empty-state" style="display: none;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-            </svg>
-            <p>No posts yet</p>
-            <p style="font-size: 0.85rem;">Check back later for team announcements</p>
-          </div>
-        </div>
-
-        <!-- Expanded Post View -->
-        <div id="postExpandedView" class="post-expanded">
-          <button class="back-btn" onclick="closeExpandedPost()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            Back
-          </button>
-          <div id="expandedPostContent"></div>
-        </div>
+    <!-- Chat Tab -->
+    <div id="chatTab" class="tab-content">
+      <div style="background: var(--bg-elevated); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px;">
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">Chatting as: <strong id="chatUserName" style="color: var(--lancers-gold);"></strong></span>
       </div>
+      <div class="chat-messages" id="chatMessages"></div>
+    </div>
 
-      <!-- Group Chat Tab -->
-      <div id="chatTab" class="tab-content">
-        <div class="chat-container">
-          <div style="background: var(--bg-elevated); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px;">
-            <span style="font-size: 0.85rem; color: var(--text-secondary);">Chatting as: <strong id="chatUserName" style="color: var(--lancers-gold);"></strong></span>
-          </div>
-          <div class="chat-messages" id="chatMessages"></div>
-        </div>
-      </div>
-
-      <!-- Text Tab -->
-      <div id="textTab" class="tab-content">
-        <input type="text" class="search-input" id="contactSearch" placeholder="Search people...">
-        <div id="contactsList"></div>
-      </div>
+    <!-- Text Tab -->
+    <div id="textTab" class="tab-content">
+      <input type="text" class="search-input" id="contactSearch" placeholder="Search people..." oninput="filterContacts()">
+      <div id="contactsList"></div>
     </div>
   </main>
 
-  <!-- Chat Input (shown only on chat tab) -->
   <div class="chat-input-fixed" id="chatInputContainer" style="display: none;">
     <input type="text" id="messageInput" placeholder="Type a message...">
-    <button id="sendBtn">
+    <button id="sendBtn" onclick="sendMessage()">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="22" y1="2" x2="11" y2="13"></line>
         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -555,70 +166,16 @@
     </button>
   </div>
 
-  <!-- New Post Modal -->
-  <div class="modal-overlay" id="newPostModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>New Post</h3>
-        <button class="modal-close" onclick="closeNewPostModal()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <textarea class="post-textarea" id="newPostText" placeholder="Share an update with the team..."></textarea>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeNewPostModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="submitNewPost()">Post</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bottom Navigation -->
   <nav class="bottom-nav">
-    <a href="index.html" class="nav-item">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-      <span>Home</span>
-    </a>
-    <a href="roster.html" class="nav-item">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-      <span>Roster</span>
-    </a>
-    <a href="schedule.html" class="nav-item">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-      <span>Schedule</span>
-    </a>
-    <a href="messages.html" class="nav-item active">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-      </svg>
-      <span>Messages</span>
-    </a>
-    <a href="playbook.html" class="nav-item">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-      </svg>
-      <span>Plays</span>
-    </a>
-    <a href="stats-view.html" class="nav-item">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-      <span>Stats</span>
-    </a>
-    <a href="highlights.html" class="nav-item">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-      </svg>
-      <span>Highlights</span>
-    </a>
+    <a href="index.html" class="nav-item"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg><span>Home</span></a>
+    <a href="roster.html" class="nav-item"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg><span>Roster</span></a>
+    <a href="schedule.html" class="nav-item"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><span>Schedule</span></a>
+    <a href="messages.html" class="nav-item active"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg><span>Messages</span></a>
+    <a href="playbook.html" class="nav-item"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg><span>Plays</span></a>
+    <a href="stats-view.html" class="nav-item"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg><span>Stats</span></a>
+    <a href="highlights.html" class="nav-item"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg><span>Highlights</span></a>
   </nav>
 
-  <!-- Scripts -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -627,433 +184,166 @@
   <script src="js/theme.js"></script>
   <script src="js/app.js?v=3"></script>
   <script>
-    let currentUser = null;
-    let currentUserInfo = null;
-    let displayName = '';
-    let rosterData = null;
-    let isCoach = false;
-    let currentTab = 'posts';
-    let expandedPostId = null;
-    let chatInitialized = false;
-    let lastDateShown = null;
+    var currentUser = null;
+    var currentUserInfo = null;
+    var displayName = '';
+    var rosterData = null;
+    var currentTab = 'chat';
 
-    // Tab switching
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tabId = btn.dataset.tab;
-        switchTab(tabId);
-      });
-    });
-
-    function switchTab(tabId) {
-      currentTab = tabId;
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
-      document.getElementById(`${tabId}Tab`).classList.add('active');
-
-      // Show/hide chat input
-      document.getElementById('chatInputContainer').style.display = tabId === 'chat' ? 'flex' : 'none';
-
-      // Initialize chat if needed
-      if (tabId === 'chat' && !chatInitialized) {
-        initChat();
-      }
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+      event.target.classList.add('active');
+      document.getElementById(tab + 'Tab').classList.add('active');
+      document.getElementById('chatInputContainer').style.display = (tab === 'chat') ? 'flex' : 'none';
     }
 
-    // Helper functions
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+    function formatTime(ts) {
+      if (!ts) return '';
+      var d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
     }
 
-    function formatTimeAgo(timestamp) {
-      if (!timestamp) return '';
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      const now = new Date();
-      const diff = Math.floor((now - date) / 1000);
-
+    function formatTimeAgo(ts) {
+      if (!ts) return '';
+      var d = ts.toDate ? ts.toDate() : new Date(ts);
+      var diff = Math.floor((new Date() - d) / 1000);
       if (diff < 60) return 'Just now';
-      if (diff < 3600) return Math.floor(diff / 60) + 'm';
-      if (diff < 86400) return Math.floor(diff / 3600) + 'h';
-      if (diff < 604800) return Math.floor(diff / 86400) + 'd';
-      return date.toLocaleDateString();
+      if (diff < 3600) return Math.floor(diff/60) + 'm';
+      if (diff < 86400) return Math.floor(diff/3600) + 'h';
+      return Math.floor(diff/86400) + 'd';
     }
 
-    function formatTime(timestamp) {
-      if (!timestamp) return '';
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    function escapeHtml(t) {
+      var d = document.createElement('div');
+      d.textContent = t;
+      return d.innerHTML;
     }
-
-    // ==================== POSTS ====================
 
     function loadPosts() {
-      db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
-        const postsList = document.getElementById('postsList');
-        const postsEmpty = document.getElementById('postsEmpty');
-
-        if (snapshot.empty) {
-          postsList.innerHTML = '';
-          postsEmpty.style.display = 'block';
+      if (!db) return;
+      db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(function(snap) {
+        var list = document.getElementById('postsList');
+        var empty = document.getElementById('postsEmpty');
+        if (snap.empty) {
+          list.innerHTML = '';
+          empty.style.display = 'block';
           return;
         }
-
-        postsEmpty.style.display = 'none';
-        postsList.innerHTML = '';
-
-        snapshot.forEach(doc => {
-          const post = doc.data();
-          const postEl = createPostCard(doc.id, post);
-          postsList.appendChild(postEl);
+        empty.style.display = 'none';
+        list.innerHTML = '';
+        snap.forEach(function(doc) {
+          var p = doc.data();
+          var div = document.createElement('div');
+          div.className = 'post-card';
+          div.innerHTML = '<div class="post-header"><span class="post-author">' + escapeHtml(p.authorName || 'Coach') + '</span><span class="post-time">' + formatTimeAgo(p.timestamp) + '</span></div><div class="post-text">' + escapeHtml(p.text || '') + '</div>';
+          list.appendChild(div);
         });
       });
     }
 
-    function createPostCard(postId, post) {
-      const div = document.createElement('div');
-      div.className = 'post-card';
-      div.onclick = () => expandPost(postId);
-
-      const reactions = post.reactions || {};
-      const thumbsCount = (reactions['👍'] || []).length;
-      const heartsCount = (reactions['❤️'] || []).length;
-      const ballsCount = (reactions['🏀'] || []).length;
-
-      div.innerHTML = `
-        <div class="post-header">
-          <span class="post-author">${escapeHtml(post.authorName)}</span>
-          <span class="post-time">${formatTimeAgo(post.timestamp)}</span>
-        </div>
-        <div class="post-text">${escapeHtml(post.text)}</div>
-        <div class="post-actions" onclick="event.stopPropagation();">
-          <button class="reaction-btn" onclick="toggleReaction('${postId}', '👍')">👍 ${thumbsCount || ''}</button>
-          <button class="reaction-btn" onclick="toggleReaction('${postId}', '❤️')">❤️ ${heartsCount || ''}</button>
-          <button class="reaction-btn" onclick="toggleReaction('${postId}', '🏀')">🏀 ${ballsCount || ''}</button>
-          <button class="comment-btn">💬 ${post.commentCount || 0}</button>
-        </div>
-      `;
-      return div;
-    }
-
-    async function toggleReaction(postId, emoji) {
-      const postRef = db.collection('posts').doc(postId);
-      const postDoc = await postRef.get();
-      const post = postDoc.data();
-      const reactions = post.reactions || {};
-      const emojiReactions = reactions[emoji] || [];
-      const uid = currentUser.uid;
-
-      if (emojiReactions.includes(uid)) {
-        // Remove reaction
-        await postRef.update({
-          [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayRemove(uid)
-        });
-      } else {
-        // Add reaction
-        await postRef.update({
-          [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayUnion(uid)
-        });
-      }
-    }
-
-    async function expandPost(postId) {
-      expandedPostId = postId;
-      document.getElementById('postsListView').style.display = 'none';
-      document.getElementById('postExpandedView').classList.add('active');
-
-      const postDoc = await db.collection('posts').doc(postId).get();
-      const post = postDoc.data();
-
-      const reactions = post.reactions || {};
-      const thumbsCount = (reactions['👍'] || []).length;
-      const heartsCount = (reactions['❤️'] || []).length;
-      const ballsCount = (reactions['🏀'] || []).length;
-
-      let html = `
-        <div class="post-card">
-          <div class="post-header">
-            <span class="post-author">${escapeHtml(post.authorName)}</span>
-            <span class="post-time">${formatTimeAgo(post.timestamp)}</span>
-          </div>
-          <div class="post-text">${escapeHtml(post.text)}</div>
-          <div class="post-actions">
-            <button class="reaction-btn" onclick="toggleReaction('${postId}', '👍')">👍 ${thumbsCount || ''}</button>
-            <button class="reaction-btn" onclick="toggleReaction('${postId}', '❤️')">❤️ ${heartsCount || ''}</button>
-            <button class="reaction-btn" onclick="toggleReaction('${postId}', '🏀')">🏀 ${ballsCount || ''}</button>
-          </div>
-        </div>
-        <div class="comments-section">
-          <div class="comments-header">Comments</div>
-          <div id="commentsList"></div>
-          <div class="comment-input-bar">
-            <input type="text" class="comment-input" id="commentInput" placeholder="Add a comment...">
-            <button class="comment-submit" onclick="submitComment('${postId}')">Post</button>
-          </div>
-        </div>
-      `;
-
-      document.getElementById('expandedPostContent').innerHTML = html;
-
-      // Load comments
-      db.collection('posts').doc(postId).collection('comments').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
-        const commentsList = document.getElementById('commentsList');
-        commentsList.innerHTML = '';
-
-        snapshot.forEach(doc => {
-          const comment = doc.data();
-          const commentEl = document.createElement('div');
-          commentEl.className = 'comment-item';
-          commentEl.innerHTML = `
-            <span class="comment-author">${escapeHtml(comment.authorName)}</span>
-            <span class="comment-time">${formatTimeAgo(comment.timestamp)}</span>
-            <div class="comment-text">${escapeHtml(comment.text)}</div>
-          `;
-          commentsList.appendChild(commentEl);
-        });
-      });
-
-      // Handle enter key for comment
-      document.getElementById('commentInput').addEventListener('keypress', e => {
-        if (e.key === 'Enter') submitComment(postId);
-      });
-    }
-
-    function closeExpandedPost() {
-      expandedPostId = null;
-      document.getElementById('postsListView').style.display = 'block';
-      document.getElementById('postExpandedView').classList.remove('active');
-    }
-
-    async function submitComment(postId) {
-      const input = document.getElementById('commentInput');
-      const text = input.value.trim();
-      if (!text) return;
-
-      await db.collection('posts').doc(postId).collection('comments').add({
-        text: text,
-        authorUid: currentUser.uid,
-        authorName: displayName,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      // Update comment count
-      await db.collection('posts').doc(postId).update({
-        commentCount: firebase.firestore.FieldValue.increment(1)
-      });
-
-      input.value = '';
-    }
-
-    function openNewPostModal() {
-      document.getElementById('newPostModal').classList.add('active');
-      document.getElementById('newPostText').focus();
-    }
-
-    function closeNewPostModal() {
-      document.getElementById('newPostModal').classList.remove('active');
-      document.getElementById('newPostText').value = '';
-    }
-
-    async function submitNewPost() {
-      const text = document.getElementById('newPostText').value.trim();
-      if (!text) return;
-
-      await db.collection('posts').add({
-        text: text,
-        authorUid: currentUser.uid,
-        authorName: displayName,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        commentCount: 0,
-        reactions: {}
-      });
-
-      closeNewPostModal();
-    }
-
-    // ==================== GROUP CHAT ====================
-
-    function initChat() {
-      chatInitialized = true;
-      lastDateShown = null;
-
-      db.collection('messages').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
-        const chatMessages = document.getElementById('chatMessages');
-
-        snapshot.docChanges().forEach(change => {
+    function loadChat() {
+      if (!db) return;
+      db.collection('messages').orderBy('timestamp', 'asc').onSnapshot(function(snap) {
+        var container = document.getElementById('chatMessages');
+        snap.docChanges().forEach(function(change) {
           if (change.type === 'added') {
-            const msg = change.doc.data();
-            const isOwn = msg.uid === currentUser.uid;
-            addChatMessage(msg.text, msg.senderName, msg.timestamp, isOwn);
+            var m = change.doc.data();
+            var div = document.createElement('div');
+            div.className = 'chat-message ' + (m.uid === currentUser.uid ? 'sent' : 'received');
+            var html = '';
+            if (m.uid !== currentUser.uid) html += '<div class="sender">' + escapeHtml(m.senderName || '') + '</div>';
+            html += '<div>' + escapeHtml(m.text || '') + '</div>';
+            html += '<div class="time">' + formatTime(m.timestamp) + '</div>';
+            div.innerHTML = html;
+            container.appendChild(div);
           }
         });
-
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        container.scrollTop = container.scrollHeight;
       });
     }
 
-    function formatDateLabel(timestamp) {
-      if (!timestamp) return '';
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-
-      if (dateOnly.getTime() === todayOnly.getTime()) return 'Today';
-      if (dateOnly.getTime() === yesterdayOnly.getTime()) return 'Yesterday';
-      return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-    }
-
-    function getDateKey(timestamp) {
-      if (!timestamp) return '';
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      return date.toDateString();
-    }
-
-    function addChatMessage(text, sender, timestamp, isOwn) {
-      const chatMessages = document.getElementById('chatMessages');
-
-      // Add date divider if needed
-      const dateKey = getDateKey(timestamp);
-      if (dateKey && dateKey !== lastDateShown) {
-        const divider = document.createElement('div');
-        divider.className = 'date-divider';
-        divider.textContent = formatDateLabel(timestamp);
-        chatMessages.appendChild(divider);
-        lastDateShown = dateKey;
-      }
-
-      const div = document.createElement('div');
-      div.className = 'chat-message ' + (isOwn ? 'sent' : 'received');
-
-      let content = '';
-      if (!isOwn) {
-        content += `<div class="sender">${escapeHtml(sender)}</div>`;
-      }
-      content += `<div>${escapeHtml(text)}</div>`;
-      content += `<div class="time">${formatTime(timestamp)}</div>`;
-      div.innerHTML = content;
-      chatMessages.appendChild(div);
-    }
-
-    function sendChatMessage() {
-      const text = document.getElementById('messageInput').value.trim();
-      if (!text) return;
-
+    function sendMessage() {
+      var input = document.getElementById('messageInput');
+      var text = input.value.trim();
+      if (!text || !db || !currentUser) return;
       db.collection('messages').add({
         text: text,
         senderName: displayName,
         senderEmail: currentUser.email,
         uid: currentUser.uid,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(() => {
-        document.getElementById('messageInput').value = '';
       });
+      input.value = '';
     }
-
-    document.getElementById('sendBtn').addEventListener('click', sendChatMessage);
-    document.getElementById('messageInput').addEventListener('keypress', e => {
-      if (e.key === 'Enter') sendChatMessage();
-    });
-
-    // ==================== TEXT TAB ====================
 
     function loadContacts() {
       if (!rosterData) return;
-
-      const contactsList = document.getElementById('contactsList');
-      let html = '';
-
-      // Coaches
-      html += '<div class="contact-section-header">Coaches</div>';
-      rosterData.coaches.forEach(coach => {
-        html += createContactCard(coach.name, coach.role, coach.phone);
+      var html = '<div class="contact-section-header">Coaches</div>';
+      rosterData.coaches.forEach(function(c) {
+        html += '<div class="contact-card"><div class="contact-info"><h4>' + escapeHtml(c.name) + '</h4><span>' + escapeHtml(c.role) + '</span></div>' + (c.phone ? '<a href="sms:' + c.phone + '" class="text-btn">Text</a>' : '<span style="color:var(--text-muted)">No phone</span>') + '</div>';
       });
-
-      // Parents
       html += '<div class="contact-section-header">Parents</div>';
-      const allParents = [];
-      rosterData.players.forEach(player => {
-        if (player.parents) {
-          player.parents.forEach(parent => {
-            allParents.push({
-              name: parent.name,
-              role: `${player.firstName}'s Parent`,
-              phone: parent.phone
-            });
+      rosterData.players.forEach(function(p) {
+        if (p.parents) {
+          p.parents.forEach(function(par) {
+            html += '<div class="contact-card"><div class="contact-info"><h4>' + escapeHtml(par.name) + '</h4><span>' + escapeHtml(p.firstName) + "'s Parent</span></div>" + (par.phone ? '<a href="sms:' + par.phone + '" class="text-btn">Text</a>' : '<span style="color:var(--text-muted)">No phone</span>') + '</div>';
           });
         }
       });
-
-      // Sort parents alphabetically
-      allParents.sort((a, b) => a.name.localeCompare(b.name));
-      allParents.forEach(p => {
-        html += createContactCard(p.name, p.role, p.phone);
-      });
-
-      contactsList.innerHTML = html;
+      document.getElementById('contactsList').innerHTML = html;
     }
 
-    function createContactCard(name, role, phone) {
-      const phoneLink = phone ? `sms:${phone}` : null;
-      return `
-        <div class="contact-card">
-          <div class="contact-info">
-            <h4>${escapeHtml(name)}</h4>
-            <span>${escapeHtml(role)}</span>
-          </div>
-          ${phoneLink ?
-            `<a href="${phoneLink}" class="text-btn">Text</a>` :
-            `<span class="no-phone">No phone</span>`
-          }
-        </div>
-      `;
+    function filterContacts() {
+      var q = document.getElementById('contactSearch').value.toLowerCase();
+      document.querySelectorAll('.contact-card').forEach(function(c) {
+        var name = c.querySelector('h4').textContent.toLowerCase();
+        c.style.display = name.indexOf(q) >= 0 ? 'flex' : 'none';
+      });
     }
 
-    // Search functionality
-    document.getElementById('contactSearch').addEventListener('input', e => {
-      const query = e.target.value.toLowerCase();
-      document.querySelectorAll('.contact-card').forEach(card => {
-        const name = card.querySelector('h4').textContent.toLowerCase();
-        card.style.display = name.includes(query) ? 'flex' : 'none';
-      });
+    document.getElementById('messageInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') sendMessage();
     });
 
-    // ==================== INIT ====================
-
-    requireAuth({ requireParent: true }).then(async userInfo => {
+    // Init - copy pattern from working chat.html
+    requireAuth({ requireParent: true }).then(function(userInfo) {
       currentUser = auth.currentUser;
       currentUserInfo = userInfo;
-      isCoach = userInfo.isCoach;
 
-      displayName = isCoach
-        ? 'Coach ' + userInfo.name.split(' ')[0]
-        : userInfo.name || userInfo.parent?.name || currentUser.email.split('@')[0];
+      if (userInfo.isCoach && userInfo.name) {
+        displayName = 'Coach ' + userInfo.name.split(' ')[0];
+      } else if (userInfo.name) {
+        displayName = userInfo.name;
+      } else if (userInfo.parent && userInfo.parent.name) {
+        displayName = userInfo.parent.name;
+      } else {
+        displayName = currentUser.email.split('@')[0];
+      }
 
       document.getElementById('chatUserName').textContent = displayName;
       document.getElementById('loadingState').style.display = 'none';
-      document.getElementById('mainContainer').style.display = 'block';
+      document.getElementById('tabBar').style.display = 'flex';
+      document.getElementById('chatTab').classList.add('active');
+      document.getElementById('chatInputContainer').style.display = 'flex';
 
-      // Show new post button for coaches
-      if (isCoach) {
-        document.getElementById('newPostBtn').style.display = 'flex';
-        document.getElementById('newPostBtn').onclick = openNewPostModal;
+      if (userInfo.isCoach) {
+        document.getElementById('newPostBtn').style.display = 'block';
       }
 
-      // Load roster for Text tab
-      rosterData = await loadRoster();
-      loadContacts();
+      loadRoster().then(function(data) {
+        rosterData = data;
+        loadContacts();
+      });
 
-      // Load posts
       loadPosts();
+      loadChat();
 
-    }).catch(err => {
-      console.log('Auth required:', err);
+    }).catch(function(err) {
+      console.log('Auth error:', err);
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('authRequired').style.display = 'block';
     });
   </script>
 </body>
