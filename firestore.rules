@@ -75,5 +75,20 @@ service cloud.firestore {
       allow write: if isAuthenticated();
       // Note: Frontend verifies user is a parent of this player before allowing writes
     }
+
+    // Posts - coach announcements with reactions and comments
+    match /posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated(); // Frontend verifies coach role
+      allow update: if isAuthenticated(); // For reactions
+      allow delete: if false; // Posts can't be deleted
+
+      // Comments on posts
+      match /comments/{commentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if isAuthenticated() && resource.data.authorUid == request.auth.uid;
+      }
+    }
   }
 }
