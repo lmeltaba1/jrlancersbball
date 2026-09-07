@@ -10,195 +10,287 @@
   <link rel="stylesheet" href="css/athletic.css">
   <link rel="manifest" href="manifest.json">
   <style>
-    .player-row {
+    /* Scoreboard */
+    .scoreboard {
       display: flex;
+      justify-content: space-around;
       align-items: center;
-      padding: 6px 8px;
-      border-bottom: 1px solid var(--border-color);
-      gap: 6px;
-    }
-    .player-row:last-child { border-bottom: none; }
-    .player-info {
-      width: 65px;
-      flex-shrink: 0;
-    }
-    .player-num {
-      font-weight: 800;
-      font-size: 1rem;
-      color: #ffffff;
-    }
-    .player-name {
-      font-size: 0.7rem;
-      color: var(--text-secondary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .player-stats {
-      display: flex;
-      gap: 4px;
-      flex-wrap: nowrap;
-      align-items: center;
-    }
-    .mini-btn {
-      min-width: 36px;
-      height: 32px;
-      padding: 0 4px;
-      border: none;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      cursor: pointer;
-      touch-action: manipulation;
-      flex-shrink: 0;
-    }
-    .mini-btn:active { transform: scale(0.9); }
-    .btn-pts { background: #ffffff; color: #000; }
-    .btn-pos { background: #22C55E; color: #fff; }
-    .btn-neg { background: #EF4444; color: #fff; }
-    .btn-opp { background: #444444; color: #fff; }
-    .stat-display {
-      min-width: 22px;
-      text-align: center;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: #ffffff;
-    }
-    .stat-display.pts { color: #ffffff; font-size: 0.9rem; font-weight: 800; }
-    .foul-warn { color: #F59E0B !important; }
-    .foul-out { color: #EF4444 !important; text-decoration: line-through; }
-    .scoreboard-compact {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 60px;
       padding: 10px 16px;
       background: var(--bg-card);
       border: 1px solid var(--border-accent);
+      border-radius: 8px;
       margin-bottom: 8px;
     }
     .score-side {
       text-align: center;
-      min-width: 80px;
     }
     .score-label {
-      font-size: 0.7rem;
+      font-size: 0.8rem;
       color: var(--text-secondary);
       text-transform: uppercase;
     }
     .score-num {
-      font-size: 2rem;
+      font-size: 2.2rem;
       font-weight: 800;
-      color: #ffffff;
+      color: var(--text-primary);
     }
-    .score-num.opp { color: #888888; }
+    .score-num.opp { color: var(--text-secondary); }
+
+    /* Player Card - Two Rows */
+    .player-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .player-card.foul-warning {
+      border-color: #F59E0B;
+    }
+    .player-card.fouled-out {
+      border-color: #EF4444;
+      opacity: 0.6;
+    }
+
+    /* Row 1: Info + Stats */
+    .player-row-1 {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      gap: 10px;
+      background: var(--bg-elevated);
+    }
+    .player-num {
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: var(--lancers-gold);
+      min-width: 36px;
+    }
+    .player-name {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--text-primary);
+      flex: 1;
+    }
+    .player-stats-row {
+      display: flex;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    .stat-item {
+      display: flex;
+      gap: 2px;
+    }
+    .stat-item .val {
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .stat-item.pts .val {
+      color: var(--lancers-gold);
+      font-size: 1rem;
+    }
+    .stat-item.foul-warn .val { color: #F59E0B; }
+    .stat-item.foul-out .val { color: #EF4444; }
+
+    /* Row 2: Buttons */
+    .player-row-2 {
+      display: flex;
+      padding: 8px 12px;
+      gap: 4px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 4px;
+    }
+    .btn-group.points { margin-right: 10px; }
+    .stat-btn {
+      min-width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .stat-btn:active { transform: scale(0.95); }
+    .stat-btn.pts { background: var(--lancers-gold); color: #000; }
+    .stat-btn.pos { background: #22C55E; color: #fff; }
+    .stat-btn.neg { background: #EF4444; color: #fff; }
+    .edit-btn {
+      min-width: 40px;
+      height: 44px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 1rem;
+      cursor: pointer;
+      margin-left: auto;
+    }
+
+    /* Edit Mode */
+    .player-card.editing .player-row-2 {
+      background: var(--bg-elevated);
+    }
+    .player-card.editing .stat-btn.pos,
+    .player-card.editing .stat-btn.neg {
+      background: #666;
+    }
+    .player-card.editing .minus-btn {
+      background: #EF4444 !important;
+    }
+
+    /* Opponent Row */
     .opponent-row {
       display: flex;
       align-items: center;
-      padding: 10px 12px;
-      background: var(--bg-elevated);
+      padding: 12px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
       border-radius: 8px;
       margin-top: 8px;
-      gap: 8px;
+      gap: 10px;
+    }
+    .opp-label {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text-secondary);
     }
     .opp-btns {
       display: flex;
       gap: 6px;
       flex: 1;
     }
-    .opp-btns .mini-btn {
+    .opp-btns .stat-btn {
       flex: 1;
-      min-width: 50px;
-      height: 40px;
-      font-size: 0.9rem;
+      height: 44px;
+      background: #666;
+      color: #fff;
     }
-    .players-card {
-      background: var(--bg-card);
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid var(--border-color);
-    }
-    .players-header {
+
+    /* Bottom Actions */
+    .bottom-actions {
       display: flex;
-      padding: 6px 8px;
-      background: var(--bg-elevated);
-      font-size: 0.6rem;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .action-btn {
+      flex: 1;
+      padding: 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
       font-weight: 700;
-      color: var(--text-secondary);
-      gap: 6px;
+      cursor: pointer;
     }
-    .players-header .player-info { color: #ffffff; }
-    .header-stats {
-      display: flex;
-      gap: 4px;
-    }
-    .header-stat {
-      min-width: 22px;
-      text-align: center;
-    }
-    .undo-btn-small {
-      min-width: 32px;
-      height: 32px;
-      padding: 0 6px;
+    .action-btn.sub {
       background: var(--bg-elevated);
       border: 1px solid var(--border-color);
-      border-radius: 6px;
+      color: var(--text-primary);
+    }
+    .action-btn.end {
+      background: var(--lancers-gold);
+      color: #000;
+    }
+
+    /* Sub Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.95);
+      z-index: 999999;
+      display: none;
+      padding: 12px;
+      padding-top: calc(env(safe-area-inset-top, 20px) + 60px);
+      padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      overflow-y: auto;
+    }
+    .modal-overlay.active { display: block; }
+    .modal-content {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .modal-close {
+      background: #EF4444;
+      border: none;
+      color: #fff;
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .sub-section {
+      margin-bottom: 16px;
+    }
+    .sub-section-title {
       font-size: 0.75rem;
       color: var(--text-secondary);
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-    /* Live tracking mode - fill available space */
-    body.tracking-mode {
-      overflow: hidden;
-    }
-    body.tracking-mode .main-content {
-      position: fixed;
-      top: 60px;
-      bottom: 70px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 600px;
-      padding: 8px !important;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    body.tracking-mode #live-game {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-    body.tracking-mode .scoreboard-compact {
-      flex-shrink: 0;
+      text-transform: uppercase;
       margin-bottom: 8px;
+      padding-left: 4px;
     }
-    body.tracking-mode .players-card {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      min-height: 0;
-    }
-    body.tracking-mode .players-header {
-      flex-shrink: 0;
-    }
-    body.tracking-mode #player-rows {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-    body.tracking-mode .player-row {
-      flex: 1;
+    .sub-player {
       display: flex;
       align-items: center;
-      min-height: 36px;
+      padding: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      cursor: pointer;
     }
-    body.tracking-mode .opponent-row {
-      flex-shrink: 0;
-      margin-top: 8px;
+    .sub-player:active { background: var(--bg-elevated); }
+    .sub-player.selected {
+      border-color: var(--lancers-gold);
+      background: rgba(255,215,0,0.1);
+    }
+    .sub-player.swapping-in {
+      border-color: #22C55E;
+      background: rgba(34,197,94,0.1);
+    }
+    .sub-player .num {
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--lancers-gold);
+      min-width: 36px;
+    }
+    .sub-player .name {
+      font-weight: 600;
+      flex: 1;
+    }
+    .sub-player .stats {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    .sub-hint {
+      text-align: center;
+      padding: 12px;
+      color: var(--lancers-gold);
+      font-size: 0.85rem;
+    }
+
+    /* Tracking Mode - use normal flow, no fixed positioning */
+    body.tracking-mode .main-content {
+      padding: 4px 8px !important;
+      padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
     }
   </style>
 </head>
@@ -225,7 +317,7 @@
     </div>
   </header>
 
-  <main class="main-content" style="padding-bottom: 80px;" id="main-content">
+  <main class="main-content" id="main-content">
     <!-- Game Selector -->
     <div id="game-selector" class="card">
       <div class="card-title">Select Game</div>
@@ -235,15 +327,12 @@
       <button id="start-tracking-btn" class="btn btn-primary" style="width: 100%;" disabled>
         Start Tracking
       </button>
-      <p id="no-permission-msg" style="color: #F59E0B; font-size: 0.8rem; margin-top: 10px; display: none;">
-        You must be the coach or signed up as scorekeeper to track stats.
-      </p>
     </div>
 
     <!-- Live Game -->
     <div id="live-game" style="display: none;">
       <!-- Scoreboard -->
-      <div class="scoreboard-compact">
+      <div class="scoreboard">
         <div class="score-side">
           <div class="score-label">Lancers</div>
           <div class="score-num" id="lancers-score">0</div>
@@ -254,44 +343,52 @@
         </div>
       </div>
 
-      <!-- Players -->
-      <div class="players-card">
-        <div class="players-header">
-          <div class="player-info">Player</div>
-          <div class="header-stats">
-            <div class="header-stat">P</div>
-            <div class="header-stat">R</div>
-            <div class="header-stat">A</div>
-            <div class="header-stat">S</div>
-            <div class="header-stat">T</div>
-            <div class="header-stat">F</div>
-          </div>
+      <!-- On-Court Players -->
+      <div id="court-players"></div>
+
+      <!-- Opponent + Actions -->
+      <div class="opponent-row">
+        <span class="opp-label">OPP</span>
+        <div class="opp-btns">
+          <button class="stat-btn" onclick="addOppScore(-1)">-1</button>
+          <button class="stat-btn" onclick="addOppScore(1)">+1</button>
+          <button class="stat-btn" onclick="addOppScore(2)">+2</button>
+          <button class="stat-btn" onclick="addOppScore(3)">+3</button>
         </div>
-        <div id="player-rows"></div>
       </div>
 
-      <!-- Opponent Score + End Game -->
-      <div class="opponent-row">
-        <div class="opp-btns">
-          <span style="font-weight: 700; font-size: 0.75rem; margin-right: 6px;">OPP:</span>
-          <button class="mini-btn btn-opp" onclick="addOpponentScore(-1)">-1</button>
-          <button class="mini-btn btn-opp" onclick="addOpponentScore(1)">+1</button>
-          <button class="mini-btn btn-opp" onclick="addOpponentScore(2)">+2</button>
-          <button class="mini-btn btn-opp" onclick="addOpponentScore(3)">+3</button>
-        </div>
-        <button class="btn btn-primary" style="padding: 6px 16px; font-size: 0.75rem;" onclick="endGame()">End Game</button>
+      <div class="bottom-actions">
+        <button class="action-btn sub" onclick="openSubModal()">SUB</button>
+        <button class="action-btn end" onclick="endGame()">END GAME</button>
       </div>
     </div>
 
     <!-- Login Required -->
     <div id="login-required" class="card" style="display: none; text-align: center;">
       <h3 style="margin-bottom: 12px;">Login Required</h3>
-      <p style="color: var(--text-secondary); margin-bottom: 16px;">
-        You must be logged in to track game stats.
-      </p>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">You must be logged in to track game stats.</p>
       <a href="login.html" class="btn btn-primary">Log In</a>
     </div>
   </main>
+
+  <!-- Substitution Modal -->
+  <div class="modal-overlay" id="sub-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Substitutions</div>
+        <button class="modal-close" onclick="closeSubModal()">×</button>
+      </div>
+      <div id="sub-hint" class="sub-hint"></div>
+      <div class="sub-section">
+        <div class="sub-section-title">On Court</div>
+        <div id="court-players-modal"></div>
+      </div>
+      <div class="sub-section">
+        <div class="sub-section-title">Bench</div>
+        <div id="bench-players"></div>
+      </div>
+    </div>
+  </div>
 
   <nav class="bottom-nav">
     <a href="index.html" class="nav-item">
@@ -324,6 +421,12 @@
       </svg>
       <span>Plays</span>
     </a>
+    <a href="stats-view.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span>Stats</span>
+    </a>
     <a href="highlights.html" class="nav-item">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -339,7 +442,7 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
   <script>
-    // Inline functions
+    // Helpers
     async function loadSchedule() {
       const response = await fetch('data/schedule.json?v=' + Date.now());
       return response.json();
@@ -357,13 +460,26 @@
       };
     }
 
+    // Position order: PG=1, SG=2, SF=3, PF=4, C=5
+    const positionOrder = { 'PG': 1, 'SG': 2, 'SF': 3, 'PF': 4, 'C': 5 };
+    function getPositionOrder(player) {
+      return positionOrder[player.position] || 99;
+    }
+    function sortByPosition(playerList) {
+      return [...playerList].sort((a, b) => getPositionOrder(a) - getPositionOrder(b));
+    }
+
+    // State
     let currentGameId = null;
     let currentGame = null;
     let players = [];
     let playerStats = {};
     let opponentScore = 0;
+    let onCourt = []; // Array of 5 player IDs currently on court
     let unsubscribe = null;
-    let canEdit = false;
+    let editingPlayerId = null;
+    let selectedPlayerId = null; // For sub modal - can be court or bench player
+    let selectedFrom = null; // 'court' or 'bench'
 
     document.addEventListener('DOMContentLoaded', async function() {
       if (!auth) {
@@ -386,16 +502,7 @@
       try {
         const schedule = await loadSchedule();
         const roster = await loadRoster();
-        // Custom sort order
-        const playerOrder = ['Camden', 'Rylan', 'Ashton', 'Dean', 'Raequan', 'Easton', 'Jeevan', 'Grant', 'Peyton', 'Wyatt'];
-        players = roster.players.sort((a, b) => {
-          const aIdx = playerOrder.indexOf(a.firstName);
-          const bIdx = playerOrder.indexOf(b.firstName);
-          if (aIdx === -1 && bIdx === -1) return a.number - b.number;
-          if (aIdx === -1) return 1;
-          if (bIdx === -1) return -1;
-          return aIdx - bIdx;
-        });
+        players = roster.players.sort((a, b) => a.number - b.number);
 
         const upcomingGames = schedule.games.filter(g => !g.result);
         const select = document.getElementById('game-select');
@@ -411,7 +518,7 @@
             return `<option value="${g.id}">${dateInfo.month} ${dateInfo.day} vs ${g.opponent}</option>`;
           }).join('');
 
-        select.addEventListener('change', async function() {
+        select.addEventListener('change', function() {
           const gameId = this.value;
           if (!gameId) {
             document.getElementById('start-tracking-btn').disabled = true;
@@ -419,9 +526,6 @@
           }
           currentGameId = parseInt(gameId);
           currentGame = schedule.games.find(g => g.id === currentGameId);
-
-          // For now, allow anyone logged in to track (simplify for testing)
-          canEdit = true;
           document.getElementById('start-tracking-btn').disabled = false;
         });
 
@@ -434,10 +538,9 @@
     async function startTracking() {
       if (!currentGameId) return;
 
-      // Fill available space between header and footer
       document.body.classList.add('tracking-mode');
       document.getElementById('game-selector').style.display = 'none';
-      document.getElementById('live-game').style.display = 'flex';
+      document.getElementById('live-game').style.display = 'block';
       document.getElementById('opponent-name').textContent = currentGame.opponent;
 
       // Initialize or load stats
@@ -449,110 +552,117 @@
           const data = doc.data();
           playerStats = data.playerStats || {};
           opponentScore = data.opponentScore || 0;
+          onCourt = data.onCourt || [2, 6, 4, 1, 5];
         } else {
+          // Initialize fresh
           playerStats = {};
           players.forEach(p => {
             playerStats[p.id] = {
               name: p.firstName + ' ' + p.lastName.charAt(0) + '.',
-              points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0,
-              turnovers: 0, fouls: 0, twoPointersMade: 0, threePointersMade: 0,
-              freeThrowsMade: 0, freeThrowsAttempted: 0
+              points: 0, rebounds: 0, assists: 0, steals: 0,
+              turnovers: 0, fouls: 0
             };
           });
           opponentScore = 0;
+          // Default starting lineup: Camden(2), Dean(6), Rylan(4), Raequan(1), Ashton(5)
+          onCourt = [2, 6, 4, 1, 5];
 
           await docRef.set({
             gameId: currentGameId,
             isLive: true,
             opponentScore: 0,
             playerStats: playerStats,
+            onCourt: onCourt,
             trackedBy: auth.currentUser.email,
             startedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
         }
 
+        // Real-time sync
         unsubscribe = docRef.onSnapshot(snapshot => {
           if (snapshot.exists) {
             const data = snapshot.data();
             playerStats = data.playerStats || playerStats;
             opponentScore = data.opponentScore || 0;
+            onCourt = data.onCourt || onCourt;
             updateScoreboard();
-            updateAllRows();
+            renderCourtPlayers();
           }
         });
       } else {
-        // No Firebase - use local stats
+        // Offline mode
         playerStats = {};
         players.forEach(p => {
           playerStats[p.id] = {
-            name: p.firstName + ' ' + p.lastName.charAt(0) + '.',
-            points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0,
+            name: p.firstName,
+            points: 0, rebounds: 0, assists: 0, steals: 0,
             turnovers: 0, fouls: 0
           };
         });
+        onCourt = [2, 6, 4, 1, 5];
       }
 
-      renderPlayerRows();
+      renderCourtPlayers();
       updateScoreboard();
     }
 
-    let editingPlayerId = null;
+    function renderCourtPlayers() {
+      const container = document.getElementById('court-players');
+      // Get court players and sort by position
+      const courtPlayersList = onCourt
+        .map(id => players.find(pl => pl.id === id))
+        .filter(p => p)
+        .sort((a, b) => getPositionOrder(a) - getPositionOrder(b));
 
-    function renderPlayerRows() {
-      const container = document.getElementById('player-rows');
-      container.innerHTML = players.map(p => {
-        const s = playerStats[p.id] || {};
-        const foulClass = (s.fouls || 0) >= 5 ? 'foul-out' : ((s.fouls || 0) >= 4 ? 'foul-warn' : '');
-        const isEditing = editingPlayerId === p.id;
-
-        if (isEditing) {
-          return `
-            <div class="player-row" id="row-${p.id}" style="background: var(--bg-elevated);">
-              <div class="player-info">
-                <div class="player-num">#${p.number}</div>
-                <div class="player-name">${p.firstName}</div>
-              </div>
-              <div class="player-stats">
-                <div class="stat-display pts">${s.points || 0}</div>
-                <div class="stat-display">${s.rebounds || 0}</div>
-                <div class="stat-display">${s.assists || 0}</div>
-                <div class="stat-display">${s.steals || 0}</div>
-                <div class="stat-display">${s.turnovers || 0}</div>
-                <div class="stat-display ${foulClass}">${s.fouls || 0}</div>
-                <button class="mini-btn btn-neg" onclick="subPts(${p.id}, 1)">-P</button>
-                <button class="mini-btn btn-neg" onclick="subStat(${p.id}, 'rebounds')">-R</button>
-                <button class="mini-btn btn-neg" onclick="subStat(${p.id}, 'assists')">-A</button>
-                <button class="mini-btn btn-neg" onclick="subStat(${p.id}, 'steals')">-S</button>
-                <button class="mini-btn btn-neg" onclick="subStat(${p.id}, 'turnovers')">-T</button>
-                <button class="mini-btn btn-neg" onclick="subStat(${p.id}, 'fouls')">-F</button>
-                <button class="undo-btn-small" onclick="toggleEdit(${p.id})" style="background: var(--lancers-gold); color: #000;">✓</button>
-              </div>
-            </div>
-          `;
-        }
+      container.innerHTML = courtPlayersList.map(p => {
+        const playerId = p.id;
+        const s = playerStats[playerId] || {};
+        const fouls = s.fouls || 0;
+        const foulClass = fouls >= 5 ? 'fouled-out' : (fouls >= 4 ? 'foul-warning' : '');
+        const isEditing = editingPlayerId === playerId;
 
         return `
-          <div class="player-row" id="row-${p.id}">
-            <div class="player-info">
+          <div class="player-card ${foulClass} ${isEditing ? 'editing' : ''}" id="card-${playerId}">
+            <div class="player-row-1">
               <div class="player-num">#${p.number}</div>
-              <div class="player-name">${p.firstName}</div>
+              <div class="player-name">${p.firstName} <span style="color: var(--text-secondary); font-size: 0.75rem;">${p.position}</span></div>
+              <div class="player-stats-row">
+                <div class="stat-item pts"><span class="val">${s.points || 0}</span>p</div>
+                <div class="stat-item"><span class="val">${s.rebounds || 0}</span>r</div>
+                <div class="stat-item"><span class="val">${s.assists || 0}</span>a</div>
+                <div class="stat-item"><span class="val">${s.steals || 0}</span>s</div>
+                <div class="stat-item"><span class="val">${s.turnovers || 0}</span>t</div>
+                <div class="stat-item ${fouls >= 5 ? 'foul-out' : (fouls >= 4 ? 'foul-warn' : '')}"><span class="val">${fouls}</span>f</div>
+              </div>
             </div>
-            <div class="player-stats">
-              <div class="stat-display pts" id="pts-${p.id}">${s.points || 0}</div>
-              <div class="stat-display" id="reb-${p.id}">${s.rebounds || 0}</div>
-              <div class="stat-display" id="ast-${p.id}">${s.assists || 0}</div>
-              <div class="stat-display" id="stl-${p.id}">${s.steals || 0}</div>
-              <div class="stat-display" id="to-${p.id}">${s.turnovers || 0}</div>
-              <div class="stat-display ${foulClass}" id="fls-${p.id}">${s.fouls || 0}</div>
-              <button class="mini-btn btn-pts" onclick="addPts(${p.id}, 2)">+2</button>
-              <button class="mini-btn btn-pts" onclick="addPts(${p.id}, 3)">+3</button>
-              <button class="mini-btn btn-pts" onclick="addFT(${p.id})">+1</button>
-              <button class="mini-btn btn-pos" onclick="addStat(${p.id}, 'rebounds')">R</button>
-              <button class="mini-btn btn-pos" onclick="addStat(${p.id}, 'assists')">A</button>
-              <button class="mini-btn btn-pos" onclick="addStat(${p.id}, 'steals')">S</button>
-              <button class="mini-btn btn-neg" onclick="addStat(${p.id}, 'turnovers')">T</button>
-              <button class="mini-btn btn-neg" onclick="addFoul(${p.id})">F</button>
-              <button class="undo-btn-small" onclick="toggleEdit(${p.id})">✎</button>
+            <div class="player-row-2">
+              ${isEditing ? `
+                <div class="btn-group points">
+                  <button class="stat-btn minus-btn" onclick="subPts(${playerId})">-P</button>
+                </div>
+                <div class="btn-group">
+                  <button class="stat-btn minus-btn" onclick="subStat(${playerId},'rebounds')">-R</button>
+                  <button class="stat-btn minus-btn" onclick="subStat(${playerId},'assists')">-A</button>
+                  <button class="stat-btn minus-btn" onclick="subStat(${playerId},'steals')">-S</button>
+                  <button class="stat-btn minus-btn" onclick="subStat(${playerId},'turnovers')">-T</button>
+                  <button class="stat-btn minus-btn" onclick="subStat(${playerId},'fouls')">-F</button>
+                </div>
+                <button class="edit-btn" onclick="toggleEdit(${playerId})" style="background: var(--lancers-gold); color: #000;">✓</button>
+              ` : `
+                <div class="btn-group points">
+                  <button class="stat-btn pts" onclick="addPts(${playerId},2)">+2</button>
+                  <button class="stat-btn pts" onclick="addPts(${playerId},3)">+3</button>
+                  <button class="stat-btn pts" onclick="addPts(${playerId},1)">+1</button>
+                </div>
+                <div class="btn-group">
+                  <button class="stat-btn pos" onclick="addStat(${playerId},'rebounds')">R</button>
+                  <button class="stat-btn pos" onclick="addStat(${playerId},'assists')">A</button>
+                  <button class="stat-btn pos" onclick="addStat(${playerId},'steals')">S</button>
+                  <button class="stat-btn neg" onclick="addStat(${playerId},'turnovers')">T</button>
+                  <button class="stat-btn neg" onclick="addStat(${playerId},'fouls')">F</button>
+                </div>
+                <button class="edit-btn" onclick="toggleEdit(${playerId})">✎</button>
+              `}
             </div>
           </div>
         `;
@@ -561,68 +671,25 @@
 
     function toggleEdit(playerId) {
       editingPlayerId = editingPlayerId === playerId ? null : playerId;
-      renderPlayerRows();
+      renderCourtPlayers();
     }
 
-    async function subPts(playerId, pts) {
-      const s = playerStats[playerId];
-      if (!s) return;
-      s.points = Math.max(0, (s.points || 0) - pts);
-      await saveStats();
-      renderPlayerRows();
-      updateScoreboard();
-    }
-
-    async function subStat(playerId, stat) {
-      const s = playerStats[playerId];
-      if (!s) return;
-      s[stat] = Math.max(0, (s[stat] || 0) - 1);
-      await saveStats();
-      renderPlayerRows();
-    }
-
-    function updateAllRows() {
-      players.forEach(p => {
-        const s = playerStats[p.id] || {};
-        const ptsEl = document.getElementById(`pts-${p.id}`);
-        const rebEl = document.getElementById(`reb-${p.id}`);
-        const astEl = document.getElementById(`ast-${p.id}`);
-        const stlEl = document.getElementById(`stl-${p.id}`);
-        const toEl = document.getElementById(`to-${p.id}`);
-        const flsEl = document.getElementById(`fls-${p.id}`);
-        if (ptsEl) ptsEl.textContent = s.points || 0;
-        if (rebEl) rebEl.textContent = s.rebounds || 0;
-        if (astEl) astEl.textContent = s.assists || 0;
-        if (stlEl) stlEl.textContent = s.steals || 0;
-        if (toEl) toEl.textContent = s.turnovers || 0;
-        if (flsEl) {
-          flsEl.textContent = s.fouls || 0;
-          flsEl.className = 'stat-display ' + ((s.fouls || 0) >= 5 ? 'foul-out' : ((s.fouls || 0) >= 4 ? 'foul-warn' : ''));
-        }
-      });
-    }
-
+    // Stat functions
     async function addPts(playerId, pts) {
       const s = playerStats[playerId];
       if (!s) return;
       s.points = (s.points || 0) + pts;
-      if (pts === 2) s.twoPointersMade = (s.twoPointersMade || 0) + 1;
-      if (pts === 3) s.threePointersMade = (s.threePointersMade || 0) + 1;
-      s.lastAction = { type: pts === 2 ? 'twoPointersMade' : 'threePointersMade', pts: pts };
       await saveStats();
-      updateAllRows();
+      renderCourtPlayers();
       updateScoreboard();
     }
 
-    async function addFT(playerId) {
+    async function subPts(playerId) {
       const s = playerStats[playerId];
-      if (!s) return;
-      s.freeThrowsAttempted = (s.freeThrowsAttempted || 0) + 1;
-      s.freeThrowsMade = (s.freeThrowsMade || 0) + 1;
-      s.points = (s.points || 0) + 1;
-      s.lastAction = { type: 'freeThrowsMade', pts: 1 };
+      if (!s || (s.points || 0) <= 0) return;
+      s.points = (s.points || 0) - 1;
       await saveStats();
-      updateAllRows();
+      renderCourtPlayers();
       updateScoreboard();
     }
 
@@ -630,35 +697,22 @@
       const s = playerStats[playerId];
       if (!s) return;
       s[stat] = (s[stat] || 0) + 1;
-      s.lastAction = { type: stat, pts: 0 };
+      if (stat === 'fouls' && s.fouls === 5) {
+        alert(s.name + ' fouled out!');
+      }
       await saveStats();
-      updateAllRows();
+      renderCourtPlayers();
     }
 
-    async function addFoul(playerId) {
+    async function subStat(playerId, stat) {
       const s = playerStats[playerId];
-      if (!s) return;
-      s.fouls = (s.fouls || 0) + 1;
-      s.lastAction = { type: 'fouls', pts: 0 };
-      if (s.fouls === 4) alert(s.name + ' has 4 fouls!');
-      if (s.fouls === 5) alert(s.name + ' fouled out!');
+      if (!s || (s[stat] || 0) <= 0) return;
+      s[stat] = (s[stat] || 0) - 1;
       await saveStats();
-      updateAllRows();
+      renderCourtPlayers();
     }
 
-    async function undo(playerId) {
-      const s = playerStats[playerId];
-      if (!s || !s.lastAction) return;
-      const { type, pts } = s.lastAction;
-      if (type && s[type] > 0) s[type]--;
-      if (pts > 0) s.points = Math.max(0, (s.points || 0) - pts);
-      delete s.lastAction;
-      await saveStats();
-      updateAllRows();
-      updateScoreboard();
-    }
-
-    async function addOpponentScore(pts) {
+    async function addOppScore(pts) {
       opponentScore = Math.max(0, opponentScore + pts);
       await saveStats();
       updateScoreboard();
@@ -671,22 +725,139 @@
       document.getElementById('opponent-score').textContent = opponentScore;
     }
 
+    // Substitution Modal
+    function openSubModal() {
+      selectedPlayerId = null;
+      selectedFrom = null;
+      renderSubModal();
+      document.getElementById('sub-modal').classList.add('active');
+    }
+
+    function closeSubModal() {
+      selectedPlayerId = null;
+      selectedFrom = null;
+      document.getElementById('sub-modal').classList.remove('active');
+    }
+
+    function renderSubModal() {
+      // Sort both lists by position
+      const benchPlayers = sortByPosition(players.filter(p => !onCourt.includes(p.id)));
+      const courtPlayers = sortByPosition(players.filter(p => onCourt.includes(p.id)));
+
+      // Hint text
+      const hint = document.getElementById('sub-hint');
+      if (selectedPlayerId) {
+        const p = players.find(pl => pl.id === selectedPlayerId);
+        if (selectedFrom === 'court') {
+          hint.textContent = `Tap bench player to replace #${p.number} ${p.firstName}`;
+        } else {
+          hint.textContent = `Tap court player to swap out for #${p.number} ${p.firstName}`;
+        }
+      } else {
+        hint.textContent = 'Tap any player to start substitution';
+      }
+
+      // On Court (now first)
+      document.getElementById('court-players-modal').innerHTML = courtPlayers.map(p => {
+        const s = playerStats[p.id] || {};
+        const isSelected = selectedPlayerId === p.id && selectedFrom === 'court';
+        return `
+          <div class="sub-player ${isSelected ? 'selected' : ''}" onclick="selectCourtPlayer(${p.id})">
+            <div class="num">#${p.number}</div>
+            <div class="name">${p.firstName} <span style="opacity:0.6">${p.position}</span></div>
+            <div class="stats">${s.points || 0}p ${s.rebounds || 0}r ${s.fouls || 0}f</div>
+          </div>
+        `;
+      }).join('');
+
+      // Bench
+      document.getElementById('bench-players').innerHTML = benchPlayers.map(p => {
+        const s = playerStats[p.id] || {};
+        const isSelected = selectedPlayerId === p.id && selectedFrom === 'bench';
+        return `
+          <div class="sub-player ${isSelected ? 'swapping-in' : ''}" onclick="selectBenchPlayer(${p.id})">
+            <div class="num">#${p.number}</div>
+            <div class="name">${p.firstName} <span style="opacity:0.6">${p.position}</span></div>
+            <div class="stats">${s.points || 0}p ${s.rebounds || 0}r ${s.fouls || 0}f</div>
+          </div>
+        `;
+      }).join('') || '<p style="color: var(--text-secondary); padding: 12px;">All players on court</p>';
+    }
+
+    async function selectCourtPlayer(playerId) {
+      // If tapping same player, unselect
+      if (selectedPlayerId === playerId && selectedFrom === 'court') {
+        selectedPlayerId = null;
+        selectedFrom = null;
+        renderSubModal();
+        return;
+      }
+
+      // If bench player already selected, do the swap
+      if (selectedPlayerId && selectedFrom === 'bench') {
+        const idx = onCourt.indexOf(playerId);
+        if (idx !== -1) {
+          onCourt[idx] = selectedPlayerId;
+          selectedPlayerId = null;
+          selectedFrom = null;
+          await saveStats();
+          renderSubModal();
+          renderCourtPlayers();
+        }
+        return;
+      }
+
+      // Select this court player
+      selectedPlayerId = playerId;
+      selectedFrom = 'court';
+      renderSubModal();
+    }
+
+    async function selectBenchPlayer(playerId) {
+      // If tapping same player, unselect
+      if (selectedPlayerId === playerId && selectedFrom === 'bench') {
+        selectedPlayerId = null;
+        selectedFrom = null;
+        renderSubModal();
+        return;
+      }
+
+      // If court player already selected, do the swap
+      if (selectedPlayerId && selectedFrom === 'court') {
+        const idx = onCourt.indexOf(selectedPlayerId);
+        if (idx !== -1) {
+          onCourt[idx] = playerId;
+          selectedPlayerId = null;
+          selectedFrom = null;
+          await saveStats();
+          renderSubModal();
+          renderCourtPlayers();
+        }
+        return;
+      }
+
+      // Select this bench player
+      selectedPlayerId = playerId;
+      selectedFrom = 'bench';
+      renderSubModal();
+    }
+
     async function endGame() {
       if (!confirm('End game and finalize stats?')) return;
+
       let total = 0;
       Object.values(playerStats).forEach(s => total += s.points || 0);
-      const result = total > opponentScore ? 'W' : 'L';
+      const result = total > opponentScore ? 'W' : (total < opponentScore ? 'L' : 'T');
+      const finalScore = `${total}-${opponentScore}`;
 
       if (db) {
         await db.collection('gameStats').doc(currentGameId.toString()).update({
           isLive: false,
-          endedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        await db.collection('games').doc(currentGameId.toString()).set({
-          gameId: currentGameId,
           result: result,
-          finalScore: { lancers: total, opponent: opponentScore },
-          statsComplete: true
+          finalScore: finalScore,
+          lancersScore: total,
+          opponentScore: opponentScore,
+          endedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       }
 
@@ -701,6 +872,7 @@
         await db.collection('gameStats').doc(currentGameId.toString()).update({
           playerStats: playerStats,
           opponentScore: opponentScore,
+          onCourt: onCourt,
           lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch (e) {

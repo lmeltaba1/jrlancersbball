@@ -39,13 +39,13 @@
           <span id="player-number" style="font-size: 1.5rem; font-weight: 800; color: #000000;">--</span>
         </div>
         <div style="flex: 1;">
-          <div id="player-name" style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">Player Name</div>
+          <div id="player-name" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">Player Name</div>
           <div style="display: flex; align-items: center; gap: 8px;">
             <span id="player-position-badge" class="position-badge" style="font-size: 0.7rem;">PG</span>
-            <span id="player-position-name" style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">Point Guard</span>
+            <span id="player-position-name" style="font-size: 0.85rem; color: var(--text-secondary);">Point Guard</span>
           </div>
         </div>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 24px; height: 24px; color: rgba(255,255,255,0.5);">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 24px; height: 24px; color: var(--text-muted);">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </div>
@@ -54,14 +54,14 @@
     <!-- Coach Banner (shown when logged in as coach without player) -->
     <div id="coach-banner" class="card" style="display: none; background: var(--bg-card); border: 1px solid var(--border-accent);">
       <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="background: #ffffff; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <div style="background: var(--lancers-gold); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#000000" style="width: 32px; height: 32px;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         </div>
         <div style="flex: 1;">
-          <div id="coach-name" style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">Coach Name</div>
-          <div id="coach-role" style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">Head Coach</div>
+          <div id="coach-name" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">Coach Name</div>
+          <div id="coach-role" style="font-size: 0.85rem; color: var(--text-secondary);">Head Coach</div>
         </div>
       </div>
     </div>
@@ -183,6 +183,12 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
       </svg>
       <span>Plays</span>
+    </a>
+    <a href="stats-view.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span>Stats</span>
     </a>
     <a href="highlights.html" class="nav-item">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">

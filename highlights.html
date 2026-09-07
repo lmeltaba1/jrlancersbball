@@ -19,6 +19,8 @@
       position: sticky;
       top: 60px;
       z-index: 10;
+      max-width: 600px;
+      margin: 0 auto;
     }
     .filter-select {
       flex: 1;
@@ -447,6 +449,12 @@
       </svg>
       <span>Plays</span>
     </a>
+        <a href="stats-view.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span>Stats</span>
+    </a>
     <a href="highlights.html" class="nav-item active">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -645,7 +653,11 @@
           <div class="highlight-card">
             <div class="highlight-media" onclick="openViewer('${h.downloadUrl}', ${isVideo})">
               ${isVideo ? `
-                <video src="${h.downloadUrl}" preload="metadata"></video>
+                ${h.thumbnailUrl ? `
+                  <img src="${h.thumbnailUrl}" alt="Video thumbnail">
+                ` : `
+                  <video src="${h.downloadUrl}" preload="metadata"></video>
+                `}
                 <div class="play-icon">
                   <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </div>
@@ -741,12 +753,49 @@
     document.getElementById('uploadGame').addEventListener('change', validateUploadForm);
     document.getElementById('uploadPlayer').addEventListener('change', validateUploadForm);
 
+    // Generate thumbnail from video file
+    function generateVideoThumbnail(videoFile) {
+      return new Promise((resolve) => {
+        const video = document.createElement('video');
+        const url = URL.createObjectURL(videoFile);
+        video.src = url;
+        video.muted = true;
+        video.playsInline = true;
+
+        video.onloadeddata = () => {
+          // Seek to 0.5 seconds for thumbnail
+          video.currentTime = 0.5;
+        };
+
+        video.onseeked = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 320;
+          canvas.height = 180;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+
+          canvas.toBlob((blob) => {
+            resolve(blob);
+          }, 'image/jpeg', 0.7);
+        };
+
+        video.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve(null);
+        };
+
+        video.load();
+      });
+    }
+
     async function uploadHighlight() {
       if (!currentUser || !selectedFile) return;
 
       const gameId = document.getElementById('uploadGame').value;
       const playerId = document.getElementById('uploadPlayer').value;
       const caption = document.getElementById('uploadCaption').value.trim();
+      const isVideo = selectedFile.type.startsWith('video/');
 
       const submitBtn = document.getElementById('uploadSubmit');
       submitBtn.disabled = true;
@@ -759,8 +808,23 @@
       try {
         // Generate unique filename
         const ext = selectedFile.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
+        const baseName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const fileName = `${baseName}.${ext}`;
         const storagePath = `highlights/${gameId}/${fileName}`;
+
+        // Generate thumbnail for videos
+        let thumbnailUrl = null;
+        if (isVideo) {
+          submitBtn.textContent = 'Generating thumbnail...';
+          const thumbnailBlob = await generateVideoThumbnail(selectedFile);
+          if (thumbnailBlob) {
+            const thumbPath = `highlights/${gameId}/${baseName}_thumb.jpg`;
+            const thumbRef = storage.ref(thumbPath);
+            await thumbRef.put(thumbnailBlob);
+            thumbnailUrl = await thumbRef.getDownloadURL();
+          }
+          submitBtn.textContent = 'Uploading video...';
+        }
 
         // Upload to Firebase Storage
         const storageRef = storage.ref(storagePath);
@@ -787,9 +851,10 @@
               playerId: parseInt(playerId),
               uploadedBy: currentUser.uid,
               uploaderName: currentUserInfo ? currentUserInfo.name : 'Unknown',
-              mediaType: selectedFile.type.startsWith('video/') ? 'video' : 'photo',
+              mediaType: isVideo ? 'video' : 'photo',
               storagePath: storagePath,
               downloadUrl: downloadUrl,
+              thumbnailUrl: thumbnailUrl,
               caption: caption,
               timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
@@ -809,7 +874,22 @@
       if (!confirm('Delete this highlight?')) return;
 
       try {
-        // Delete from Storage
+        // Get the highlight doc to check for thumbnail
+        const doc = await db.collection('highlights').doc(docId).get();
+        const data = doc.data();
+
+        // Delete thumbnail from Storage if it exists
+        if (data && data.thumbnailUrl) {
+          try {
+            // Extract path from thumbnailUrl - it's in the storagePath pattern
+            const thumbPath = storagePath.replace(/\.[^.]+$/, '_thumb.jpg');
+            await storage.ref(thumbPath).delete();
+          } catch (e) {
+            console.log('Thumbnail delete skipped:', e.message);
+          }
+        }
+
+        // Delete main file from Storage
         if (storagePath) {
           await storage.ref(storagePath).delete();
         }

@@ -92,6 +92,12 @@
       </svg>
       <span>Plays</span>
     </a>
+        <a href="stats-view.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span>Stats</span>
+    </a>
     <a href="highlights.html" class="nav-item">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -127,6 +133,7 @@
     let allEvents = [];
     let volunteers = {};
     let attendance = {}; // gameId -> { attending: N, notAttending: N, noResponse: N }
+    let gameResults = {}; // gameId -> { result: 'W'/'L', finalScore: '45-32', lancersScore, opponentScore }
     let totalPlayers = 0;
     let currentFilter = 'all';
 
@@ -156,9 +163,32 @@
         }
         allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        // Load attendance data from Firestore
+        // Load game results and attendance from Firestore
         if (db) {
           try {
+            // Load game stats (results)
+            const gameStatsSnapshot = await db.collection('gameStats').get();
+            gameStatsSnapshot.forEach(doc => {
+              const data = doc.data();
+              if (data.result && data.finalScore) {
+                gameResults[data.gameId] = {
+                  result: data.result,
+                  finalScore: data.finalScore,
+                  lancersScore: data.lancersScore,
+                  opponentScore: data.opponentScore
+                };
+              }
+            });
+
+            // Merge results into allEvents
+            allEvents = allEvents.map(event => {
+              if (gameResults[event.id]) {
+                return { ...event, ...gameResults[event.id] };
+              }
+              return event;
+            });
+
+            // Load attendance data
             const attendanceSnapshot = await db.collection('attendance').get();
             const attendanceByGame = {};
             attendanceSnapshot.forEach(doc => {
@@ -183,7 +213,7 @@
             }
             attendance = attendanceByGame;
           } catch (e) {
-            console.log('Could not load attendance:', e);
+            console.log('Could not load Firestore data:', e);
           }
         }
 
@@ -258,9 +288,11 @@
           let resultHtml = '';
           if (event.result) {
             const isWin = event.result === 'W';
+            const isTie = event.result === 'T';
+            const scoreDisplay = event.finalScore || '';
             resultHtml = `
-              <div class="game-result ${isWin ? 'win' : 'loss'}">
-                ${isWin ? 'W' : 'L'} ${event.finalScore ? event.finalScore.lancers + ' - ' + event.finalScore.opponent : ''}
+              <div class="game-result ${isWin ? 'win' : (isTie ? 'tie' : 'loss')}">
+                ${isWin ? 'W' : (isTie ? 'T' : 'L')} ${scoreDisplay}
               </div>
             `;
           }
