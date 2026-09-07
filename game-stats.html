@@ -300,6 +300,21 @@
     html.light-mode .stat-btn.pts { background: #000; color: #fff; }
     html.light-mode .action-btn.end { background: #000; color: #fff; }
     html.light-mode .edit-btn.edit-confirm { background: #000; color: #fff; }
+
+    /* View-only mode: sticky scoreboard */
+    body.view-only-mode .scoreboard {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      margin: 0 -8px 6px -8px;
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+      border-top: none;
+    }
+    body.view-only-mode .main-content {
+      padding-top: 0 !important;
+    }
   </style>
 </head>
 <body>
@@ -333,7 +348,7 @@
         <option value="">Loading games...</option>
       </select>
       <button id="start-tracking-btn" class="btn btn-primary" style="width: 100%;" disabled>
-        Start Tracking
+        View Live Stats
       </button>
     </div>
 
@@ -468,6 +483,33 @@
       };
     }
 
+    // Check if current time is within tracking window
+    // 10 minutes before game start to 30 minutes after game ends (assume 1hr game)
+    function isInTrackingWindow(gameDate, gameTime) {
+      const [year, month, day] = gameDate.split('-').map(Number);
+
+      // Parse time like "10:15 AM" or "2:30 PM"
+      const timeParts = gameTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!timeParts) return false;
+
+      let hours = parseInt(timeParts[1]);
+      const mins = parseInt(timeParts[2]);
+      const ampm = timeParts[3].toUpperCase();
+
+      if (ampm === 'PM' && hours !== 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+
+      const gameStart = new Date(year, month - 1, day, hours, mins, 0);
+      const now = new Date();
+
+      // Window: 10 minutes before game start
+      const windowStart = new Date(gameStart.getTime() - 10 * 60 * 1000);
+      // Window: 30 minutes after game ends (assume 1 hour game = 90 minutes after start)
+      const windowEnd = new Date(gameStart.getTime() + 90 * 60 * 1000);
+
+      return now >= windowStart && now <= windowEnd;
+    }
+
     // Position order: PG=1, SG=2, SF=3, PF=4, C=5
     const positionOrder = { 'PG': 1, 'SG': 2, 'SF': 3, 'PF': 4, 'C': 5 };
     function getPositionOrder(player) {
@@ -489,15 +531,12 @@
     let selectedPlayerId = null; // For sub modal - can be court or bench player
     let selectedFrom = null; // 'court' or 'bench'
 
+    let isScorekeeper = false; // Whether current user is the designated scorekeeper
+    let viewOnlyMode = false; // True = can only view, False = can edit
+
     document.addEventListener('DOMContentLoaded', async function() {
-      // Require auth - viewers can't do live scoring
-      requireAuth({ requireParent: true }).then(async function(userInfo) {
-        // Also check if user has stat tracking permission
-        if (!userInfo.canTrackStats) {
-          alert('You do not have permission to track stats. Contact Coach Logan for access.');
-          window.location.href = 'index.html';
-          return;
-        }
+      // Allow all authenticated users (including viewers) to view
+      requireAuth().then(async function(userInfo) {
         await loadGames();
       }).catch(function(err) {
         console.log('Auth required:', err);
@@ -536,6 +575,21 @@
         });
 
         document.getElementById('start-tracking-btn').addEventListener('click', startTracking);
+
+        // Check for auto-start with game URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameParam = urlParams.get('game');
+        if (gameParam) {
+          const gameId = parseInt(gameParam);
+          const game = schedule.games.find(g => g.id === gameId);
+          if (game) {
+            currentGameId = gameId;
+            currentGame = game;
+            select.value = gameId.toString();
+            // Auto-start tracking
+            startTracking();
+          }
+        }
       } catch (e) {
         console.error('Error loading games:', e);
       }
@@ -544,10 +598,64 @@
     async function startTracking() {
       if (!currentGameId) return;
 
+      // Check if current user is the designated scorekeeper
+      isScorekeeper = false;
+      viewOnlyMode = true;
+
+      // Force view-only mode with URL param ?view=1 (for testing/preview)
+      const urlParams = new URLSearchParams(window.location.search);
+      const forceViewOnly = urlParams.get('view') === '1';
+
+      // Check if we're in the allowed time window for tracking
+      // 10 minutes before game start to 30 minutes after game ends (assume 1hr game = 90 min total window)
+      const inTrackingWindow = isInTrackingWindow(currentGame.date, currentGame.time);
+      const isCoach = currentUserInfo && currentUserInfo.isCoach;
+
+      if (forceViewOnly) {
+        viewOnlyMode = true;
+      } else if (db && auth.currentUser) {
+        try {
+          const volDoc = await db.collection('volunteers').doc(currentGameId.toString()).get();
+          if (volDoc.exists) {
+            const volData = volDoc.data();
+            if (volData.scorekeeper && volData.scorekeeper.email.toLowerCase() === auth.currentUser.email.toLowerCase()) {
+              isScorekeeper = true;
+              // Scorekeeper can only track during the time window
+              if (inTrackingWindow) {
+                viewOnlyMode = false;
+              }
+            }
+          }
+          // Coaches can edit anytime (even after window closes)
+          if (isCoach) {
+            viewOnlyMode = false;
+          }
+        } catch (e) {
+          console.log('Error checking volunteer status:', e);
+        }
+      }
+
+      // Show message if scorekeeper but outside tracking window
+      if (!inTrackingWindow && !isCoach && isScorekeeper) {
+        const windowMsg = document.createElement('div');
+        windowMsg.style.cssText = 'background: #F59E0B; color: black; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; font-size: 0.85rem; text-align: center;';
+        windowMsg.textContent = 'Stat tracking is only available from 10 min before game until 30 min after it ends.';
+        document.getElementById('live-game').insertBefore(windowMsg, document.getElementById('live-game').firstChild);
+      }
+
       document.body.classList.add('tracking-mode');
       document.getElementById('game-selector').style.display = 'none';
       document.getElementById('live-game').style.display = 'block';
       document.getElementById('opponent-name').textContent = currentGame.opponent;
+
+      // Update UI based on mode
+      if (viewOnlyMode) {
+        document.body.classList.add('view-only-mode');
+        document.querySelector('header h1 a').innerHTML = '<img src="images/lancers-logo.jpg?v=2" alt="Lancers" class="header-logo">Live Stats <span style="font-size: 0.6em; opacity: 0.7;">(View Only)</span>';
+        // Hide opponent controls and action buttons
+        document.querySelector('.opponent-row').style.display = 'none';
+        document.querySelector('.bottom-actions').style.display = 'none';
+      }
 
       // Initialize or load stats
       if (db) {
@@ -559,8 +667,17 @@
           playerStats = data.playerStats || {};
           opponentScore = data.opponentScore || 0;
           onCourt = data.onCourt || [2, 6, 4, 1, 5];
+        } else if (viewOnlyMode) {
+          // View-only user and no game in progress - show message
+          document.getElementById('court-players').innerHTML = `
+            <div class="card" style="text-align: center; padding: 24px;">
+              <p style="color: var(--text-secondary); margin-bottom: 8px;">No live stats available yet.</p>
+              <p style="font-size: 0.85rem; color: var(--text-muted);">The scorekeeper hasn't started tracking this game.</p>
+            </div>
+          `;
+          return;
         } else {
-          // Initialize fresh
+          // Scorekeeper - Initialize fresh game
           playerStats = {};
           players.forEach(p => {
             playerStats[p.id] = {
@@ -596,7 +713,15 @@
           }
         });
       } else {
-        // Offline mode
+        // Offline mode - only for non-viewers
+        if (viewOnlyMode) {
+          document.getElementById('court-players').innerHTML = `
+            <div class="card" style="text-align: center; padding: 24px;">
+              <p style="color: var(--text-secondary);">Cannot view live stats offline.</p>
+            </div>
+          `;
+          return;
+        }
         playerStats = {};
         players.forEach(p => {
           playerStats[p.id] = {
@@ -614,7 +739,61 @@
 
     function renderCourtPlayers() {
       const container = document.getElementById('court-players');
-      // Get court players and sort by position
+
+      // View-only mode: show ALL players with stats, no buttons, larger stats
+      // On-court players first (sorted by position), then bench players (sorted by position)
+      if (viewOnlyMode) {
+        const courtPlayers = players.filter(p => onCourt.includes(p.id)).sort((a, b) => getPositionOrder(a) - getPositionOrder(b));
+        const benchPlayers = players.filter(p => !onCourt.includes(p.id)).sort((a, b) => getPositionOrder(a) - getPositionOrder(b));
+        const allPlayersSorted = [...courtPlayers, ...benchPlayers];
+
+        container.innerHTML = allPlayersSorted.map(p => {
+          const playerId = p.id;
+          const s = playerStats[playerId] || {};
+          const fouls = s.fouls || 0;
+          const foulClass = fouls >= 5 ? 'fouled-out' : (fouls >= 4 ? 'foul-warning' : '');
+          const isOnCourt = onCourt.includes(playerId);
+
+          return `
+            <div class="player-card ${foulClass}" style="${!isOnCourt ? 'opacity: 0.6;' : ''}">
+              <div style="display: flex; align-items: center; padding: 8px 12px; background: var(--bg-elevated);">
+                <div style="font-weight: 800; font-size: 1.1rem; color: var(--lancers-gold); min-width: 45px;">#${p.number}</div>
+                <div style="font-weight: 600; font-size: 1rem; color: var(--text-primary); flex: 1;">${p.firstName} <span style="color: var(--text-secondary); font-size: 0.8rem;">${p.position}</span></div>
+                ${isOnCourt ? '<span style="font-size: 0.7rem; color: #22C55E; font-weight: 700; background: rgba(34,197,94,0.15); padding: 2px 8px; border-radius: 4px;">ON COURT</span>' : '<span style="font-size: 0.7rem; color: var(--text-muted);">BENCH</span>'}
+              </div>
+              <div style="display: flex; justify-content: space-around; padding: 12px 8px; text-align: center;">
+                <div style="flex: 1;">
+                  <div style="font-size: 1.5rem; font-weight: 800; color: var(--lancers-gold);">${s.points || 0}</div>
+                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">PTS</div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">${s.rebounds || 0}</div>
+                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">REB</div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">${s.assists || 0}</div>
+                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">AST</div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">${s.steals || 0}</div>
+                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">STL</div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">${s.turnovers || 0}</div>
+                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">TO</div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="font-size: 1.5rem; font-weight: 800; color: ${fouls >= 5 ? '#EF4444' : (fouls >= 4 ? '#F59E0B' : 'var(--text-primary)')};">${fouls}</div>
+                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">FLS</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        return;
+      }
+
+      // Edit mode: show only on-court players with buttons
       const courtPlayersList = onCourt
         .map(id => players.find(pl => pl.id === id))
         .filter(p => p)

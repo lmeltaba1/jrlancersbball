@@ -111,31 +111,19 @@
       </div>
     </div>
 
-    <!-- Quick Links -->
-    <div class="quick-links">
-      <a href="roster.html" class="quick-link">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        <span>Roster</span>
-      </a>
-      <a href="schedule.html" class="quick-link">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <span>Schedule</span>
-      </a>
-      <a href="volunteers.html" class="quick-link">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <!-- My Volunteer Stats (shown when logged in) -->
+    <div id="my-volunteer-card" class="card" style="display: none;">
+      <div class="card-title" style="display: flex; align-items: center; justify-content: space-between;">
+        <span>My Volunteering</span>
+      </div>
+      <div id="my-volunteer-stats" style="margin-bottom: 12px;">
+        <!-- Stats will be populated by JS -->
+      </div>
+      <a href="volunteers.html" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
-        <span>Volunteer</span>
-      </a>
-      <a href="stats-view.html" class="quick-link">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-        <span>Stats</span>
+        Sign Up to Volunteer
       </a>
     </div>
 
@@ -268,6 +256,36 @@
       return jersey.toUpperCase() + ' JERSEY';
     }
 
+    // Check if we're in the live stats window
+    // 10 minutes before game start to 90 minutes after (assumes 1hr game + 30 min buffer)
+    function isInLiveStatsWindow(gameDate, gameTime) {
+      const [year, month, day] = gameDate.split('-').map(Number);
+
+      // Parse time like "10:15 AM" or "2:30 PM"
+      const timeParts = gameTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!timeParts) return false;
+
+      let hours = parseInt(timeParts[1]);
+      const mins = parseInt(timeParts[2]);
+      const ampm = timeParts[3].toUpperCase();
+
+      if (ampm === 'PM' && hours !== 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+
+      const gameStart = new Date(year, month - 1, day, hours, mins, 0);
+      const now = new Date();
+
+      // Window: 10 minutes before game start
+      const windowStart = new Date(gameStart.getTime() - 10 * 60 * 1000);
+      // Window: 90 minutes after game start (1 hour game + 30 min buffer)
+      const windowEnd = new Date(gameStart.getTime() + 90 * 60 * 1000);
+
+      return now >= windowStart && now <= windowEnd;
+    }
+
+    // Store game info for live stats button
+    let upcomingGameForLiveStats = null;
+
     // Copy text to clipboard and show feedback
     function copyToClipboard(text) {
       navigator.clipboard.writeText(text).then(function() {
@@ -324,6 +342,84 @@
         }
       } catch (error) {
         console.error('Error checking RSVP:', error);
+      }
+    }
+
+    // Load user's personal volunteer stats
+    async function loadMyVolunteerStats(userEmail) {
+      if (!db || !userEmail) return;
+
+      const card = document.getElementById('my-volunteer-card');
+      const statsContainer = document.getElementById('my-volunteer-stats');
+
+      try {
+        const data = await loadSchedule();
+        const snapshot = await db.collection('volunteers').get();
+
+        // Count volunteer signups by role
+        let stats = {
+          scorekeeper: { past: 0, upcoming: 0 },
+          tableWorker: { past: 0, upcoming: 0 }
+        };
+
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const emailLower = userEmail.toLowerCase();
+
+        snapshot.forEach(doc => {
+          const vol = doc.data();
+          const gameId = parseInt(doc.id);
+          const game = data.games.find(g => g.id === gameId);
+
+          if (!game) return;
+
+          const [year, month, day] = game.date.split('-').map(Number);
+          const gameDate = new Date(year, month - 1, day);
+          const isPast = gameDate < now;
+
+          // Check scorekeeper
+          if (vol.scorekeeper && vol.scorekeeper.email.toLowerCase() === emailLower) {
+            if (isPast) stats.scorekeeper.past++;
+            else stats.scorekeeper.upcoming++;
+          }
+
+          // Check table worker
+          if (vol.tableWorker && vol.tableWorker.email.toLowerCase() === emailLower) {
+            if (isPast) stats.tableWorker.past++;
+            else stats.tableWorker.upcoming++;
+          }
+        });
+
+        const totalPast = stats.scorekeeper.past + stats.tableWorker.past;
+        const totalUpcoming = stats.scorekeeper.upcoming + stats.tableWorker.upcoming;
+
+        // Build stats display
+        statsContainer.innerHTML = `
+          <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+            <div style="flex: 1; text-align: center; padding: 12px; background: var(--bg-elevated); border-radius: 8px;">
+              <div style="font-size: 1.5rem; font-weight: 800; color: var(--lancers-gold);">${totalPast}</div>
+              <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Completed</div>
+            </div>
+            <div style="flex: 1; text-align: center; padding: 12px; background: var(--bg-elevated); border-radius: 8px;">
+              <div style="font-size: 1.5rem; font-weight: 800; color: #22C55E;">${totalUpcoming}</div>
+              <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Upcoming</div>
+            </div>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary);">
+            <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border-color);">
+              <span>Scorekeeper</span>
+              <span style="color: var(--text-primary);">${stats.scorekeeper.past + stats.scorekeeper.upcoming} games</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+              <span>Table Worker</span>
+              <span style="color: var(--text-primary);">${stats.tableWorker.past + stats.tableWorker.upcoming} games</span>
+            </div>
+          </div>
+        `;
+
+        card.style.display = 'block';
+      } catch (e) {
+        console.error('Error loading volunteer stats:', e);
       }
     }
 
@@ -422,6 +518,11 @@
           if (nextEvent.eventType === 'game') {
             // Display as game card
             eventTitle.textContent = 'Next Game';
+
+            // Check if in live stats window (10 min before to 90 min after game start)
+            const showLiveStats = isInLiveStatsWindow(nextEvent.date, nextEvent.time);
+            upcomingGameForLiveStats = showLiveStats ? nextEvent : null;
+
             eventContent.innerHTML = `
               <div class="game-card" style="margin: 0;">
                 <div class="game-card-header ${nextEvent.league}">
@@ -452,6 +553,16 @@
                   <div style="text-align: center; margin-top: 10px;">
                     <span class="jersey-indicator ${nextEvent.jersey}">${formatJerseyLabel(nextEvent.jersey)}</span>
                   </div>
+                  ${showLiveStats ? `
+                    <div id="live-stats-btn-container" style="margin-top: 16px; text-align: center;">
+                      <a id="live-stats-btn" href="game-stats.html?game=${nextEvent.id}&view=1" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        View Live Stats
+                      </a>
+                    </div>
+                  ` : ''}
                 </div>
               </div>
             `;
@@ -579,6 +690,37 @@
         // Hide nav items that viewers can't access
         if (userInfo.isViewer) {
           hideViewerRestrictedNav();
+        } else {
+          // Load volunteer stats for parents and coaches (not viewers)
+          loadMyVolunteerStats(auth.currentUser.email);
+        }
+
+        // Update live stats button for scorekeeper or coach
+        if (upcomingGameForLiveStats && db) {
+          try {
+            const volDoc = await db.collection('volunteers').doc(upcomingGameForLiveStats.id.toString()).get();
+            const volData = volDoc.exists ? volDoc.data() : {};
+            const isScorekeeper = volData.scorekeeper &&
+              volData.scorekeeper.email.toLowerCase() === auth.currentUser.email.toLowerCase();
+            const isCoach = userInfo.isCoach;
+
+            // Show "Track Live Stats" button for scorekeeper or coach
+            if (isScorekeeper || isCoach) {
+              const btn = document.getElementById('live-stats-btn');
+              if (btn) {
+                btn.href = `game-stats.html?game=${upcomingGameForLiveStats.id}`;
+                btn.innerHTML = `
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  Track Live Stats
+                `;
+                btn.style.background = '#22C55E';
+              }
+            }
+          } catch (e) {
+            console.log('Error checking scorekeeper status:', e);
+          }
         }
       }).catch(function(err) {
         console.log('Auth required:', err);

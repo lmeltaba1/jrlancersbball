@@ -310,11 +310,13 @@
     let allGameStats = {};
     let currentPlayerFilter = 'all';
     let currentGameFilter = 'all';
+    let isCoachUser = false;
 
     document.addEventListener('DOMContentLoaded', async function() {
       // Require auth - all users can view stats
       requireAuth().then(async function(userInfo) {
         if (userInfo.isViewer) hideViewerRestrictedNav();
+        isCoachUser = userInfo.isCoach;
         loadPageContent();
       }).catch(function(err) {
         console.log('Auth required:', err);
@@ -605,6 +607,14 @@
             <div style="font-size: 0.85rem; color: var(--text-secondary);">${game.opponent}</div>
           </div>
         </div>
+        ${isCoachUser ? `
+          <a href="game-stats.html?game=${gameId}" class="btn btn-primary" style="width: 100%; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 18px; height: 18px;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit Stats
+          </a>
+        ` : ''}
       `;
 
       // Summary stats for this game
