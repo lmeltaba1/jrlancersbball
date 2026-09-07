@@ -62,6 +62,25 @@
 
       <!-- Stats Card (for completed games) -->
       <div class="card" id="stats-card" style="display: none;"></div>
+
+      <!-- Highlights Card -->
+      <div class="card" id="highlights-card">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lancers-gold)" stroke-width="2">
+              <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Highlights
+            <span id="highlights-count" style="background: var(--lancers-gold); color: #000; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 700;"></span>
+          </span>
+          <button class="btn btn-primary" style="font-size: 0.75rem; padding: 6px 12px;" id="addHighlightBtn" onclick="addHighlight()" style="display: none;">+ Add</button>
+        </div>
+        <div id="highlights-content">
+          <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+            <div class="spinner" style="margin: 0 auto 10px;"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="error-message" style="display: none; text-align: center; padding: 40px;">
@@ -102,11 +121,11 @@
       </svg>
       <span>Plays</span>
     </a>
-    <a href="stats-view.html" class="nav-item">
+    <a href="highlights.html" class="nav-item">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
       </svg>
-      <span>Stats</span>
+      <span>Highlights</span>
     </a>
   </nav>
 
@@ -114,6 +133,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
   <script>
@@ -143,6 +163,8 @@
     let userInfo = null;
     let game = null;
     let volunteers = {};
+    let highlights = [];
+    let players = [];
 
     document.addEventListener('DOMContentLoaded', async function() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -154,13 +176,21 @@
       }
 
       try {
-        const data = await loadSchedule();
-        game = data.games.find(g => g.id === gameId);
+        const [scheduleData, rosterData] = await Promise.all([
+          loadSchedule(),
+          fetch('data/roster.json?v=' + Date.now()).then(r => r.json())
+        ]);
+
+        game = scheduleData.games.find(g => g.id === gameId);
+        players = rosterData.players || [];
 
         if (!game) {
           showError();
           return;
         }
+
+        // Load highlights for this game
+        loadHighlights(gameId);
 
         // Load volunteer data
         if (db) {
@@ -499,6 +529,107 @@
         console.error('Error canceling signup:', e);
         alert('Error canceling. Please try again.');
       }
+    }
+
+    // Highlights functions
+    function loadHighlights(gameId) {
+      if (!db) {
+        renderHighlights();
+        return;
+      }
+
+      db.collection('highlights')
+        .where('gameId', '==', gameId)
+        .orderBy('timestamp', 'desc')
+        .onSnapshot((snapshot) => {
+          highlights = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          renderHighlights();
+        }, (error) => {
+          console.log('Error loading highlights:', error);
+          renderHighlights();
+        });
+    }
+
+    function renderHighlights() {
+      const container = document.getElementById('highlights-content');
+      const countBadge = document.getElementById('highlights-count');
+      const addBtn = document.getElementById('addHighlightBtn');
+
+      // Show/hide add button based on auth
+      if (currentUser) {
+        addBtn.style.display = 'inline-block';
+      } else {
+        addBtn.style.display = 'none';
+      }
+
+      // Update count badge
+      if (highlights.length > 0) {
+        countBadge.textContent = highlights.length;
+        countBadge.style.display = 'inline';
+      } else {
+        countBadge.style.display = 'none';
+      }
+
+      if (highlights.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+            <p style="margin: 0;">No highlights yet</p>
+            ${currentUser ? '<p style="font-size: 0.8rem; margin-top: 8px;">Be the first to add one!</p>' : ''}
+          </div>
+        `;
+        return;
+      }
+
+      // Show thumbnails grid (max 4, then "View All" link)
+      const displayHighlights = highlights.slice(0, 4);
+      const hasMore = highlights.length > 4;
+
+      container.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: ${hasMore ? '12px' : '0'};">
+          ${displayHighlights.map(h => {
+            const player = players.find(p => p.id == h.playerId);
+            const playerName = player ? player.firstName : 'Unknown';
+            const isVideo = h.mediaType === 'video';
+
+            return `
+              <div style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; background: #000;" onclick="openHighlight('${h.downloadUrl}', ${isVideo})">
+                ${isVideo ? `
+                  <video src="${h.downloadUrl}" style="width: 100%; height: 100%; object-fit: cover;"></video>
+                  <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30px; height: 30px; background: rgba(0,0,0,0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: white; margin-left: 2px;"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                ` : `
+                  <img src="${h.downloadUrl}" style="width: 100%; height: 100%; object-fit: cover;">
+                `}
+                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 4px 6px;">
+                  <span style="color: white; font-size: 0.65rem; font-weight: 600;">${playerName}</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        ${hasMore ? `
+          <a href="highlights.html?game=${game.id}" style="display: block; text-align: center; color: var(--lancers-gold); font-weight: 600; font-size: 0.85rem; text-decoration: none;">
+            View All ${highlights.length} Highlights →
+          </a>
+        ` : highlights.length > 0 ? `
+          <a href="highlights.html?game=${game.id}" style="display: block; text-align: center; color: var(--lancers-gold); font-weight: 600; font-size: 0.85rem; text-decoration: none; margin-top: 12px;">
+            View All →
+          </a>
+        ` : ''}
+      `;
+    }
+
+    function addHighlight() {
+      window.location.href = 'highlights.html?game=' + game.id + '&upload=true';
+    }
+
+    function openHighlight(url, isVideo) {
+      // Simple viewer - open in new modal or navigate to highlights page
+      window.location.href = 'highlights.html?game=' + game.id;
     }
   </script>
 </body>

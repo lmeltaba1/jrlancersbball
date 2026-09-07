@@ -14,6 +14,7 @@ var firebaseConfig = {
 var app = null;
 var auth = null;
 var db = null;
+var storage = null;
 
 // Initialize Firebase
 if (typeof firebase !== 'undefined') {
@@ -25,6 +26,9 @@ if (typeof firebase !== 'undefined') {
     }
     if (typeof firebase.firestore === 'function') {
       db = firebase.firestore();
+    }
+    if (typeof firebase.storage === 'function') {
+      storage = firebase.storage();
     }
     try {
       if (typeof firebase.analytics === 'function') {
