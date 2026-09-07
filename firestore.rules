@@ -67,5 +67,13 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated()
         && resource.data.uploadedBy == request.auth.uid;
     }
+
+    // Viewers - invited family members who can view but not interact
+    // Parents can manage viewers for their player
+    match /viewers/{playerId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+      // Note: Frontend verifies user is a parent of this player before allowing writes
+    }
   }
 }

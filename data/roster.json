@@ -46,7 +46,8 @@
           "phone": "5738199211",
           "canTrackStats": true
         }
-      ]
+      ],
+      "viewers": []
     },
     {
       "id": 2,
@@ -66,7 +67,8 @@
           "email": "gakreyling@hotmail.com",
           "phone": ""
         }
-      ]
+      ],
+      "viewers": []
     },
     {
       "id": 3,
@@ -86,7 +88,8 @@
           "email": "andrew.weltz@yahoo.com",
           "phone": ""
         }
-      ]
+      ],
+      "viewers": []
     },
     {
       "id": 4,
@@ -105,18 +108,20 @@
           "name": "Kevin Trott",
           "email": "ktjetski16@aol.com",
           "phone": ""
-        },
+        }
+      ],
+      "viewers": [
         {
           "name": "Maureen Trott",
           "email": "maureen.trott@att.net",
           "phone": "",
-          "role": "Guardian"
+          "relationship": "Guardian"
         },
         {
           "name": "Ranona Bowers",
           "email": "ranonab@aol.com",
           "phone": "3144795101",
-          "role": "Guardian"
+          "relationship": "Guardian"
         }
       ]
     },
@@ -138,7 +143,8 @@
           "email": "mindy.m.carney@gmail.com",
           "phone": "5738199211"
         }
-      ]
+      ],
+      "viewers": []
     },
     {
       "id": 6,
@@ -159,7 +165,8 @@
           "phone": "3147531022",
           "canTrackStats": true
         }
-      ]
+      ],
+      "viewers": []
     },
     {
       "id": 7,
@@ -174,7 +181,8 @@
           "email": "jillian.weems@me.com",
           "phone": "3142217372"
         }
-      ]
+      ],
+      "viewers": []
     },
     {
       "id": 8,
@@ -189,7 +197,8 @@
           "email": "jamieparks86@gmail.com",
           "phone": "8167998735"
         }
-      ]
+      ],
+      "viewers": []
     },
     {
       "id": 9,
@@ -204,7 +213,8 @@
           "email": "ral0709@charter.net",
           "phone": "3144121868"
         }
-      ]
+      ],
+      "viewers": []
     },
     {
       "id": 10,
@@ -219,7 +229,8 @@
           "email": "matthewmoore09@yahoo.com",
           "phone": "4173531948"
         }
-      ]
+      ],
+      "viewers": []
     }
   ]
 }

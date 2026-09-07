@@ -312,6 +312,16 @@
     let currentGameFilter = 'all';
 
     document.addEventListener('DOMContentLoaded', async function() {
+      // Require auth - all users can view stats
+      requireAuth().then(async function(userInfo) {
+        if (userInfo.isViewer) hideViewerRestrictedNav();
+        loadPageContent();
+      }).catch(function(err) {
+        console.log('Auth required:', err);
+      });
+    });
+
+    async function loadPageContent() {
       try {
         // Load roster and schedule
         const [roster, schedule] = await Promise.all([loadRoster(), loadSchedule()]);
@@ -400,7 +410,7 @@
         console.error('Error loading stats:', e);
         document.getElementById('loading').innerHTML = '<p style="color: var(--text-secondary);">Error loading stats</p>';
       }
-    });
+    }
 
     function renderStats() {
       if (currentGameFilter !== 'all') {

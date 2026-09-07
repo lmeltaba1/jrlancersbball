@@ -148,6 +148,16 @@
     };
 
     document.addEventListener('DOMContentLoaded', async function() {
+      // Require auth - all users can view schedule
+      requireAuth().then(async function(userInfo) {
+        if (userInfo.isViewer) hideViewerRestrictedNav();
+        loadPageContent();
+      }).catch(function(err) {
+        console.log('Auth required:', err);
+      });
+    });
+
+    async function loadPageContent() {
       // Load schedule and roster
       try {
         const [scheduleData, rosterData] = await Promise.all([
@@ -233,7 +243,7 @@
           renderSchedule();
         });
       });
-    });
+    }
 
     function updateRecord() {
       let wins = 0, losses = 0;

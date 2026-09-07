@@ -1548,53 +1548,43 @@
 
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
-      // Tab switching
-      document.querySelectorAll('.section-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-          document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
-          this.classList.add('active');
-          currentChapter = this.dataset.chapter;
-          renderPlays();
-          // Re-apply highlighting after rendering new plays
-          setTimeout(applyHighlighting, 150);
+      // Require auth - viewers can't see playbook
+      requireAuth({ requireParent: true }).then(async function(userInfo) {
+        // Tab switching
+        document.querySelectorAll('.section-tab').forEach(tab => {
+          tab.addEventListener('click', function() {
+            document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            currentChapter = this.dataset.chapter;
+            renderPlays();
+            // Re-apply highlighting after rendering new plays
+            setTimeout(applyHighlighting, 150);
+          });
         });
-      });
 
-      renderPlays();
+        renderPlays();
 
-      // Auto-detect user's position if logged in
-      if (typeof auth !== 'undefined' && auth) {
-        auth.onAuthStateChanged(async function(user) {
-          if (user && user.emailVerified) {
-            try {
-              const userInfo = await getPlayerFromRoster(user.email);
-              console.log('User info for playbook:', userInfo);
+        // Auto-detect user's position
+        if (userInfo && userInfo.player && userInfo.player.position) {
+          const posNum = positionToNumber[userInfo.player.position];
+          if (posNum) {
+            // Set the dropdown and highlight
+            const select = document.getElementById('highlight-position');
+            select.value = posNum.toString();
+            highlightedPosition = posNum;
 
-              // Check for player position (works for parents)
-              if (userInfo && userInfo.player && userInfo.player.position) {
-                const posNum = positionToNumber[userInfo.player.position];
-                console.log('Detected position:', userInfo.player.position, '-> number:', posNum);
-                if (posNum) {
-                  // Set the dropdown and highlight
-                  const select = document.getElementById('highlight-position');
-                  select.value = posNum.toString();
-                  highlightedPosition = posNum;
+            // Show label with player name
+            const label = document.getElementById('auto-position-label');
+            label.textContent = `(${userInfo.player.firstName}'s position)`;
+            label.style.display = 'inline';
 
-                  // Show label with player name
-                  const label = document.getElementById('auto-position-label');
-                  label.textContent = `(${userInfo.player.firstName}'s position)`;
-                  label.style.display = 'inline';
-
-                  // Re-render plays with highlighting
-                  renderPlays();
-                }
-              }
-            } catch (e) {
-              console.log('Could not detect user position:', e);
-            }
+            // Re-render plays with highlighting
+            renderPlays();
           }
-        });
-      }
+        }
+      }).catch(function(err) {
+        console.log('Auth required:', err);
+      });
     });
 
   </script>

@@ -360,6 +360,33 @@
         <div class="card-title">Contact Info</div>
         <div id="contact-list"></div>
       </div>
+
+      <div class="card" id="viewers-card" style="display: none;">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Invited Viewers</span>
+          <button onclick="showAddViewerForm()" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.75rem;">+ Add</button>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.75rem; margin: 8px 0;">
+          Viewers (grandparents, relatives) can see schedule, roster, stats, and highlights, but cannot chat, view plays, or sign up.
+        </p>
+        <div id="viewers-list" style="margin-top: 8px;"></div>
+      </div>
+
+      <div id="add-viewer-form" style="display: none; margin-top: 10px; padding: 12px; background: var(--bg-elevated); border-radius: 8px;">
+        <div style="margin-bottom: 8px;">
+          <input type="email" id="viewer-email" placeholder="Email address" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 0.85rem;">
+        </div>
+        <div style="margin-bottom: 8px;">
+          <input type="text" id="viewer-name" placeholder="Name (e.g., Grandma Jane)" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 0.85rem;">
+        </div>
+        <div style="margin-bottom: 8px;">
+          <input type="text" id="viewer-relationship" placeholder="Relationship (e.g., Grandmother)" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 0.85rem;">
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button onclick="saveViewer()" class="btn btn-primary" style="flex: 1; padding: 8px;">Send Invite</button>
+          <button onclick="hideAddViewerForm()" class="btn" style="padding: 8px; background: var(--bg-body); border: 1px solid var(--border-color);">Cancel</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -440,6 +467,16 @@
     const emailIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="contact-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>`;
 
     document.addEventListener('DOMContentLoaded', async function() {
+      // Require auth - all users can view roster
+      requireAuth().then(async function(userInfo) {
+        if (userInfo.isViewer) hideViewerRestrictedNav();
+        loadPageContent();
+      }).catch(function(err) {
+        console.log('Auth required:', err);
+      });
+    });
+
+    async function loadPageContent() {
       // Tab switching
       document.querySelectorAll('.section-tab').forEach(tab => {
         tab.addEventListener('click', function() {
@@ -568,7 +605,7 @@
         document.getElementById('players-list').innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Error loading roster</p>';
         document.getElementById('parents-list').innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Error loading parents</p>';
       }
-    });
+    }
 
     let currentSeasonTotals = null;
 
@@ -710,6 +747,23 @@
         }).join('');
       } else {
         document.getElementById('contact-card').style.display = 'none';
+      }
+
+      // Show viewers card if current user is a parent of this player
+      const viewersCard = document.getElementById('viewers-card');
+      const addViewerForm = document.getElementById('add-viewer-form');
+      addViewerForm.style.display = 'none';
+
+      // Check if current user is a parent of this player or a coach
+      const isMyChild = currentUserInfo && currentUserInfo.player && currentUserInfo.player.id === playerId && !currentUserInfo.isViewer;
+      const isCoach = currentUserInfo && currentUserInfo.isCoach;
+      canManageViewers = isMyChild || isCoach;
+
+      if (canManageViewers) {
+        viewersCard.style.display = 'block';
+        loadViewers(playerId);
+      } else {
+        viewersCard.style.display = 'none';
       }
 
       // Load highlights for this player
@@ -854,6 +908,170 @@
         overlay.remove();
       }
     }
+
+    // Viewer management functions
+    let currentPlayerViewers = [];
+    let canManageViewers = false; // True if current user can add/remove viewers for current player
+
+    let removedViewerEmails = []; // Blocklist of removed roster.json viewer emails
+
+    async function loadViewers(playerId) {
+      currentPlayerViewers = [];
+      removedViewerEmails = [];
+
+      // Load Firestore data first (includes blocklist and added viewers)
+      try {
+        if (db) {
+          const doc = await db.collection('viewers').doc(playerId.toString()).get();
+          if (doc.exists) {
+            const data = doc.data();
+            removedViewerEmails = data.removedEmails || [];
+            const firestoreViewers = (data.viewers || []).map(v => ({
+              ...v,
+              source: 'firestore'
+            }));
+            currentPlayerViewers = currentPlayerViewers.concat(firestoreViewers);
+          }
+        }
+      } catch (e) {
+        console.log('Error loading Firestore viewers:', e);
+      }
+
+      // Then load static viewers from roster.json (filtering out removed ones)
+      const player = rosterData.players.find(p => p.id === playerId);
+      if (player && player.viewers) {
+        const rosterViewers = player.viewers
+          .filter(v => !removedViewerEmails.includes(v.email.toLowerCase()))
+          .map(v => ({
+            ...v,
+            source: 'roster'
+          }));
+        currentPlayerViewers = rosterViewers.concat(currentPlayerViewers);
+      }
+
+      renderViewersList();
+    }
+
+    function renderViewersList() {
+      const container = document.getElementById('viewers-list');
+      if (currentPlayerViewers.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.75rem; text-align: center;">No viewers invited yet</p>';
+        return;
+      }
+
+      container.innerHTML = currentPlayerViewers.map((viewer, index) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border-color);">
+          <div>
+            <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">${viewer.name}</div>
+            <div style="font-size: 0.7rem; color: var(--text-secondary);">${viewer.relationship || 'Viewer'} &bull; ${viewer.email}</div>
+          </div>
+          <button onclick="removeViewer(${index})" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function saveViewer() {
+      // Double-check permission (UI already hides this for unauthorized users)
+      if (!canManageViewers) {
+        alert('You do not have permission to add viewers for this player.');
+        return;
+      }
+
+      const email = document.getElementById('viewer-email').value.trim().toLowerCase();
+      const name = document.getElementById('viewer-name').value.trim();
+      const relationship = document.getElementById('viewer-relationship').value.trim();
+
+      if (!email || !name) {
+        alert('Please enter both email and name');
+        return;
+      }
+
+      // Check if already exists
+      if (currentPlayerViewers.some(v => v.email.toLowerCase() === email)) {
+        alert('This email is already invited');
+        return;
+      }
+
+      const newViewer = {
+        email: email,
+        name: name,
+        relationship: relationship || 'Viewer',
+        addedBy: auth.currentUser.email,
+        addedAt: new Date().toISOString()
+      };
+
+      // Get only Firestore viewers and add the new one
+      const firestoreViewers = currentPlayerViewers.filter(v => v.source === 'firestore');
+      firestoreViewers.push(newViewer);
+
+      try {
+        // Remove source field before saving
+        const cleanViewers = firestoreViewers.map(({source, ...rest}) => rest);
+        await db.collection('viewers').doc(currentPlayerId.toString()).set({
+          viewers: cleanViewers
+        });
+
+        hideAddViewerForm();
+        // Reload to get fresh data with proper source tags
+        await loadViewers(currentPlayerId);
+
+        alert(`Invitation sent! ${name} can now register at the app using the email: ${email}\n\nShare this link: ${window.location.origin}/register.html`);
+      } catch (e) {
+        console.error('Error saving viewer:', e);
+        alert('Error saving viewer. Please try again.');
+      }
+    }
+
+    async function removeViewer(index) {
+      // Double-check permission (UI already hides this for unauthorized users)
+      if (!canManageViewers) {
+        alert('You do not have permission to remove viewers for this player.');
+        return;
+      }
+
+      const viewer = currentPlayerViewers[index];
+
+      if (!confirm(`Remove ${viewer.name}? They will no longer be able to access the app.`)) return;
+
+      try {
+        // Get current Firestore viewers
+        const firestoreViewers = currentPlayerViewers
+          .filter(v => v.source === 'firestore' && v !== viewer)
+          .map(({source, ...rest}) => rest);
+
+        // If removing a roster.json viewer, add to blocklist
+        let newRemovedEmails = [...removedViewerEmails];
+        if (viewer.source === 'roster') {
+          newRemovedEmails.push(viewer.email.toLowerCase());
+        }
+
+        await db.collection('viewers').doc(currentPlayerId.toString()).set({
+          viewers: firestoreViewers,
+          removedEmails: newRemovedEmails
+        });
+
+        // Reload to get fresh data
+        await loadViewers(currentPlayerId);
+      } catch (e) {
+        console.error('Error removing viewer:', e);
+        alert('Error removing viewer. Please try again.');
+      }
+    }
+
+    function showAddViewerForm() {
+      document.getElementById('add-viewer-form').style.display = 'block';
+      document.getElementById('viewer-email').value = '';
+      document.getElementById('viewer-name').value = '';
+      document.getElementById('viewer-relationship').value = '';
+      document.getElementById('viewer-email').focus();
+    }
+
+    function hideAddViewerForm() {
+      document.getElementById('add-viewer-form').style.display = 'none';
+    }
+
   </script>
 </body>
 </html>

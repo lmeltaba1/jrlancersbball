@@ -367,94 +367,77 @@
       });
     }
 
-    // Check auth
-    if (auth) {
-      auth.onAuthStateChanged(async function(user) {
-        if (user && user.emailVerified) {
-          currentUser = user;
-          currentUserInfo = await getPlayerFromRoster(user.email);
+    // Check auth - require parent/coach (viewers can't access chat)
+    requireAuth({ requireParent: true }).then(async function(userInfo) {
+      currentUser = auth.currentUser;
+      currentUserInfo = userInfo;
 
-          if (currentUserInfo) {
-            displayName = currentUserInfo.isCoach
-              ? 'Coach ' + currentUserInfo.name.split(' ')[0]
-              : currentUserInfo.name || currentUserInfo.parent?.name || user.email.split('@')[0];
+      displayName = currentUserInfo.isCoach
+        ? 'Coach ' + currentUserInfo.name.split(' ')[0]
+        : currentUserInfo.name || currentUserInfo.parent?.name || currentUser.email.split('@')[0];
 
-            document.getElementById('chatUserName').textContent = displayName;
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('chatContainer').style.display = 'block';
-            document.getElementById('chatInputContainer').style.display = 'flex';
-
-            lastReadMessageId = await getLastReadMessageId();
-
-            if (db) {
-              var isFirstSnapshot = true;
-              var latestMessageId = null;
-              var foundLastRead = false;
-
-              db.collection('messages').orderBy('timestamp', 'asc').onSnapshot(function(snapshot) {
-                var chatMessages = document.getElementById('chatMessages');
-
-                snapshot.docChanges().forEach(function(change) {
-                  if (change.type === 'added') {
-                    var msg = change.doc.data();
-                    var messageId = change.doc.id;
-                    var isOwn = msg.uid === currentUser.uid;
-                    latestMessageId = messageId;
-
-                    if (isFirstSnapshot && lastReadMessageId && foundLastRead && !unreadDividerAdded) {
-                      addUnreadDivider();
-                    }
-
-                    if (messageId === lastReadMessageId) {
-                      foundLastRead = true;
-                    }
-
-                    var shouldScroll = !isFirstSnapshot;
-                    addMessage(messageId, msg.text, msg.senderName, msg.timestamp, isOwn, shouldScroll);
-                  }
-                });
-
-                if (isFirstSnapshot) {
-                  isFirstSnapshot = false;
-                  initialLoadComplete = true;
-
-                  var divider = document.getElementById('unreadDivider');
-                  if (divider) {
-                    divider.scrollIntoView({ behavior: 'auto', block: 'start' });
-                  } else if (lastReadMessageId) {
-                    var lastReadEl = chatMessages.querySelector('[data-message-id="' + lastReadMessageId + '"]');
-                    if (lastReadEl) {
-                      lastReadEl.scrollIntoView({ behavior: 'auto', block: 'start' });
-                    } else {
-                      chatMessages.scrollTop = chatMessages.scrollHeight;
-                    }
-                  } else {
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                  }
-                }
-
-                if (latestMessageId) {
-                  saveLastReadMessageId(latestMessageId);
-                }
-              });
-            }
-          } else {
-            // User not in roster - still allow chat
-            displayName = user.email.split('@')[0];
-            document.getElementById('chatUserName').textContent = displayName;
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('chatContainer').style.display = 'block';
-            document.getElementById('chatInputContainer').style.display = 'flex';
-          }
-        } else {
-          document.getElementById('loadingState').style.display = 'none';
-          document.getElementById('authRequired').style.display = 'block';
-        }
-      });
-    } else {
+      document.getElementById('chatUserName').textContent = displayName;
       document.getElementById('loadingState').style.display = 'none';
-      document.getElementById('authRequired').style.display = 'block';
-    }
+      document.getElementById('chatContainer').style.display = 'block';
+      document.getElementById('chatInputContainer').style.display = 'flex';
+
+      lastReadMessageId = await getLastReadMessageId();
+
+      if (db) {
+        var isFirstSnapshot = true;
+        var latestMessageId = null;
+        var foundLastRead = false;
+
+        db.collection('messages').orderBy('timestamp', 'asc').onSnapshot(function(snapshot) {
+          var chatMessages = document.getElementById('chatMessages');
+
+          snapshot.docChanges().forEach(function(change) {
+            if (change.type === 'added') {
+              var msg = change.doc.data();
+              var messageId = change.doc.id;
+              var isOwn = msg.uid === currentUser.uid;
+              latestMessageId = messageId;
+
+              if (isFirstSnapshot && lastReadMessageId && foundLastRead && !unreadDividerAdded) {
+                addUnreadDivider();
+              }
+
+              if (messageId === lastReadMessageId) {
+                foundLastRead = true;
+              }
+
+              var shouldScroll = !isFirstSnapshot;
+              addMessage(messageId, msg.text, msg.senderName, msg.timestamp, isOwn, shouldScroll);
+            }
+          });
+
+          if (isFirstSnapshot) {
+            isFirstSnapshot = false;
+            initialLoadComplete = true;
+
+            var divider = document.getElementById('unreadDivider');
+            if (divider) {
+              divider.scrollIntoView({ behavior: 'auto', block: 'start' });
+            } else if (lastReadMessageId) {
+              var lastReadEl = chatMessages.querySelector('[data-message-id="' + lastReadMessageId + '"]');
+              if (lastReadEl) {
+                lastReadEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+              } else {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+              }
+            } else {
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+          }
+
+          if (latestMessageId) {
+            saveLastReadMessageId(latestMessageId);
+          }
+        });
+      }
+    }).catch(function(err) {
+      console.log('Auth required:', err);
+    });
 
     document.getElementById('sendBtn').addEventListener('click', sendMessage);
     document.getElementById('messageInput').addEventListener('keypress', function(e) {

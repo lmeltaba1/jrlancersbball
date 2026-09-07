@@ -174,6 +174,18 @@
     let players = [];
 
     document.addEventListener('DOMContentLoaded', async function() {
+      // Require auth - all users can view game details
+      requireAuth().then(async function(info) {
+        currentUser = auth.currentUser;
+        userInfo = info;
+        if (info.isViewer) hideViewerRestrictedNav();
+        loadPageContent();
+      }).catch(function(err) {
+        console.log('Auth required:', err);
+      });
+    });
+
+    async function loadPageContent() {
       const urlParams = new URLSearchParams(window.location.search);
       const gameId = parseInt(urlParams.get('id'));
 
@@ -211,24 +223,13 @@
           }
         }
 
-        // Check auth for volunteer signups
-        if (auth) {
-          auth.onAuthStateChanged(async function(user) {
-            if (user && user.emailVerified) {
-              currentUser = user;
-              userInfo = await getPlayerFromRoster(user.email);
-            }
-            renderGame();
-          });
-        } else {
-          renderGame();
-        }
+        renderGame();
 
       } catch (e) {
         console.error('Error loading game:', e);
         showError();
       }
-    });
+    }
 
     function showError() {
       document.getElementById('loading').style.display = 'none';

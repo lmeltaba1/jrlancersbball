@@ -490,19 +490,17 @@
     let selectedFrom = null; // 'court' or 'bench'
 
     document.addEventListener('DOMContentLoaded', async function() {
-      if (!auth) {
-        document.getElementById('game-selector').style.display = 'none';
-        document.getElementById('login-required').style.display = 'block';
-        return;
-      }
-
-      auth.onAuthStateChanged(async function(user) {
-        if (!user || !user.emailVerified) {
-          document.getElementById('game-selector').style.display = 'none';
-          document.getElementById('login-required').style.display = 'block';
+      // Require auth - viewers can't do live scoring
+      requireAuth({ requireParent: true }).then(async function(userInfo) {
+        // Also check if user has stat tracking permission
+        if (!userInfo.canTrackStats) {
+          alert('You do not have permission to track stats. Contact Coach Logan for access.');
+          window.location.href = 'index.html';
           return;
         }
         await loadGames();
+      }).catch(function(err) {
+        console.log('Auth required:', err);
       });
     });
 

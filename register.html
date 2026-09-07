@@ -80,6 +80,14 @@
       }
 
       try {
+        // Check if email is in roster before allowing registration
+        const inRoster = await isEmailInRoster(email);
+        if (!inRoster) {
+          errorDiv.textContent = 'This email is not authorized. Please contact Coach Logan to be added to the team roster.';
+          errorDiv.style.display = 'block';
+          return;
+        }
+
         const result = await auth.createUserWithEmailAndPassword(email, password);
 
         // Send verification email
