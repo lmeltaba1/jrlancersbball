@@ -1,10 +1,19 @@
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
+const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { defineSecret } = require('firebase-functions/params');
+const { initializeApp } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
+const { getMessaging } = require('firebase-admin/messaging');
+const sgMail = require('@sendgrid/mail');
 
-admin.initializeApp();
+initializeApp();
 
-const db = admin.firestore();
-const messaging = admin.messaging();
+const db = getFirestore();
+const messaging = getMessaging();
+
+// Define SendGrid API key as a secret
+const sendgridApiKey = defineSecret('SENDGRID_API_KEY');
 
 // Send notification to all registered devices
 async function sendToAllDevices(title, body, data = {}) {
@@ -28,8 +37,6 @@ async function sendToAllDevices(title, body, data = {}) {
     return;
   }
 
-  // Use data-only message to prevent FCM from auto-showing notification
-  // Our service worker will handle displaying it
   const message = {
     data: {
       title: title,
@@ -43,7 +50,6 @@ async function sendToAllDevices(title, body, data = {}) {
     const response = await messaging.sendEachForMulticast(message);
     console.log(`Sent ${response.successCount} notifications, ${response.failureCount} failed`);
 
-    // Clean up invalid tokens
     if (response.failureCount > 0) {
       const failedTokens = [];
       response.responses.forEach((resp, idx) => {
@@ -52,7 +58,6 @@ async function sendToAllDevices(title, body, data = {}) {
         }
       });
 
-      // Remove invalid tokens
       if (failedTokens.length > 0) {
         const batch = db.batch();
         const invalidDocs = await db.collection('fcmTokens')
@@ -72,67 +77,62 @@ async function sendToAllDevices(title, body, data = {}) {
 }
 
 // Trigger on new chat message
-exports.onNewMessage = functions.firestore
-  .document('messages/{messageId}')
-  .onCreate(async (snap, context) => {
-    const message = snap.data();
-    const senderUid = message.uid;
+exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) => {
+  const message = event.data.data();
+  const senderUid = message.uid;
 
-    // Don't notify about system messages
-    if (!message.senderName) return null;
+  if (!message.senderName) return null;
 
-    const title = `${message.senderName}`;
-    const body = message.text.length > 100
-      ? message.text.substring(0, 100) + '...'
-      : message.text;
+  const title = `${message.senderName}`;
+  const body = message.text.length > 100
+    ? message.text.substring(0, 100) + '...'
+    : message.text;
 
-    // Get all tokens except the sender's
-    const tokensSnapshot = await db.collection('fcmTokens').get();
-    const tokens = [];
+  const tokensSnapshot = await db.collection('fcmTokens').get();
+  const tokens = [];
 
-    tokensSnapshot.forEach(doc => {
-      const tokenData = doc.data();
-      // Exclude the sender's tokens
-      if (tokenData.token && tokenData.uid !== senderUid) {
-        tokens.push(tokenData.token);
-      }
-    });
-
-    if (tokens.length === 0) {
-      console.log('No tokens to notify (excluding sender)');
-      return null;
+  tokensSnapshot.forEach(doc => {
+    const tokenData = doc.data();
+    if (tokenData.token && tokenData.uid !== senderUid) {
+      tokens.push(tokenData.token);
     }
-
-    const notificationMessage = {
-      data: {
-        title: title,
-        body: body,
-        type: 'chat',
-        url: '/chat.html'
-      },
-      tokens: tokens
-    };
-
-    try {
-      const response = await messaging.sendEachForMulticast(notificationMessage);
-      console.log(`Chat: Sent ${response.successCount} notifications, ${response.failureCount} failed`);
-    } catch (error) {
-      console.error('Error sending chat notifications:', error);
-    }
-
-    return null;
   });
 
-// Manual notification endpoint (for coach)
-exports.sendAnnouncement = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
+  if (tokens.length === 0) {
+    console.log('No tokens to notify (excluding sender)');
+    return null;
   }
 
-  const { title, body } = data;
+  const notificationMessage = {
+    data: {
+      title: title,
+      body: body,
+      type: 'chat',
+      url: '/chat.html'
+    },
+    tokens: tokens
+  };
+
+  try {
+    const response = await messaging.sendEachForMulticast(notificationMessage);
+    console.log(`Chat: Sent ${response.successCount} notifications, ${response.failureCount} failed`);
+  } catch (error) {
+    console.error('Error sending chat notifications:', error);
+  }
+
+  return null;
+});
+
+// Manual notification endpoint (for coach)
+exports.sendAnnouncement = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Must be logged in');
+  }
+
+  const { title, body } = request.data;
 
   if (!title || !body) {
-    throw new functions.https.HttpsError('invalid-argument', 'Title and body required');
+    throw new HttpsError('invalid-argument', 'Title and body required');
   }
 
   await sendToAllDevices(title, body, {
@@ -144,143 +144,129 @@ exports.sendAnnouncement = functions.https.onCall(async (data, context) => {
 });
 
 // Simple test endpoint
-exports.helloWorld = functions.https.onRequest((request, response) => {
+exports.helloWorld = onRequest((request, response) => {
   response.send("Hello from Jr. Lancers Basketball!");
 });
 
-// Scheduled function to send attendance reminders
-// Runs daily at 9 AM Central time
-exports.sendAttendanceReminders = functions.pubsub
-  .schedule('0 9 * * *')
-  .timeZone('America/Chicago')
-  .onRun(async (context) => {
-    console.log('Running attendance reminder check...');
+// Scheduled function to send attendance reminders - daily at 9 AM Central
+exports.sendAttendanceReminders = onSchedule({
+  schedule: '0 9 * * *',
+  timeZone: 'America/Chicago'
+}, async (event) => {
+  console.log('Running attendance reminder check...');
 
-    try {
-      // Load schedule and roster from Firestore config
-      const scheduleDoc = await db.collection('config').doc('schedule').get();
-      const rosterDoc = await db.collection('config').doc('roster').get();
+  try {
+    const scheduleDoc = await db.collection('config').doc('schedule').get();
+    const rosterDoc = await db.collection('config').doc('roster').get();
 
-      if (!scheduleDoc.exists || !rosterDoc.exists) {
-        console.log('Schedule or roster config not found in Firestore');
-        return null;
-      }
-
-      const schedule = scheduleDoc.data();
-      const roster = rosterDoc.data();
-
-      if (!schedule.games || !roster.players) {
-        console.log('Invalid schedule or roster data');
-        return null;
-      }
-
-      // Find games within 4 days
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const upcomingGames = schedule.games.filter(game => {
-        const gameDate = new Date(game.date);
-        gameDate.setHours(0, 0, 0, 0);
-        const daysUntil = Math.ceil((gameDate - today) / (1000 * 60 * 60 * 24));
-        return daysUntil > 0 && daysUntil <= 4 && !game.result;
-      });
-
-      if (upcomingGames.length === 0) {
-        console.log('No upcoming games within 4 days');
-        return null;
-      }
-
-      // Process each upcoming game
-      for (const game of upcomingGames) {
-        console.log(`Processing game ${game.id}: vs ${game.opponent}`);
-
-        // Get all attendance responses for this game
-        const attendanceSnapshot = await db.collection('attendance')
-          .where('gameId', '==', game.id)
-          .get();
-
-        const respondedPlayerIds = new Set();
-        attendanceSnapshot.forEach(doc => {
-          respondedPlayerIds.add(doc.data().playerId);
-        });
-
-        // Find non-responders
-        const nonResponders = roster.players.filter(player =>
-          !respondedPlayerIds.has(player.id)
-        );
-
-        if (nonResponders.length === 0) {
-          console.log(`All players have responded for game ${game.id}`);
-          continue;
-        }
-
-        console.log(`Found ${nonResponders.length} non-responders for game ${game.id}`);
-
-        // Collect all parent emails for non-responders
-        const parentEmails = new Set();
-        nonResponders.forEach(player => {
-          if (player.parents) {
-            player.parents.forEach(parent => {
-              if (parent.email) {
-                parentEmails.add(parent.email.toLowerCase());
-              }
-            });
-          }
-        });
-
-        // Get FCM tokens for these parents
-        const tokensSnapshot = await db.collection('fcmTokens').get();
-        const tokensToNotify = [];
-
-        tokensSnapshot.forEach(doc => {
-          const tokenData = doc.data();
-          if (tokenData.token && tokenData.email && parentEmails.has(tokenData.email.toLowerCase())) {
-            tokensToNotify.push(tokenData.token);
-          }
-        });
-
-        if (tokensToNotify.length === 0) {
-          console.log(`No FCM tokens found for non-responders of game ${game.id}`);
-          continue;
-        }
-
-        // Build notification
-        const gameTitle = `vs ${game.opponent}`;
-        const gameDate = new Date(game.date);
-        const dateStr = gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
-        const title = 'RSVP Needed';
-        const body = `${gameTitle} on ${dateStr} - Let us know if your player can attend!`;
-
-        // Send notifications
-        const message = {
-          data: {
-            title: title,
-            body: body,
-            type: 'attendance',
-            url: `/attendance.html?game=${game.id}`
-          },
-          tokens: tokensToNotify
-        };
-
-        try {
-          const response = await messaging.sendEachForMulticast(message);
-          console.log(`Sent ${response.successCount} attendance reminders for game ${game.id}, ${response.failureCount} failed`);
-        } catch (error) {
-          console.error(`Error sending attendance reminders for game ${game.id}:`, error);
-        }
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Error in sendAttendanceReminders:', error);
+    if (!scheduleDoc.exists || !rosterDoc.exists) {
+      console.log('Schedule or roster config not found in Firestore');
       return null;
     }
-  });
+
+    const schedule = scheduleDoc.data();
+    const roster = rosterDoc.data();
+
+    if (!schedule.games || !roster.players) {
+      console.log('Invalid schedule or roster data');
+      return null;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const upcomingGames = schedule.games.filter(game => {
+      const gameDate = new Date(game.date);
+      gameDate.setHours(0, 0, 0, 0);
+      const daysUntil = Math.ceil((gameDate - today) / (1000 * 60 * 60 * 24));
+      return daysUntil > 0 && daysUntil <= 4 && !game.result;
+    });
+
+    if (upcomingGames.length === 0) {
+      console.log('No upcoming games within 4 days');
+      return null;
+    }
+
+    for (const game of upcomingGames) {
+      console.log(`Processing game ${game.id}: vs ${game.opponent}`);
+
+      const attendanceSnapshot = await db.collection('attendance')
+        .where('gameId', '==', game.id)
+        .get();
+
+      const respondedPlayerIds = new Set();
+      attendanceSnapshot.forEach(doc => {
+        respondedPlayerIds.add(doc.data().playerId);
+      });
+
+      const nonResponders = roster.players.filter(player =>
+        !respondedPlayerIds.has(player.id)
+      );
+
+      if (nonResponders.length === 0) {
+        console.log(`All players have responded for game ${game.id}`);
+        continue;
+      }
+
+      console.log(`Found ${nonResponders.length} non-responders for game ${game.id}`);
+
+      const parentEmails = new Set();
+      nonResponders.forEach(player => {
+        if (player.parents) {
+          player.parents.forEach(parent => {
+            if (parent.email) {
+              parentEmails.add(parent.email.toLowerCase());
+            }
+          });
+        }
+      });
+
+      const tokensSnapshot = await db.collection('fcmTokens').get();
+      const tokensToNotify = [];
+
+      tokensSnapshot.forEach(doc => {
+        const tokenData = doc.data();
+        if (tokenData.token && tokenData.email && parentEmails.has(tokenData.email.toLowerCase())) {
+          tokensToNotify.push(tokenData.token);
+        }
+      });
+
+      if (tokensToNotify.length === 0) {
+        console.log(`No FCM tokens found for non-responders of game ${game.id}`);
+        continue;
+      }
+
+      const gameTitle = `vs ${game.opponent}`;
+      const gameDate = new Date(game.date);
+      const dateStr = gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+      const notificationMessage = {
+        data: {
+          title: 'RSVP Needed',
+          body: `${gameTitle} on ${dateStr} - Let us know if your player can attend!`,
+          type: 'attendance',
+          url: `/attendance.html?game=${game.id}`
+        },
+        tokens: tokensToNotify
+      };
+
+      try {
+        const response = await messaging.sendEachForMulticast(notificationMessage);
+        console.log(`Sent ${response.successCount} attendance reminders for game ${game.id}, ${response.failureCount} failed`);
+      } catch (error) {
+        console.error(`Error sending attendance reminders for game ${game.id}:`, error);
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error in sendAttendanceReminders:', error);
+    return null;
+  }
+});
 
 // Manual trigger for attendance reminders (for testing)
-exports.triggerAttendanceReminders = functions.https.onRequest(async (request, response) => {
-  // Simple API key check
+exports.triggerAttendanceReminders = onRequest(async (request, response) => {
   const apiKey = request.query.key;
   if (apiKey !== 'lancers2026') {
     response.status(403).send('Unauthorized');
@@ -288,7 +274,6 @@ exports.triggerAttendanceReminders = functions.https.onRequest(async (request, r
   }
 
   try {
-    // Load schedule and roster from Firestore config
     const scheduleDoc = await db.collection('config').doc('schedule').get();
     const rosterDoc = await db.collection('config').doc('roster').get();
 
@@ -303,7 +288,6 @@ exports.triggerAttendanceReminders = functions.https.onRequest(async (request, r
     const schedule = scheduleDoc.data();
     const roster = rosterDoc.data();
 
-    // Find games within 4 days
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -317,7 +301,6 @@ exports.triggerAttendanceReminders = functions.https.onRequest(async (request, r
     const results = [];
 
     for (const game of upcomingGames) {
-      // Get attendance responses
       const attendanceSnapshot = await db.collection('attendance')
         .where('gameId', '==', game.id)
         .get();
@@ -327,12 +310,10 @@ exports.triggerAttendanceReminders = functions.https.onRequest(async (request, r
         respondedPlayerIds.add(doc.data().playerId);
       });
 
-      // Find non-responders
       const nonResponders = roster.players.filter(player =>
         !respondedPlayerIds.has(player.id)
       );
 
-      // Collect parent emails
       const parentEmails = new Set();
       nonResponders.forEach(player => {
         if (player.parents) {
@@ -344,7 +325,6 @@ exports.triggerAttendanceReminders = functions.https.onRequest(async (request, r
         }
       });
 
-      // Get FCM tokens
       const tokensSnapshot = await db.collection('fcmTokens').get();
       const tokensToNotify = [];
 
@@ -360,7 +340,7 @@ exports.triggerAttendanceReminders = functions.https.onRequest(async (request, r
         const gameDate = new Date(game.date);
         const dateStr = gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-        const message = {
+        const notificationMessage = {
           data: {
             title: 'RSVP Needed',
             body: `${gameTitle} on ${dateStr} - Let us know if your player can attend!`,
@@ -370,7 +350,7 @@ exports.triggerAttendanceReminders = functions.https.onRequest(async (request, r
           tokens: tokensToNotify
         };
 
-        const sendResult = await messaging.sendEachForMulticast(message);
+        const sendResult = await messaging.sendEachForMulticast(notificationMessage);
         results.push({
           gameId: game.id,
           opponent: game.opponent,
@@ -404,7 +384,7 @@ exports.triggerAttendanceReminders = functions.https.onRequest(async (request, r
 });
 
 // Sync schedule and roster from hosted JSON to Firestore
-exports.syncConfig = functions.https.onRequest(async (request, response) => {
+exports.syncConfig = onRequest(async (request, response) => {
   const apiKey = request.query.key;
   if (apiKey !== 'lancers2026') {
     response.status(403).send('Unauthorized');
@@ -425,7 +405,6 @@ exports.syncConfig = functions.https.onRequest(async (request, response) => {
   };
 
   try {
-    // TODO: Update these URLs when deployed
     const baseUrl = 'https://lancers-bball.web.app';
     const [schedule, roster] = await Promise.all([
       fetchJson(`${baseUrl}/data/schedule.json`),
@@ -443,5 +422,98 @@ exports.syncConfig = functions.https.onRequest(async (request, response) => {
     });
   } catch (error) {
     response.status(500).json({ error: error.message });
+  }
+});
+
+// Send viewer invite email
+exports.sendViewerInvite = onCall({
+  secrets: [sendgridApiKey]
+}, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Must be logged in');
+  }
+
+  const { viewerEmail, viewerName, playerName, inviterName, relationship } = request.data;
+
+  if (!viewerEmail || !viewerName || !playerName || !inviterName) {
+    throw new HttpsError('invalid-argument', 'Missing required fields');
+  }
+
+  // Check if SendGrid is configured
+  const apiKey = sendgridApiKey.value();
+  if (!apiKey) {
+    console.log('SendGrid not configured, skipping email');
+    return { success: true, emailSent: false, reason: 'Email service not configured' };
+  }
+
+  sgMail.setApiKey(apiKey);
+
+  const appUrl = 'https://lancers-bball.web.app';
+  const registerUrl = `${appUrl}/register.html`;
+
+  const msg = {
+    to: viewerEmail,
+    from: {
+      email: 'noreply@lancers-bball.web.app',
+      name: 'Jr. Lancers Basketball'
+    },
+    subject: `You're invited to follow ${playerName} on Jr. Lancers!`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #000; padding: 20px; text-align: center;">
+          <h1 style="color: #FFD700; margin: 0;">Jr. Lancers Basketball</h1>
+        </div>
+        <div style="padding: 30px; background: #f9f9f9;">
+          <h2 style="color: #333;">Hi ${viewerName}!</h2>
+          <p style="font-size: 16px; color: #555; line-height: 1.6;">
+            ${inviterName} has invited you to follow <strong>${playerName}</strong>'s basketball season with the Jr. Lancers!
+          </p>
+          <p style="font-size: 16px; color: #555; line-height: 1.6;">
+            As a <strong>${relationship || 'viewer'}</strong>, you'll be able to:
+          </p>
+          <ul style="font-size: 16px; color: #555; line-height: 1.8;">
+            <li>View the game schedule</li>
+            <li>See the team roster</li>
+            <li>Watch live game stats</li>
+            <li>View photos and videos</li>
+          </ul>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${registerUrl}" style="background: #FFD700; color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; display: inline-block;">
+              Create Your Account
+            </a>
+          </div>
+          <p style="font-size: 14px; color: #888; text-align: center;">
+            Use this email address (<strong>${viewerEmail}</strong>) when registering.
+          </p>
+        </div>
+        <div style="background: #333; padding: 15px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            Jr. Lancers Basketball • Lafayette 5th Grade
+          </p>
+        </div>
+      </div>
+    `,
+    text: `
+Hi ${viewerName}!
+
+${inviterName} has invited you to follow ${playerName}'s basketball season with the Jr. Lancers!
+
+As a ${relationship || 'viewer'}, you'll be able to view the game schedule, team roster, live game stats, and photos/videos.
+
+Create your account here: ${registerUrl}
+
+Use this email address (${viewerEmail}) when registering.
+
+- Jr. Lancers Basketball
+    `
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`Viewer invite email sent to ${viewerEmail} for player ${playerName}`);
+    return { success: true, emailSent: true };
+  } catch (error) {
+    console.error('Error sending viewer invite email:', error);
+    return { success: true, emailSent: false, reason: error.message };
   }
 });

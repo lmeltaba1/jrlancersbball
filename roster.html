@@ -374,17 +374,17 @@
 
       <div id="add-viewer-form" style="display: none; margin-top: 10px; padding: 12px; background: var(--bg-elevated); border-radius: 8px;">
         <div style="margin-bottom: 8px;">
-          <input type="email" id="viewer-email" placeholder="Email address" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 0.85rem;">
+          <input type="email" id="viewer-email" placeholder="Email address" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 16px;">
         </div>
         <div style="margin-bottom: 8px;">
-          <input type="text" id="viewer-name" placeholder="Name (e.g., Grandma Jane)" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 0.85rem;">
+          <input type="text" id="viewer-name" placeholder="Name (e.g., Grandma Jane)" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 16px;">
         </div>
         <div style="margin-bottom: 8px;">
-          <input type="text" id="viewer-relationship" placeholder="Relationship (e.g., Grandmother)" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 0.85rem;">
+          <input type="text" id="viewer-relationship" placeholder="Relationship (e.g., Grandmother)" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 16px;">
         </div>
         <div style="display: flex; gap: 8px;">
-          <button onclick="saveViewer()" class="btn btn-primary" style="flex: 1; padding: 8px;">Send Invite</button>
-          <button onclick="hideAddViewerForm()" class="btn" style="padding: 8px; background: var(--bg-body); border: 1px solid var(--border-color);">Cancel</button>
+          <button type="button" onclick="saveViewer()" class="btn btn-primary" style="flex: 1; padding: 10px;">Send Invite</button>
+          <button type="button" onclick="hideAddViewerForm()" class="btn" style="padding: 10px; background: var(--bg-body); border: 1px solid var(--border-color);">Cancel</button>
         </div>
       </div>
     </div>
@@ -442,6 +442,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-functions-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/app.js?v=3"></script>
@@ -754,10 +755,12 @@
       const addViewerForm = document.getElementById('add-viewer-form');
       addViewerForm.style.display = 'none';
 
-      // Check if current user is a parent of this player or a coach
-      const isMyChild = currentUserInfo && currentUserInfo.player && currentUserInfo.player.id === playerId && !currentUserInfo.isViewer;
+      // Check if current user is a parent of THIS SPECIFIC player or a coach
+      // Must check the player's parents array directly (not currentUserInfo.player which only returns first match)
+      const currentUserEmail = auth.currentUser ? auth.currentUser.email.toLowerCase() : '';
+      const isParentOfThisPlayer = player.parents && player.parents.some(p => p.email.toLowerCase() === currentUserEmail);
       const isCoach = currentUserInfo && currentUserInfo.isCoach;
-      canManageViewers = isMyChild || isCoach;
+      canManageViewers = isParentOfThisPlayer || isCoach;
 
       if (canManageViewers) {
         viewersCard.style.display = 'block';
@@ -1006,6 +1009,10 @@
       const firestoreViewers = currentPlayerViewers.filter(v => v.source === 'firestore');
       firestoreViewers.push(newViewer);
 
+      // Get player name for the email
+      const player = rosterData.players.find(p => p.id === currentPlayerId);
+      const playerName = player ? `${player.firstName} ${player.lastName}` : 'your player';
+
       try {
         // Remove source field before saving
         const cleanViewers = firestoreViewers.map(({source, ...rest}) => rest);
@@ -1017,7 +1024,27 @@
         // Reload to get fresh data with proper source tags
         await loadViewers(currentPlayerId);
 
-        alert(`Invitation sent! ${name} can now register at the app using the email: ${email}\n\nShare this link: ${window.location.origin}/register.html`);
+        // Send invite email via Cloud Function
+        let emailSent = false;
+        try {
+          const sendViewerInvite = firebase.functions().httpsCallable('sendViewerInvite');
+          const result = await sendViewerInvite({
+            viewerEmail: email,
+            viewerName: name,
+            playerName: playerName,
+            inviterName: currentUserInfo.name || 'A team parent',
+            relationship: relationship || 'Viewer'
+          });
+          emailSent = result.data.emailSent;
+        } catch (emailError) {
+          console.log('Could not send invite email:', emailError);
+        }
+
+        if (emailSent) {
+          alert(`Invite sent! ${name} will receive an email at ${email} with instructions to create their account.`);
+        } else {
+          alert(`${name} has been added! Please tell them to register at:\n\n${window.location.origin}/register.html\n\nThey must use this email: ${email}`);
+        }
       } catch (e) {
         console.error('Error saving viewer:', e);
         alert('Error saving viewer. Please try again.');
@@ -1061,11 +1088,13 @@
     }
 
     function showAddViewerForm() {
-      document.getElementById('add-viewer-form').style.display = 'block';
+      const form = document.getElementById('add-viewer-form');
+      form.style.display = 'block';
       document.getElementById('viewer-email').value = '';
       document.getElementById('viewer-name').value = '';
       document.getElementById('viewer-relationship').value = '';
-      document.getElementById('viewer-email').focus();
+      // Scroll the form into view (don't auto-focus to avoid mobile zoom)
+      setTimeout(() => form.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
     }
 
     function hideAddViewerForm() {
