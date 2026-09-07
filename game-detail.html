@@ -244,56 +244,50 @@
 
       // Game Info Card
       const gameInfoHtml = `
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary);">${dateInfo.weekday}</div>
-            <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">${dateInfo.full}</div>
+            <div style="font-size: 0.65rem; color: var(--text-secondary);">${dateInfo.weekday}</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">${dateInfo.full}</div>
           </div>
           <span class="league-badge ${game.league}">${leagueNames[game.league]}</span>
         </div>
 
-        <div style="text-align: center; padding: 20px 0; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
-          <div style="font-size: 1.25rem; font-weight: 700;">
+        <div style="text-align: center; padding: 6px 0; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+          <div style="font-size: 0.9rem; font-weight: 700;">
             <span style="color: var(--lancers-gold);">Lancers</span>
-            <span style="margin: 0 12px; color: var(--text-secondary);">${game.home ? 'VS' : '@'}</span>
+            <span style="margin: 0 6px; color: var(--text-secondary);">${game.home ? 'VS' : '@'}</span>
             <span style="color: var(--text-primary);">${game.opponent}</span>
           </div>
           ${isCompleted ? `
-            <div style="margin-top: 12px;">
-              <span class="game-result ${game.result === 'W' ? 'win' : 'loss'}" style="font-size: 1.5rem; padding: 8px 20px;">
+            <div style="margin-top: 4px;">
+              <span class="game-result ${game.result === 'W' ? 'win' : 'loss'}" style="font-size: 0.95rem; padding: 3px 10px;">
                 ${game.result === 'W' ? 'WIN' : 'LOSS'} ${game.finalScore ? game.finalScore.lancers + ' - ' + game.finalScore.opponent : ''}
               </span>
             </div>
           ` : ''}
         </div>
 
-        <div style="margin-top: 16px;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 12px; background: var(--bg-elevated); border-radius: 10px; cursor: pointer;" onclick="copyAddress('${game.location.replace(/'/g, "\\'")}')">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--lancers-gold)" style="width: 20px; height: 20px; flex-shrink: 0;">
+        <div style="display: flex; gap: 6px; margin-top: 6px; align-items: stretch;">
+          <div style="flex: 1; display: flex; align-items: center; gap: 6px; padding: 6px; background: var(--bg-elevated); border-radius: 6px; cursor: pointer;" onclick="copyAddress('${game.location.replace(/'/g, "\\'")}')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--lancers-gold)" style="width: 14px; height: 14px; flex-shrink: 0;">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <div>
-              <div style="font-weight: 600; color: var(--text-primary);">${game.location}</div>
-              <div style="font-size: 0.75rem; color: var(--text-secondary);">Tap to copy address</div>
-            </div>
+            <div style="font-size: 0.7rem; color: var(--text-primary); line-height: 1.2;">${game.location}</div>
           </div>
-
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 12px; background: var(--bg-elevated); border-radius: 10px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--lancers-gold)" style="width: 20px; height: 20px; flex-shrink: 0;">
+          <div style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--bg-elevated); border-radius: 6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--lancers-gold)" style="width: 14px; height: 14px; flex-shrink: 0;">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <div style="font-weight: 600; color: var(--text-primary);">${game.time}</div>
+            <div style="font-weight: 600; font-size: 0.75rem; color: var(--text-primary);">${game.time}</div>
           </div>
-
-          ${game.jersey ? `
-            <div style="text-align: center; margin-top: 16px;">
-              <span class="jersey-indicator ${game.jersey}" style="font-size: 1rem; padding: 10px 24px;">
-                ${game.jersey === 'parkrock' ? 'PARK ROCK' : game.jersey.toUpperCase()} JERSEY
-              </span>
-            </div>
-          ` : ''}
         </div>
+        ${game.jersey ? `
+          <div style="text-align: center; margin-top: 6px;">
+            <span class="jersey-indicator ${game.jersey}" style="font-size: 0.75rem; padding: 4px 12px;">
+              ${game.jersey === 'parkrock' ? 'PARK ROCK' : game.jersey.toUpperCase()} JERSEY
+            </span>
+          </div>
+        ` : ''}
       `;
       document.getElementById('game-info').innerHTML = gameInfoHtml;
 
@@ -339,37 +333,37 @@
           let html = '';
 
           // Attending section
-          html += `<div style="margin-bottom: 12px;">
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-              <span style="color: #22C55E; font-weight: 700;">&#10003; Attending (${attending.length})</span>
+          html += `<div style="margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+              <span style="color: #22C55E; font-weight: 700; font-size: 0.8rem;">&#10003; Attending (${attending.length})</span>
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-              ${attending.length > 0 ? attending.map(n => `<span style="background: rgba(34,197,94,0.2); color: #22C55E; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">${n}</span>`).join('') : '<span style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">None yet</span>'}
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+              ${attending.length > 0 ? attending.map(n => `<span style="background: rgba(34,197,94,0.2); color: #22C55E; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">${n}</span>`).join('') : '<span style="color: var(--text-muted); font-size: 0.7rem; font-style: italic;">None yet</span>'}
             </div>
           </div>`;
 
           // Not attending section
-          html += `<div style="margin-bottom: 12px;">
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-              <span style="color: #EF4444; font-weight: 700;">&#10007; Not Attending (${notAttending.length})</span>
+          html += `<div style="margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+              <span style="color: #EF4444; font-weight: 700; font-size: 0.8rem;">&#10007; Not Attending (${notAttending.length})</span>
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-              ${notAttending.length > 0 ? notAttending.map(n => `<span style="background: rgba(239,68,68,0.2); color: #EF4444; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">${n}</span>`).join('') : '<span style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">None</span>'}
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+              ${notAttending.length > 0 ? notAttending.map(n => `<span style="background: rgba(239,68,68,0.2); color: #EF4444; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">${n}</span>`).join('') : '<span style="color: var(--text-muted); font-size: 0.7rem; font-style: italic;">None</span>'}
             </div>
           </div>`;
 
           // No response section
-          html += `<div style="margin-bottom: 12px;">
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-              <span style="color: #6B7280; font-weight: 700;">? No Response (${noResponse.length})</span>
+          html += `<div style="margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+              <span style="color: #6B7280; font-weight: 700; font-size: 0.8rem;">? No Response (${noResponse.length})</span>
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-              ${noResponse.length > 0 ? noResponse.map(n => `<span style="background: rgba(107,114,128,0.2); color: #6B7280; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">${n}</span>`).join('') : '<span style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">Everyone responded!</span>'}
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+              ${noResponse.length > 0 ? noResponse.map(n => `<span style="background: rgba(107,114,128,0.2); color: #6B7280; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">${n}</span>`).join('') : '<span style="color: var(--text-muted); font-size: 0.7rem; font-style: italic;">Everyone responded!</span>'}
             </div>
           </div>`;
 
           // RSVP button
-          html += `<a href="attendance.html?game=${game.id}" class="btn btn-primary" style="width: 100%; text-align: center; margin-top: 8px;">RSVP Now</a>`;
+          html += `<a href="attendance.html?game=${game.id}" class="btn btn-primary" style="width: 100%; text-align: center; margin-top: 6px; padding: 8px;">RSVP Now</a>`;
 
           document.getElementById('attendance-content').innerHTML = html;
         } catch (e) {
@@ -394,30 +388,30 @@
           <div class="card-title">Volunteers Needed</div>
 
           <!-- Scorekeeper Slot -->
-          <div style="background: var(--bg-elevated); border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border-color);">
+          <div style="background: var(--bg-elevated); border-radius: 8px; padding: 8px; margin-bottom: 6px; border: 1px solid var(--border-color);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <div>
-                <div style="font-weight: 700; font-size: 0.9rem; color: var(--lancers-gold);">Scorekeeper</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary);">Track stats in the app</div>
+                <div style="font-weight: 700; font-size: 0.8rem; color: var(--lancers-gold);">Scorekeeper</div>
+                <div style="font-size: 0.65rem; color: var(--text-secondary);">Track stats in the app</div>
               </div>
               ${scorekeeperFilled ? `
                 <div style="text-align: right;">
-                  <span class="volunteer-slot filled" style="margin: 0;">
+                  <span class="volunteer-slot filled" style="margin: 0; font-size: 0.75rem;">
                     &#10003; ${volunteers.scorekeeper.name}
                   </span>
                   ${userIsScorekeeper ? `
-                    <button class="btn btn-secondary" style="font-size: 0.7rem; padding: 6px 10px; margin-top: 6px;" onclick="cancelSignup('scorekeeper')">
+                    <button class="btn btn-secondary" style="font-size: 0.65rem; padding: 4px 8px; margin-top: 4px;" onclick="cancelSignup('scorekeeper')">
                       Cancel
                     </button>
                   ` : ''}
                 </div>
               ` : `
                 ${currentUser ? `
-                  <button class="btn btn-primary" style="font-size: 0.8rem; padding: 10px 20px;" onclick="signUp('scorekeeper')">
+                  <button class="btn btn-primary" style="font-size: 0.75rem; padding: 6px 12px;" onclick="signUp('scorekeeper')">
                     Sign Up
                   </button>
                 ` : `
-                  <span class="volunteer-slot empty" style="margin: 0;">NEEDED</span>
+                  <span class="volunteer-slot empty" style="margin: 0; font-size: 0.75rem;">NEEDED</span>
                 `}
               `}
             </div>
@@ -425,30 +419,30 @@
 
           ${isCNR ? `
             <!-- Table Worker Slot -->
-            <div style="background: var(--bg-elevated); border-radius: 10px; padding: 12px; border: 1px solid var(--border-color);">
+            <div style="background: var(--bg-elevated); border-radius: 8px; padding: 8px; border: 1px solid var(--border-color);">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                  <div style="font-weight: 700; font-size: 0.9rem; color: var(--lancers-gold);">Table Worker</div>
-                  <div style="font-size: 0.75rem; color: var(--text-secondary);">Run the scorer's table</div>
+                  <div style="font-weight: 700; font-size: 0.8rem; color: var(--lancers-gold);">Table Worker</div>
+                  <div style="font-size: 0.65rem; color: var(--text-secondary);">Run the scorer's table</div>
                 </div>
                 ${tableWorkerFilled ? `
                   <div style="text-align: right;">
-                    <span class="volunteer-slot filled" style="margin: 0;">
+                    <span class="volunteer-slot filled" style="margin: 0; font-size: 0.75rem;">
                       &#10003; ${volunteers.tableWorker.name}
                     </span>
                     ${userIsTableWorker ? `
-                      <button class="btn btn-secondary" style="font-size: 0.7rem; padding: 6px 10px; margin-top: 6px;" onclick="cancelSignup('tableWorker')">
+                      <button class="btn btn-secondary" style="font-size: 0.65rem; padding: 4px 8px; margin-top: 4px;" onclick="cancelSignup('tableWorker')">
                         Cancel
                       </button>
                     ` : ''}
                   </div>
                 ` : `
                   ${currentUser ? `
-                    <button class="btn btn-primary" style="font-size: 0.8rem; padding: 10px 20px;" onclick="signUp('tableWorker')">
+                    <button class="btn btn-primary" style="font-size: 0.75rem; padding: 6px 12px;" onclick="signUp('tableWorker')">
                       Sign Up
                     </button>
                   ` : `
-                    <span class="volunteer-slot empty" style="margin: 0;">NEEDED</span>
+                    <span class="volunteer-slot empty" style="margin: 0; font-size: 0.75rem;">NEEDED</span>
                   `}
                 `}
               </div>
@@ -456,8 +450,8 @@
           ` : ''}
 
           ${!currentUser ? `
-            <div style="margin-top: 16px; text-align: center;">
-              <a href="login.html" class="btn btn-primary">Log in to Sign Up</a>
+            <div style="margin-top: 10px; text-align: center;">
+              <a href="login.html" class="btn btn-primary" style="padding: 8px 16px;">Log in to Sign Up</a>
             </div>
           ` : ''}
         `;

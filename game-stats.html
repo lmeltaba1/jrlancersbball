@@ -15,22 +15,22 @@
       display: flex;
       justify-content: space-around;
       align-items: center;
-      padding: 10px 16px;
+      padding: 8px 12px;
       background: var(--bg-card);
       border: 1px solid var(--border-accent);
-      border-radius: 8px;
-      margin-bottom: 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
     }
     .score-side {
       text-align: center;
     }
     .score-label {
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       color: var(--text-secondary);
       text-transform: uppercase;
     }
     .score-num {
-      font-size: 2.2rem;
+      font-size: 1.8rem;
       font-weight: 800;
       color: var(--text-primary);
     }
@@ -40,8 +40,8 @@
     .player-card {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
-      margin-bottom: 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
       overflow: hidden;
     }
     .player-card.foul-warning {
@@ -56,31 +56,31 @@
     .player-row-1 {
       display: flex;
       align-items: center;
-      padding: 8px 12px;
-      gap: 10px;
+      padding: 6px 8px;
+      gap: 6px;
       background: var(--bg-elevated);
     }
     .player-num {
       font-weight: 800;
-      font-size: 1.2rem;
+      font-size: 1rem;
       color: var(--lancers-gold);
-      min-width: 36px;
+      min-width: 32px;
     }
     .player-name {
       font-weight: 600;
-      font-size: 1.1rem;
+      font-size: 0.95rem;
       color: var(--text-primary);
       flex: 1;
     }
     .player-stats-row {
       display: flex;
-      gap: 6px;
-      font-size: 0.85rem;
+      gap: 4px;
+      font-size: 0.75rem;
       color: var(--text-secondary);
     }
     .stat-item {
       display: flex;
-      gap: 2px;
+      gap: 1px;
     }
     .stat-item .val {
       font-weight: 700;
@@ -88,7 +88,7 @@
     }
     .stat-item.pts .val {
       color: var(--lancers-gold);
-      font-size: 1rem;
+      font-size: 0.85rem;
     }
     .stat-item.foul-warn .val { color: #F59E0B; }
     .stat-item.foul-out .val { color: #EF4444; }
@@ -96,36 +96,36 @@
     /* Row 2: Buttons */
     .player-row-2 {
       display: flex;
-      padding: 8px 12px;
-      gap: 4px;
+      padding: 6px 8px;
+      gap: 3px;
     }
     .btn-group {
       display: flex;
-      gap: 4px;
+      gap: 3px;
     }
-    .btn-group.points { margin-right: 10px; }
+    .btn-group.points { margin-right: 6px; }
     .stat-btn {
-      min-width: 44px;
-      height: 44px;
+      min-width: 38px;
+      height: 40px;
       border: none;
-      border-radius: 8px;
-      font-size: 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
       font-weight: 700;
       cursor: pointer;
       touch-action: manipulation;
     }
     .stat-btn:active { transform: scale(0.95); }
-    .stat-btn.pts { background: var(--lancers-gold); color: #000; }
+    .stat-btn.pts { background: #fff; color: #000; }
     .stat-btn.pos { background: #22C55E; color: #fff; }
     .stat-btn.neg { background: #EF4444; color: #fff; }
     .edit-btn {
-      min-width: 40px;
-      height: 44px;
+      min-width: 34px;
+      height: 40px;
       background: var(--bg-elevated);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
+      border-radius: 6px;
       color: var(--text-secondary);
-      font-size: 1rem;
+      font-size: 0.9rem;
       cursor: pointer;
       margin-left: auto;
     }
@@ -146,26 +146,26 @@
     .opponent-row {
       display: flex;
       align-items: center;
-      padding: 12px 14px;
+      padding: 8px 10px;
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
-      margin-top: 8px;
-      gap: 10px;
+      border-radius: 6px;
+      margin-top: 6px;
+      gap: 8px;
     }
     .opp-label {
       font-weight: 700;
-      font-size: 1rem;
+      font-size: 0.85rem;
       color: var(--text-secondary);
     }
     .opp-btns {
       display: flex;
-      gap: 6px;
+      gap: 4px;
       flex: 1;
     }
     .opp-btns .stat-btn {
       flex: 1;
-      height: 44px;
+      height: 40px;
       background: #666;
       color: #fff;
     }
@@ -173,15 +173,15 @@
     /* Bottom Actions */
     .bottom-actions {
       display: flex;
-      gap: 8px;
-      margin-top: 8px;
+      gap: 6px;
+      margin-top: 6px;
     }
     .action-btn {
       flex: 1;
-      padding: 16px;
+      padding: 14px;
       border: none;
-      border-radius: 8px;
-      font-size: 1.1rem;
+      border-radius: 6px;
+      font-size: 1rem;
       font-weight: 700;
       cursor: pointer;
     }
@@ -191,7 +191,7 @@
       color: var(--text-primary);
     }
     .action-btn.end {
-      background: var(--lancers-gold);
+      background: #fff;
       color: #000;
     }
 
@@ -292,6 +292,14 @@
       padding: 4px 8px !important;
       padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
     }
+
+    /* Edit confirm button */
+    .edit-btn.edit-confirm { background: #fff; color: #000; }
+
+    /* Light mode overrides */
+    html.light-mode .stat-btn.pts { background: #000; color: #fff; }
+    html.light-mode .action-btn.end { background: #000; color: #fff; }
+    html.light-mode .edit-btn.edit-confirm { background: #000; color: #fff; }
   </style>
 </head>
 <body>
@@ -299,7 +307,7 @@
     <div class="header-content">
       <h1>
         <a href="index.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 10px;">
-          <img src="images/lancers-logo.png" alt="Lancers" class="header-logo">
+          <img src="images/lancers-logo.jpg?v=2" alt="Lancers" class="header-logo">
           Live Stats
         </a>
       </h1>
@@ -350,10 +358,10 @@
       <div class="opponent-row">
         <span class="opp-label">OPP</span>
         <div class="opp-btns">
-          <button class="stat-btn" onclick="addOppScore(-1)">-1</button>
-          <button class="stat-btn" onclick="addOppScore(1)">+1</button>
           <button class="stat-btn" onclick="addOppScore(2)">+2</button>
           <button class="stat-btn" onclick="addOppScore(3)">+3</button>
+          <button class="stat-btn" onclick="addOppScore(1)">+1</button>
+          <button class="stat-btn" onclick="addOppScore(-1)">-1</button>
         </div>
       </div>
 
@@ -647,7 +655,7 @@
                   <button class="stat-btn minus-btn" onclick="subStat(${playerId},'turnovers')">-T</button>
                   <button class="stat-btn minus-btn" onclick="subStat(${playerId},'fouls')">-F</button>
                 </div>
-                <button class="edit-btn" onclick="toggleEdit(${playerId})" style="background: var(--lancers-gold); color: #000;">✓</button>
+                <button class="edit-btn edit-confirm" onclick="toggleEdit(${playerId})">✓</button>
               ` : `
                 <div class="btn-group points">
                   <button class="stat-btn pts" onclick="addPts(${playerId},2)">+2</button>

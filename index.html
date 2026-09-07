@@ -16,7 +16,7 @@
   <header class="header">
     <div class="header-content">
       <h1>
-        <img src="images/lancers-logo.png" alt="Lancers" class="header-logo">
+        <img src="images/lancers-logo.jpg?v=2" alt="Lancers" class="header-logo">
         Jr. Lancers
       </h1>
       <button class="theme-toggle" onclick="toggleTheme()">
@@ -40,10 +40,7 @@
         </div>
         <div style="flex: 1;">
           <div id="player-name" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">Player Name</div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span id="player-position-badge" class="position-badge" style="font-size: 0.7rem;">PG</span>
-            <span id="player-position-name" style="font-size: 0.85rem; color: var(--text-secondary);">Point Guard</span>
-          </div>
+          <div id="player-position-name" style="font-size: 0.85rem; color: var(--text-secondary);">Point Guard</div>
         </div>
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 24px; height: 24px; color: var(--text-muted);">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -570,8 +567,6 @@
               window.currentPlayerNumber = userInfo.player.number;
               document.getElementById('player-number').textContent = userInfo.player.number || '-';
               document.getElementById('player-name').textContent = userInfo.playerName;
-              document.getElementById('player-position-badge').textContent = userInfo.position;
-              document.getElementById('player-position-badge').className = 'position-badge pos-' + userInfo.position.toLowerCase();
               document.getElementById('player-position-name').textContent = userInfo.positionName;
 
               // Check if user needs to RSVP for upcoming game

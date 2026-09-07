@@ -27,7 +27,8 @@
       z-index: 1000;
       display: none;
       overflow-y: auto;
-      padding: 20px;
+      padding: 10px;
+      padding-top: 60px;
       padding-bottom: 100px;
     }
     .modal-overlay.active {
@@ -41,57 +42,95 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 8px;
+    }
+    .modal-header h2 {
+      font-size: 1rem;
     }
     .modal-close {
       background: var(--bg-elevated);
       border: none;
       color: var(--text-primary);
       font-size: 1.5rem;
-      width: 36px;
-      height: 36px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .stat-toggle {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+    .stat-toggle button {
+      flex: 1;
+      padding: 4px 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .stat-toggle button.active {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
+    }
+    html.light-mode .stat-toggle button.active {
+      background: #000;
+      color: #fff;
+      border-color: #000;
     }
     .stat-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      margin: 12px 0;
+      gap: 4px;
+      margin: 4px 0;
     }
     .stat-box {
       background: var(--bg-elevated);
-      border-radius: 8px;
-      padding: 10px;
+      border-radius: 6px;
+      padding: 6px 4px;
       text-align: center;
     }
     .stat-value {
-      font-size: 1.25rem;
+      font-size: 1rem;
       font-weight: 800;
       color: var(--lancers-gold);
     }
     .stat-label {
-      font-size: 0.65rem;
+      font-size: 0.55rem;
       color: var(--text-secondary);
       text-transform: uppercase;
+    }
+    .game-by-game-scroll {
+      max-height: 200px;
+      overflow-y: auto;
     }
     .game-stat-row {
       display: flex;
       justify-content: space-between;
-      padding: 10px 0;
+      align-items: center;
+      padding: 4px 0;
       border-bottom: 1px solid var(--border-color);
-      font-size: 0.85rem;
+      font-size: 0.75rem;
     }
     .game-stat-row:last-child {
       border-bottom: none;
     }
     .game-stats-mini {
       display: flex;
-      gap: 12px;
+      gap: 6px;
       color: var(--text-secondary);
+      font-size: 0.7rem;
     }
     .game-stats-mini span {
-      min-width: 35px;
+      min-width: 24px;
       text-align: right;
     }
     .contact-icon {
@@ -106,7 +145,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 0;
+      padding: 6px 0;
       border-bottom: 1px solid var(--border-color);
     }
     .parent-item:last-child {
@@ -224,7 +263,7 @@
     <div class="header-content">
       <h1>
         <a href="index.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 10px;">
-          <img src="images/lancers-logo.png" alt="Lancers" class="header-logo">
+          <img src="images/lancers-logo.jpg?v=2" alt="Lancers" class="header-logo">
           Roster
         </a>
       </h1>
@@ -284,26 +323,29 @@
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
 
-      <div class="card">
-        <div class="card-title">Season Totals</div>
+      <div class="card" style="padding: 8px;">
+        <div class="stat-toggle">
+          <button class="active" onclick="showTotals()">Totals</button>
+          <button onclick="showAverages()">Per Game</button>
+        </div>
         <div class="stat-grid" id="season-stats">
-          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">PTS</div></div>
-          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">REB</div></div>
-          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">AST</div></div>
-          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">STL</div></div>
+          <div class="stat-box"><div class="stat-value" id="stat-pts">-</div><div class="stat-label">PTS</div></div>
+          <div class="stat-box"><div class="stat-value" id="stat-reb">-</div><div class="stat-label">REB</div></div>
+          <div class="stat-box"><div class="stat-value" id="stat-ast">-</div><div class="stat-label">AST</div></div>
+          <div class="stat-box"><div class="stat-value" id="stat-stl">-</div><div class="stat-label">STL</div></div>
         </div>
         <div class="stat-grid" id="season-stats-2">
-          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">BLK</div></div>
-          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">TO</div></div>
-          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">FLS</div></div>
-          <div class="stat-box"><div class="stat-value">-</div><div class="stat-label">Games</div></div>
+          <div class="stat-box"><div class="stat-value" id="stat-blk">-</div><div class="stat-label">BLK</div></div>
+          <div class="stat-box"><div class="stat-value" id="stat-to">-</div><div class="stat-label">TO</div></div>
+          <div class="stat-box"><div class="stat-value" id="stat-fls">-</div><div class="stat-label">FLS</div></div>
+          <div class="stat-box"><div class="stat-value" id="stat-games">-</div><div class="stat-label">Games</div></div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Game by Game</div>
-        <div id="game-by-game">
-          <p style="color: var(--text-secondary); text-align: center; padding: 20px;">No games played yet</p>
+      <div class="card" style="padding: 8px;">
+        <div class="card-title" style="margin-bottom: 4px;">Game by Game</div>
+        <div class="game-by-game-scroll" id="game-by-game">
+          <p style="color: var(--text-secondary); text-align: center; padding: 10px;">No games played yet</p>
         </div>
       </div>
 
@@ -434,7 +476,6 @@
           document.getElementById('coach-card').style.display = 'block';
           document.getElementById('coaches-list').innerHTML = rosterData.coaches.map(coach => `
             <div class="roster-item">
-              <div class="position-badge pos-pg" style="font-size: 0.6rem;">${coach.role === 'Head Coach' ? 'HC' : 'AC'}</div>
               <div style="flex: 1;">
                 <div class="player-name">${coach.name}</div>
                 <div class="position-name">${coach.role}</div>
@@ -458,10 +499,9 @@
         document.getElementById('players-list').innerHTML = players.map(player => {
           const playbookNum = positionNumbers[player.position] || '?';
           return `
-            <div class="card player-card" style="margin-bottom: 12px;" onclick="showPlayerStats(${player.id})">
+            <div class="card player-card" style="margin-bottom: 2px; padding: 5px 8px;" onclick="showPlayerStats(${player.id})">
               <div class="roster-item" style="border: none; padding: 0;">
                 <div class="player-number">${player.number || '-'}</div>
-                <div class="position-badge pos-${player.position.toLowerCase()}">${player.position}</div>
                 <div style="flex: 1;">
                   <div class="player-name">${player.firstName} ${player.lastName}</div>
                   <div class="position-name">${player.positionName} (${playbookNum})</div>
@@ -494,15 +534,15 @@
         document.getElementById('parents-list').innerHTML = parentsByPlayer.map(parent => {
           const roleLabel = parent.role || 'Parent';
           return `
-            <div class="card" style="margin-bottom: 8px;">
+            <div class="card" style="margin-bottom: 2px; padding: 5px 8px;">
               <div class="parent-item" style="border: none; padding: 0;">
                 <div style="flex: 1;">
-                  <div style="font-weight: 600; color: var(--text-primary);">${parent.name}</div>
-                  <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                  <div style="font-weight: 600; font-size: 0.8rem; color: var(--text-primary);">${parent.name}</div>
+                  <div style="font-size: 0.7rem; color: var(--text-secondary);">
                     ${roleLabel} of #${parent.playerNumber || '-'} ${parent.playerName}
                   </div>
                 </div>
-                <div style="display: flex; gap: 12px;">
+                <div style="display: flex; gap: 8px;">
                   ${parent.phone ? `<a href="tel:${parent.phone}">${phoneIcon}</a>` : ''}
                   ${parent.phone ? `<a href="sms:${parent.phone}">${textIcon}</a>` : ''}
                   <a href="mailto:${parent.email}">${emailIcon}</a>
@@ -530,6 +570,39 @@
       }
     });
 
+    let currentSeasonTotals = null;
+
+    function showTotals() {
+      document.querySelectorAll('.stat-toggle button').forEach(b => b.classList.remove('active'));
+      document.querySelector('.stat-toggle button:first-child').classList.add('active');
+      if (currentSeasonTotals) {
+        document.getElementById('stat-pts').textContent = currentSeasonTotals.points;
+        document.getElementById('stat-reb').textContent = currentSeasonTotals.rebounds;
+        document.getElementById('stat-ast').textContent = currentSeasonTotals.assists;
+        document.getElementById('stat-stl').textContent = currentSeasonTotals.steals;
+        document.getElementById('stat-blk').textContent = currentSeasonTotals.blocks;
+        document.getElementById('stat-to').textContent = currentSeasonTotals.turnovers;
+        document.getElementById('stat-fls').textContent = currentSeasonTotals.fouls;
+        document.getElementById('stat-games').textContent = currentSeasonTotals.games;
+      }
+    }
+
+    function showAverages() {
+      document.querySelectorAll('.stat-toggle button').forEach(b => b.classList.remove('active'));
+      document.querySelector('.stat-toggle button:last-child').classList.add('active');
+      if (currentSeasonTotals && currentSeasonTotals.games > 0) {
+        const g = currentSeasonTotals.games;
+        document.getElementById('stat-pts').textContent = (currentSeasonTotals.points / g).toFixed(1);
+        document.getElementById('stat-reb').textContent = (currentSeasonTotals.rebounds / g).toFixed(1);
+        document.getElementById('stat-ast').textContent = (currentSeasonTotals.assists / g).toFixed(1);
+        document.getElementById('stat-stl').textContent = (currentSeasonTotals.steals / g).toFixed(1);
+        document.getElementById('stat-blk').textContent = (currentSeasonTotals.blocks / g).toFixed(1);
+        document.getElementById('stat-to').textContent = (currentSeasonTotals.turnovers / g).toFixed(1);
+        document.getElementById('stat-fls').textContent = (currentSeasonTotals.fouls / g).toFixed(1);
+        document.getElementById('stat-games').textContent = currentSeasonTotals.games;
+      }
+    }
+
     function showPlayerStats(playerId) {
       const player = rosterData.players.find(p => p.id === playerId);
       if (!player) return;
@@ -542,72 +615,74 @@
       document.getElementById('modal-player-info').textContent = `${player.positionName} (${playbookNum})`;
 
       // Calculate season totals
-      let seasonTotals = {
+      currentSeasonTotals = {
         points: 0, rebounds: 0, assists: 0, steals: 0,
         blocks: 0, turnovers: 0, fouls: 0, games: 0
       };
 
       const gameByGameData = [];
 
-      // Go through each game's stats
+      // Go through each game's stats (only count completed games)
       for (const gameId in allGameStats) {
         const gameStats = allGameStats[gameId];
-        if (gameStats.playerStats && gameStats.playerStats[playerId]) {
-          const ps = gameStats.playerStats[playerId];
-          seasonTotals.points += ps.points || 0;
-          seasonTotals.rebounds += ps.rebounds || 0;
-          seasonTotals.assists += ps.assists || 0;
-          seasonTotals.steals += ps.steals || 0;
-          seasonTotals.blocks += ps.blocks || 0;
-          seasonTotals.turnovers += ps.turnovers || 0;
-          seasonTotals.fouls += ps.fouls || 0;
-          seasonTotals.games++;
+        const game = scheduleData.games.find(g => g.id.toString() === gameId);
 
-          // Find game info
-          const game = scheduleData.games.find(g => g.id.toString() === gameId);
-          if (game) {
-            gameByGameData.push({
-              date: game.date,
-              opponent: game.opponent,
-              result: game.result,
-              stats: ps
-            });
-          }
+        // Only count games that have a result (completed games)
+        if (game && game.result && gameStats.playerStats && gameStats.playerStats[playerId]) {
+          const ps = gameStats.playerStats[playerId];
+          currentSeasonTotals.points += ps.points || 0;
+          currentSeasonTotals.rebounds += ps.rebounds || 0;
+          currentSeasonTotals.assists += ps.assists || 0;
+          currentSeasonTotals.steals += ps.steals || 0;
+          currentSeasonTotals.blocks += ps.blocks || 0;
+          currentSeasonTotals.turnovers += ps.turnovers || 0;
+          currentSeasonTotals.fouls += ps.fouls || 0;
+          currentSeasonTotals.games++;
+
+          gameByGameData.push({
+            date: game.date,
+            opponent: game.opponent,
+            result: game.result,
+            stats: ps
+          });
         }
       }
 
-      // Update season stats display
-      document.getElementById('season-stats').innerHTML = `
-        <div class="stat-box"><div class="stat-value">${seasonTotals.points}</div><div class="stat-label">PTS</div></div>
-        <div class="stat-box"><div class="stat-value">${seasonTotals.rebounds}</div><div class="stat-label">REB</div></div>
-        <div class="stat-box"><div class="stat-value">${seasonTotals.assists}</div><div class="stat-label">AST</div></div>
-        <div class="stat-box"><div class="stat-value">${seasonTotals.steals}</div><div class="stat-label">STL</div></div>
-      `;
-      document.getElementById('season-stats-2').innerHTML = `
-        <div class="stat-box"><div class="stat-value">${seasonTotals.blocks}</div><div class="stat-label">BLK</div></div>
-        <div class="stat-box"><div class="stat-value">${seasonTotals.turnovers}</div><div class="stat-label">TO</div></div>
-        <div class="stat-box"><div class="stat-value">${seasonTotals.fouls}</div><div class="stat-label">FLS</div></div>
-        <div class="stat-box"><div class="stat-value">${seasonTotals.games}</div><div class="stat-label">Games</div></div>
-      `;
+      // Update season stats display (totals by default)
+      document.querySelectorAll('.stat-toggle button').forEach(b => b.classList.remove('active'));
+      document.querySelector('.stat-toggle button:first-child').classList.add('active');
+      document.getElementById('stat-pts').textContent = currentSeasonTotals.points;
+      document.getElementById('stat-reb').textContent = currentSeasonTotals.rebounds;
+      document.getElementById('stat-ast').textContent = currentSeasonTotals.assists;
+      document.getElementById('stat-stl').textContent = currentSeasonTotals.steals;
+      document.getElementById('stat-blk').textContent = currentSeasonTotals.blocks;
+      document.getElementById('stat-to').textContent = currentSeasonTotals.turnovers;
+      document.getElementById('stat-fls').textContent = currentSeasonTotals.fouls;
+      document.getElementById('stat-games').textContent = currentSeasonTotals.games;
 
       // Update game by game display
       if (gameByGameData.length === 0) {
-        document.getElementById('game-by-game').innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No games played yet</p>';
+        document.getElementById('game-by-game').innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 10px; font-size: 0.75rem;">No games played yet</p>';
       } else {
         // Sort by date descending
         gameByGameData.sort((a, b) => new Date(b.date) - new Date(a.date));
         document.getElementById('game-by-game').innerHTML = gameByGameData.map(g => {
           const dateInfo = formatDate(g.date);
+          const s = g.stats;
           return `
             <div class="game-stat-row">
               <div>
-                <div style="font-weight: 600; color: var(--text-primary);">vs ${g.opponent}</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary);">${dateInfo.month} ${dateInfo.day}</div>
+                <div style="font-weight: 600; color: var(--text-primary); font-size: 0.7rem;">vs ${g.opponent}</div>
+                <div style="font-size: 0.6rem; color: var(--text-secondary);">${dateInfo.month} ${dateInfo.day}</div>
               </div>
               <div class="game-stats-mini">
-                <span>${g.stats.points || 0}p</span>
-                <span>${g.stats.rebounds || 0}r</span>
-                <span>${g.stats.assists || 0}a</span>
+                <span>${s.points || 0}p</span>
+                <span>${s.rebounds || 0}r</span>
+                <span>${s.assists || 0}a</span>
+                <span>${s.steals || 0}s</span>
+                <span>${s.blocks || 0}b</span>
+                <span>${s.turnovers || 0}t</span>
+                <span>${s.fouls || 0}f</span>
               </div>
             </div>
           `;
