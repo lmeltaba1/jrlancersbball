@@ -553,32 +553,14 @@
         }).join('');
 
         // Render parents section - grouped by player
-        const parentsByPlayer = [];
-        players.forEach(player => {
-          if (player.parents && player.parents.length > 0) {
-            player.parents.forEach(parent => {
-              parentsByPlayer.push({
-                ...parent,
-                playerName: `${player.firstName} ${player.lastName}`,
-                playerNumber: player.number
-              });
-            });
-          }
-        });
-
-        // Sort parents alphabetically by their name
-        parentsByPlayer.sort((a, b) => a.name.localeCompare(b.name));
-
-        document.getElementById('parents-list').innerHTML = parentsByPlayer.map(parent => {
-          const roleLabel = parent.role || 'Parent';
-          return `
-            <div class="card" style="margin-bottom: 2px; padding: 5px 8px;">
-              <div class="parent-item" style="border: none; padding: 0;">
+        document.getElementById('parents-list').innerHTML = players
+          .filter(player => player.parents && player.parents.length > 0)
+          .map(player => {
+            const parentsHtml = player.parents.map(parent => `
+              <div class="parent-item" style="border: none; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
                 <div style="flex: 1;">
-                  <div style="font-weight: 600; font-size: 0.8rem; color: var(--text-primary);">${parent.name}</div>
-                  <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                    ${roleLabel} of #${parent.playerNumber || '-'} ${parent.playerName}
-                  </div>
+                  <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">${parent.name}</div>
+                  <div style="font-size: 0.7rem; color: var(--text-secondary);">${parent.role || 'Parent'}</div>
                 </div>
                 <div style="display: flex; gap: 8px;">
                   ${parent.phone ? `<a href="tel:${parent.phone}">${phoneIcon}</a>` : ''}
@@ -586,9 +568,17 @@
                   <a href="mailto:${parent.email}">${emailIcon}</a>
                 </div>
               </div>
-            </div>
-          `;
-        }).join('');
+            `).join('');
+
+            return `
+              <div class="card" style="margin-bottom: 10px; padding: 10px 12px;">
+                <div style="font-weight: 700; font-size: 0.75rem; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+                  ${player.firstName}'s Parents
+                </div>
+                ${parentsHtml}
+              </div>
+            `;
+          }).join('');
 
         // Check for player URL parameter and auto-open modal
         const urlParams = new URLSearchParams(window.location.search);
