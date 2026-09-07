@@ -1056,3 +1056,122 @@ a:hover {
     padding-top: max(16px, env(safe-area-inset-top));
   }
 }
+
+/* ========== LEADERBOARD ========== */
+.leaderboard-user-summary {
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.leaderboard-user-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.leaderboard-user-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.leaderboard-user-rank {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.leaderboard-progress {
+  margin-bottom: 8px;
+}
+
+.leaderboard-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.leaderboard-progress-bar {
+  height: 6px;
+  background: var(--bg-body);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.leaderboard-progress-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.leaderboard-breakdown {
+  display: flex;
+  gap: 16px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.leaderboard-badges {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.leaderboard-badge {
+  font-size: 1.2rem;
+  cursor: help;
+}
+
+.leaderboard-list {
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.leaderboard-row.is-user {
+  background: var(--bg-elevated);
+  margin: 0 -8px;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-radius: 6px;
+}
+
+.leaderboard-rank {
+  width: 24px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.leaderboard-rank.has-medal {
+  color: var(--text-primary);
+}
+
+.leaderboard-name {
+  flex: 1;
+  margin-left: 8px;
+  color: var(--text-primary);
+}
+
+.leaderboard-name.top-3 {
+  font-weight: 600;
+}
+
+.leaderboard-points {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.leaderboard-points.rank-1 {
+  color: var(--gold);
+}

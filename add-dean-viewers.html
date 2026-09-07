@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Viewers for Dean</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; }
+    .viewer { padding: 8px; margin: 4px 0; background: #f0f0f0; border-radius: 4px; }
+    .success { color: green; }
+    .error { color: red; }
+    button { padding: 12px 24px; font-size: 16px; cursor: pointer; }
+    #status { margin-top: 20px; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Add Viewers for Dean Meltabarger</h1>
+
+  <h3>Viewers to add:</h3>
+  <div class="viewer">Hal Meltabarger (halmel777@gmail.com) - Grandparent</div>
+  <div class="viewer">Rick Nihiser (rnihiser@sbcglobal.net) - Grandparent</div>
+  <div class="viewer">Pam Nihiser (no1mom39@sbcglobal.net) - Grandparent</div>
+  <div class="viewer">Paige Meltabarger (paige_2005@hotmail.com) - Aunt</div>
+  <div class="viewer">Mardeanna Sproat (mksproat97@hotmail.com) - Grandparent</div>
+  <div class="viewer">Dave Sproat (dsproat85@gmail.com) - Grandparent</div>
+
+  <br><br>
+  <button onclick="addViewers()">Add All Viewers</button>
+
+  <div id="status"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCZDonC8aqbg5OvtM-cHdA5LTJleZn8nwk",
+      authDomain: "lancers-bball.firebaseapp.com",
+      projectId: "lancers-bball",
+      storageBucket: "lancers-bball.firebasestorage.app",
+      messagingSenderId: "856557066012",
+      appId: "1:856557066012:web:8e00dcea70587e69e94c1e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const playerId = '6'; // Dean
+
+    const viewers = [
+      { name: 'Hal Meltabarger', email: 'halmel777@gmail.com', relationship: 'Grandparent', source: 'firestore' },
+      { name: 'Rick Nihiser', email: 'rnihiser@sbcglobal.net', relationship: 'Grandparent', source: 'firestore' },
+      { name: 'Pam Nihiser', email: 'no1mom39@sbcglobal.net', relationship: 'Grandparent', source: 'firestore' },
+      { name: 'Paige Meltabarger', email: 'paige_2005@hotmail.com', relationship: 'Aunt', source: 'firestore' },
+      { name: 'Mardeanna Sproat', email: 'mksproat97@hotmail.com', relationship: 'Grandparent', source: 'firestore' },
+      { name: 'Dave Sproat', email: 'dsproat85@gmail.com', relationship: 'Grandparent', source: 'firestore' }
+    ];
+
+    async function addViewers() {
+      const status = document.getElementById('status');
+      status.innerHTML = 'Checking authentication...';
+
+      // Check if logged in
+      const user = auth.currentUser;
+      if (!user) {
+        status.innerHTML = '<span class="error">Not logged in. Please log in first at lancers-bball.web.app</span>';
+        // Try to sign in
+        const email = prompt('Enter your email:');
+        const password = prompt('Enter your password:');
+        try {
+          await auth.signInWithEmailAndPassword(email, password);
+          status.innerHTML = 'Logged in! Now adding viewers...';
+        } catch (e) {
+          status.innerHTML = '<span class="error">Login failed: ' + e.message + '</span>';
+          return;
+        }
+      }
+
+      try {
+        status.innerHTML = 'Adding viewers...';
+
+        const docRef = db.collection('viewers').doc(playerId);
+        const doc = await docRef.get();
+
+        let existingViewers = [];
+        let removedEmails = [];
+
+        if (doc.exists) {
+          const data = doc.data();
+          existingViewers = data.viewers || [];
+          removedEmails = data.removedEmails || [];
+        }
+
+        // Add new viewers (avoid duplicates)
+        const existingEmails = existingViewers.map(v => v.email.toLowerCase());
+        const newViewers = viewers.filter(v => !existingEmails.includes(v.email.toLowerCase()));
+        const allViewers = [...existingViewers, ...newViewers];
+
+        await docRef.set({
+          viewers: allViewers,
+          removedEmails: removedEmails
+        });
+
+        status.innerHTML = '<span class="success">✓ Added ' + newViewers.length + ' viewers for Dean!</span><br><br>';
+        newViewers.forEach(v => {
+          status.innerHTML += '✓ ' + v.name + ' (' + v.email + ')<br>';
+        });
+
+        if (newViewers.length < viewers.length) {
+          status.innerHTML += '<br>' + (viewers.length - newViewers.length) + ' viewers already existed.';
+        }
+
+      } catch (e) {
+        status.innerHTML = '<span class="error">Error: ' + e.message + '</span>';
+        console.error(e);
+      }
+    }
+  </script>
+</body>
+</html>

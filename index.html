@@ -127,6 +127,18 @@
       </a>
     </div>
 
+    <!-- Team Spirit Leaderboard (shown when logged in) -->
+    <div id="leaderboard-card" class="card" style="display: none;">
+      <div class="card-title" style="display: flex; align-items: center; justify-content: space-between;">
+        <span>Team Spirit Leaderboard</span>
+      </div>
+      <div id="leaderboard-content">
+        <div style="text-align: center; padding: 20px;">
+          <div class="spinner" style="margin: 0 auto;"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Login Prompt (shown if not logged in) -->
     <div class="card" id="login-prompt" style="display: none;">
       <div class="card-title">Parents & Coaches</div>
@@ -190,6 +202,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
+  <script src="js/gamification.js"></script>
   <script>
     // Inline functions to bypass caching
     async function loadSchedule() {
@@ -420,6 +433,48 @@
         card.style.display = 'block';
       } catch (e) {
         console.error('Error loading volunteer stats:', e);
+      }
+    }
+
+    // Load Team Spirit Leaderboard
+    async function loadLeaderboard(userEmail) {
+      if (!db) return;
+
+      const card = document.getElementById('leaderboard-card');
+      const content = document.getElementById('leaderboard-content');
+
+      try {
+        // Load roster data
+        const rosterResponse = await fetch('data/roster.json?v=' + Date.now());
+        const roster = await rosterResponse.json();
+
+        // Load schedule data
+        const schedule = await loadSchedule();
+
+        // Load volunteers data
+        const volunteersSnapshot = await db.collection('volunteers').get();
+        const volunteersData = [];
+        volunteersSnapshot.forEach(doc => {
+          volunteersData.push({ id: doc.id, gameId: parseInt(doc.id), ...doc.data() });
+        });
+
+        // Load highlights data
+        const highlightsSnapshot = await db.collection('highlights').get();
+        const highlightsData = [];
+        highlightsSnapshot.forEach(doc => {
+          highlightsData.push(doc.data());
+        });
+
+        // Calculate family scores
+        const families = calculateFamilyScores(roster, schedule, volunteersData, highlightsData);
+
+        // Render leaderboard
+        content.innerHTML = renderLeaderboard(families, userEmail, 10);
+        card.style.display = 'block';
+      } catch (e) {
+        console.error('Error loading leaderboard:', e);
+        content.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">Could not load leaderboard</p>';
+        card.style.display = 'block';
       }
     }
 
@@ -694,6 +749,9 @@
           // Load volunteer stats for parents and coaches (not viewers)
           loadMyVolunteerStats(auth.currentUser.email);
         }
+
+        // Load leaderboard for all logged-in users
+        loadLeaderboard(auth.currentUser.email);
 
         // Update live stats button for scorekeeper or coach
         if (upcomingGameForLiveStats && db) {
