@@ -243,14 +243,14 @@
     }
     .lightbox-close {
       position: absolute;
-      top: 20px;
+      top: calc(20px + env(safe-area-inset-top, 0px));
       right: 20px;
       background: var(--bg-elevated);
       border: none;
       color: var(--text-primary);
-      font-size: 1.5rem;
-      width: 40px;
-      height: 40px;
+      font-size: 2rem;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       cursor: pointer;
       z-index: 2001;
@@ -655,8 +655,8 @@
         const gameStats = allGameStats[gameId];
         const game = scheduleData.games.find(g => g.id.toString() === gameId);
 
-        // Only count games that have a result (completed games)
-        if (game && game.result && gameStats.playerStats && gameStats.playerStats[playerId]) {
+        // Only count games that are complete and have stats for this player
+        if (game && gameStats.isComplete && gameStats.playerStats && gameStats.playerStats[playerId]) {
           const ps = gameStats.playerStats[playerId];
           currentSeasonTotals.points += ps.points || 0;
           currentSeasonTotals.rebounds += ps.rebounds || 0;
@@ -667,10 +667,13 @@
           currentSeasonTotals.fouls += ps.fouls || 0;
           currentSeasonTotals.games++;
 
+          // Determine result from scores
+          const result = gameStats.ourScore > gameStats.opponentScore ? 'W' : 'L';
+
           gameByGameData.push({
             date: game.date,
             opponent: game.opponent,
-            result: game.result,
+            result: result,
             stats: ps
           });
         }

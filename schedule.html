@@ -454,9 +454,9 @@
         const eventDate = new Date(year, month - 1, day);
         if (eventDate >= now) {
           setTimeout(() => {
-            // Get sticky header height for offset
+            // Get sticky header height for offset (main header 60px + sticky section ~100px + padding)
             const stickyHeader = document.getElementById('sticky-header');
-            const headerOffset = 60 + (stickyHeader ? stickyHeader.offsetHeight : 0) + 10;
+            const headerOffset = 60 + (stickyHeader ? stickyHeader.offsetHeight : 100) + 20;
             const cardTop = card.getBoundingClientRect().top + window.pageYOffset - headerOffset;
             window.scrollTo({ top: cardTop, behavior: 'smooth' });
             // Add highlight effect

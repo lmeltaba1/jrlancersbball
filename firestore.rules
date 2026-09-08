@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Helper: Check if user is authenticated
     function isAuthenticated() {
-      return request.auth != null && request.auth.token.email_verified;
+      return request.auth != null;
     }
 
     // Helper: Check if user is coach (must be in roster.json coaches list)
@@ -33,8 +33,8 @@ service cloud.firestore {
     // Chat messages - read/write by authenticated users
     match /messages/{messageId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if false; // Messages can't be edited/deleted
+      allow create, delete: if isAuthenticated();
+      allow update: if false; // Messages can't be edited
     }
 
     // Chat read status - users can only read/write their own
@@ -63,8 +63,8 @@ service cloud.firestore {
     // Highlights - photos/videos of game moments
     match /highlights/{docId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated()
+      allow create, delete: if isAuthenticated();
+      allow update: if isAuthenticated()
         && resource.data.uploadedBy == request.auth.uid;
     }
 
@@ -79,15 +79,12 @@ service cloud.firestore {
     // Posts - coach announcements with reactions and comments
     match /posts/{postId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated(); // Frontend verifies coach role
-      allow update: if isAuthenticated(); // For reactions
-      allow delete: if false; // Posts can't be deleted
+      allow create, update, delete: if isAuthenticated();
 
       // Comments on posts
       match /comments/{commentId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated();
-        allow update, delete: if isAuthenticated() && resource.data.authorUid == request.auth.uid;
+        allow read, create, delete: if isAuthenticated();
+        allow update: if isAuthenticated() && resource.data.authorUid == request.auth.uid;
       }
     }
   }

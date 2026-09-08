@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Seed Attendance</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #1a1a1a; color: #fff; }
+    button { padding: 15px 30px; font-size: 16px; cursor: pointer; margin: 10px; }
+    #output { background: #000; padding: 15px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+    .success { color: #22c55e; }
+    .error { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <h1>Seed Attendance Data</h1>
+  <p id="status">Checking login status...</p>
+  <button onclick="seedAttendance()" id="seedBtn" disabled>Add Attendance for Past Games</button>
+  <button onclick="clearAttendance()" id="clearBtn" disabled>Clear All Attendance First</button>
+  <pre id="output"></pre>
+
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyCZDonC8aqbg5OvtM-cHdA5LTJleZn8nwk",
+      authDomain: "lancers-bball.firebaseapp.com",
+      projectId: "lancers-bball",
+      storageBucket: "lancers-bball.firebasestorage.app",
+      messagingSenderId: "840563401504",
+      appId: "1:840563401504:web:fab87697f7129e98976d45"
+    });
+
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // Simulated date - events before this are "past"
+    const SIMULATED_DATE = '2027-01-18';
+
+    const players = [
+      { id: 1, name: 'Raequan Brimer', parentEmail: 'ranonab@aol.com' },
+      { id: 2, name: 'Camden Kreyling', parentEmail: 'mkreyling@yahoo.com' },
+      { id: 3, name: 'Grant Weltz', parentEmail: 'careypatton@hotmail.com' },
+      { id: 4, name: 'Rylan Trott', parentEmail: 'brittany28@aol.com' },
+      { id: 5, name: 'Ashton Carney', parentEmail: 'ryancar20@gmail.com' },
+      { id: 6, name: 'Dean Meltabarger', parentEmail: 'bemeltabarger@gmail.com' },
+      { id: 7, name: 'Wyatt Weems', parentEmail: 'jillian.weems@me.com' },
+      { id: 8, name: 'Peyton Parks', parentEmail: 'jamieparks86@gmail.com' },
+      { id: 9, name: 'Jeevan Sabharwal', parentEmail: 'ral0709@charter.net' },
+      { id: 10, name: 'Easton Moore', parentEmail: 'eastonmooreparent@gmail.com' }
+    ];
+
+    // Will be loaded from schedule.json
+    let allEvents = [];
+
+    auth.onAuthStateChanged(user => {
+      const status = document.getElementById('status');
+      const seedBtn = document.getElementById('seedBtn');
+      const clearBtn = document.getElementById('clearBtn');
+
+      if (user) {
+        status.innerHTML = '<span class="success">Logged in as: ' + user.email + '</span>';
+        seedBtn.disabled = false;
+        clearBtn.disabled = false;
+      } else {
+        status.innerHTML = '<span class="error">Not logged in. <a href="index.html" style="color:#ffd700">Go login first</a></span>';
+        seedBtn.disabled = true;
+        clearBtn.disabled = true;
+      }
+    });
+
+    async function clearAttendance() {
+      const output = document.getElementById('output');
+      output.textContent = 'Clearing existing attendance...\\n';
+
+      try {
+        const snapshot = await db.collection('attendance').get();
+        let count = 0;
+        for (const doc of snapshot.docs) {
+          await doc.ref.delete();
+          count++;
+          output.textContent += '.';
+        }
+        output.textContent += '\\nCleared ' + count + ' attendance records.\\n';
+      } catch (e) {
+        output.textContent += '\\nError: ' + e.message + '\\n';
+      }
+    }
+
+    async function loadSchedule() {
+      const response = await fetch('data/schedule.json');
+      return await response.json();
+    }
+
+    async function seedAttendance() {
+      const output = document.getElementById('output');
+      output.textContent = 'Loading schedule...\\n';
+
+      try {
+        const schedule = await loadSchedule();
+        const simulatedDate = new Date(SIMULATED_DATE + 'T12:00:00');
+
+        // Combine games and events
+        const allEvents = [];
+
+        for (const game of schedule.games) {
+          allEvents.push({
+            id: game.id,
+            date: game.date,
+            name: 'vs ' + game.opponent,
+            type: 'game'
+          });
+        }
+
+        for (const event of (schedule.events || [])) {
+          allEvents.push({
+            id: event.id,
+            date: event.date,
+            name: event.name,
+            type: event.type
+          });
+        }
+
+        // Filter to past events only
+        const pastEvents = allEvents.filter(e => new Date(e.date) < simulatedDate);
+        pastEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        output.textContent = 'Adding attendance for ' + pastEvents.length + ' past events...\\n';
+
+        let count = 0;
+        let errors = 0;
+
+        for (const event of pastEvents) {
+          output.textContent += '\\n' + event.date + ' - ' + event.name + ': ';
+
+          for (const player of players) {
+            const docId = event.id + '_' + player.id;
+
+            // Most players attend (90% chance for games, 85% for practices)
+            const attendChance = event.type === 'game' ? 0.9 : 0.85;
+            const attending = Math.random() < attendChance;
+
+            try {
+              await db.collection('attendance').doc(docId).set({
+                gameId: event.id,
+                playerId: player.id,
+                playerName: player.name,
+                attending: attending,
+                respondedBy: player.parentEmail,
+                respondedAt: firebase.firestore.Timestamp.fromDate(new Date(event.date + 'T08:00:00'))
+              });
+              output.textContent += attending ? '\\u2713' : '\\u2717';
+              count++;
+            } catch (e) {
+              output.textContent += '!';
+              errors++;
+            }
+
+            // Small delay to avoid rate limiting
+            await new Promise(r => setTimeout(r, 30));
+          }
+        }
+
+        output.textContent += '\\n\\nDone! Added ' + count + ' attendance records for ' + pastEvents.length + ' past events';
+        if (errors > 0) output.textContent += ' (' + errors + ' errors)';
+        output.textContent += '\\n\\nRefresh the app to see attendance data.';
+
+      } catch (e) {
+        output.textContent += '\\nError: ' + e.message;
+      }
+    }
+  </script>
+</body>
+</html>

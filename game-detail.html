@@ -211,7 +211,7 @@
         // Load highlights for this game
         loadHighlights(gameId);
 
-        // Load volunteer data
+        // Load volunteer data and game stats
         if (db) {
           try {
             const doc = await db.collection('volunteers').doc(gameId.toString()).get();
@@ -220,6 +220,23 @@
             }
           } catch (e) {
             console.log('No volunteer data yet');
+          }
+
+          // Load game stats to get result
+          try {
+            const statsDoc = await db.collection('gameStats').doc(gameId.toString()).get();
+            if (statsDoc.exists) {
+              const statsData = statsDoc.data();
+              if (statsData.isComplete && statsData.ourScore !== undefined && statsData.opponentScore !== undefined) {
+                game.result = statsData.ourScore > statsData.opponentScore ? 'W' : 'L';
+                game.finalScore = {
+                  lancers: statsData.ourScore,
+                  opponent: statsData.opponentScore
+                };
+              }
+            }
+          } catch (e) {
+            console.log('No game stats yet');
           }
         }
 

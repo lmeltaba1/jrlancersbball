@@ -76,7 +76,7 @@
     // Check if already logged in
     if (auth) {
       auth.onAuthStateChanged(function(user) {
-        if (user && user.emailVerified) {
+        if (user) {
           window.location.href = 'index.html';
         }
       });
@@ -91,13 +91,6 @@
 
       try {
         const result = await auth.signInWithEmailAndPassword(email, password);
-
-        if (!result.user.emailVerified) {
-          errorDiv.textContent = 'Please verify your email before logging in. Check your inbox.';
-          errorDiv.style.display = 'block';
-          await auth.signOut();
-          return;
-        }
 
         // Success - redirect
         window.location.href = 'index.html';

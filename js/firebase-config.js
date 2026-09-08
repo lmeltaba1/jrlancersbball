@@ -67,29 +67,58 @@ async function getPlayerFromRoster(email) {
       }
     }
 
-    // Check players - parents first
+    // Check players - find ALL players for this parent
+    const parentPlayers = [];
+    let parentInfo = null;
     for (const player of data.players) {
       if (player.parents) {
         for (const parent of player.parents) {
           if (parent.email.toLowerCase() === emailLower) {
-            return {
-              isCoach: isCoach,
-              isViewer: false,
-              isParent: true,
-              name: isCoach ? coachInfo.name : parent.name,
-              player: player,
-              parent: parent,
-              playerName: player.firstName + ' ' + player.lastName,
-              position: player.position,
-              positionName: player.positionName,
-              canTrackStats: parent.canTrackStats || isCoach,
-              canChat: true,
-              canViewPlaybook: true,
-              canSignUp: true
-            };
+            parentPlayers.push({ player, parent });
+            if (!parentInfo) parentInfo = parent;
           }
         }
       }
+    }
+
+    if (parentPlayers.length > 0) {
+      // Sort by ID descending so higher IDs come first (Ashton=5 before Raequan=1)
+      parentPlayers.sort((a, b) => b.player.id - a.player.id);
+
+      // Check localStorage for selected player preference
+      let selectedIndex = 0;
+      try {
+        const savedPlayerId = localStorage.getItem('selectedPlayerId');
+        if (savedPlayerId) {
+          const idx = parentPlayers.findIndex(p => p.player.id === parseInt(savedPlayerId));
+          if (idx >= 0) selectedIndex = idx;
+        }
+      } catch (e) { /* localStorage not available */ }
+
+      const selected = parentPlayers[selectedIndex];
+      const allPlayers = parentPlayers.map(p => ({
+        id: p.player.id,
+        firstName: p.player.firstName,
+        lastName: p.player.lastName,
+        number: p.player.number
+      }));
+
+      return {
+        isCoach: isCoach,
+        isViewer: false,
+        isParent: true,
+        name: isCoach ? coachInfo.name : selected.parent.name,
+        player: selected.player,
+        parent: selected.parent,
+        playerName: selected.player.firstName + ' ' + selected.player.lastName,
+        position: selected.player.position,
+        positionName: selected.player.positionName,
+        canTrackStats: selected.parent.canTrackStats || isCoach,
+        canChat: true,
+        canViewPlaybook: true,
+        canSignUp: true,
+        allPlayers: allPlayers.length > 1 ? allPlayers : null
+      };
     }
 
     // Check players - viewers (from roster.json)

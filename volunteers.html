@@ -163,6 +163,12 @@
       };
     }
 
+    // SIMULATION: Set to null for real date, or a date string for testing
+    const SIMULATED_DATE = '2027-01-18';
+    function getCurrentDate() {
+      return SIMULATED_DATE ? new Date(SIMULATED_DATE + 'T12:00:00') : new Date();
+    }
+
     let currentUser = null;
     let userInfo = null;
     let volunteers = {};
@@ -190,7 +196,7 @@
       try {
         const schedule = await loadSchedule();
 
-        const now = new Date();
+        const now = getCurrentDate();
         now.setHours(0, 0, 0, 0);
 
         // Separate past and upcoming games
