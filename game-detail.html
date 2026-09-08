@@ -103,6 +103,20 @@
       <!-- Stats Card (for completed games) -->
       <div class="card" id="stats-card" style="display: none;"></div>
 
+      <!-- Play-by-Play Card (for completed games with events) -->
+      <div class="card" id="playbyplay-card" style="display: none;">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lancers-gold)" stroke-width="2">
+              <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Play-by-Play
+          </span>
+          <span id="pbp-event-count" style="background: var(--lancers-gold); color: #000; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 700;"></span>
+        </div>
+        <div id="playbyplay-content" style="max-height: 600px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: 8px;"></div>
+      </div>
+
       <!-- Highlights Card -->
       <div class="card" id="highlights-card">
         <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
@@ -264,6 +278,8 @@
     let volunteers = {};
     let highlights = [];
     let players = [];
+    let gameEvents = []; // Play-by-play events
+    let playerStats = {}; // Box score stats
 
     document.addEventListener('DOMContentLoaded', async function() {
       // Require auth - all users can view game details
@@ -328,7 +344,7 @@
             console.log('No volunteer data yet');
           }
 
-          // Load game stats to get result
+          // Load game stats to get result and events
           try {
             const statsDoc = await db.collection('gameStats').doc(gameId.toString()).get();
             if (statsDoc.exists) {
@@ -340,6 +356,19 @@
                   opponent: statsData.opponentScore
                 };
               }
+              // Also check for result/finalScore if set by endGame
+              if (statsData.result && statsData.lancersScore !== undefined) {
+                game.result = statsData.result;
+                game.finalScore = {
+                  lancers: statsData.lancersScore,
+                  opponent: statsData.opponentScore
+                };
+              }
+              // Load play-by-play events and player stats
+              gameEvents = statsData.events || [];
+              playerStats = statsData.playerStats || {};
+              console.log('Loaded events from Firestore:', gameEvents.length, 'events');
+              console.log('Sample event:', gameEvents[0]);
             }
           } catch (e) {
             console.log('No game stats yet');
@@ -496,8 +525,9 @@
         }
       }
 
-      // Volunteer Card (for upcoming games only)
-      if (!isCompleted) {
+      // Volunteer Card (for upcoming games only, not for coaches or viewers)
+      const isCoachOrViewer = userInfo && (userInfo.isCoach || userInfo.isViewer);
+      if (!isCompleted && !isCoachOrViewer) {
         const volunteerCard = document.getElementById('volunteer-card');
         volunteerCard.style.display = 'block';
 
@@ -582,14 +612,162 @@
         volunteerCard.innerHTML = volunteerHtml;
       }
 
-      // Stats Card (for completed games)
+      // Stats Card (for completed games) - Show inline box score
       if (isCompleted) {
         const statsCard = document.getElementById('stats-card');
         statsCard.style.display = 'block';
-        statsCard.innerHTML = `
-          <div class="card-title">Game Stats</div>
-          <a href="stats-view.html?game=${game.id}" class="btn btn-primary" style="width: 100%;">View Box Score</a>
+
+        // Sort players by points scored
+        const statsList = Object.entries(playerStats)
+          .map(([id, stats]) => ({ id: parseInt(id), ...stats }))
+          .sort((a, b) => (b.points || 0) - (a.points || 0));
+
+        if (statsList.length > 0) {
+          statsCard.innerHTML = `
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>Box Score</span>
+              <a href="stats-view.html?game=${game.id}" style="font-size: 0.75rem; color: var(--lancers-gold); text-decoration: none;">Edit</a>
+            </div>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                <thead>
+                  <tr style="border-bottom: 2px solid var(--lancers-gold);">
+                    <th style="text-align: left; padding: 8px 4px; color: var(--text-secondary);">Player</th>
+                    <th style="text-align: center; padding: 8px 4px; color: var(--lancers-gold); font-weight: 800;">PTS</th>
+                    <th style="text-align: center; padding: 8px 4px; color: var(--text-secondary);">REB</th>
+                    <th style="text-align: center; padding: 8px 4px; color: var(--text-secondary);">AST</th>
+                    <th style="text-align: center; padding: 8px 4px; color: var(--text-secondary);">STL</th>
+                    <th style="text-align: center; padding: 8px 4px; color: var(--text-secondary);">TO</th>
+                    <th style="text-align: center; padding: 8px 4px; color: var(--text-secondary);">F</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${statsList.map(s => `
+                    <tr style="border-bottom: 1px solid var(--border-subtle);">
+                      <td style="padding: 8px 4px; font-weight: 600;">${s.name || 'Player ' + s.id}</td>
+                      <td style="text-align: center; padding: 8px 4px; font-weight: 800; color: var(--lancers-gold);">${s.points || 0}</td>
+                      <td style="text-align: center; padding: 8px 4px;">${s.rebounds || 0}</td>
+                      <td style="text-align: center; padding: 8px 4px;">${s.assists || 0}</td>
+                      <td style="text-align: center; padding: 8px 4px;">${s.steals || 0}</td>
+                      <td style="text-align: center; padding: 8px 4px;">${s.turnovers || 0}</td>
+                      <td style="text-align: center; padding: 8px 4px;">${s.fouls || 0}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        } else {
+          statsCard.innerHTML = `
+            <div class="card-title">Game Stats</div>
+            <a href="stats-view.html?game=${game.id}" class="btn btn-primary" style="width: 100%;">View Box Score</a>
+          `;
+        }
+
+        // Play-by-Play Card (if events exist)
+        if (gameEvents.length > 0) {
+          renderPlayByPlay();
+        }
+      }
+    }
+
+    // Render play-by-play section grouped by quarter
+    function renderPlayByPlay() {
+      const pbpCard = document.getElementById('playbyplay-card');
+      const pbpContent = document.getElementById('playbyplay-content');
+      const eventCount = document.getElementById('pbp-event-count');
+
+      pbpCard.style.display = 'block';
+      eventCount.textContent = gameEvents.length;
+      console.log('Total events loaded:', gameEvents.length);
+      console.log('Events by phase:', gameEvents.reduce((acc, e) => { acc[e.gamePhase] = (acc[e.gamePhase] || 0) + 1; return acc; }, {}));
+
+      // Build map of eventId -> highlight for quick lookup
+      const highlightsByEventId = {};
+      (highlights || []).forEach(h => {
+        if (h.eventId) highlightsByEventId[h.eventId] = h;
+      });
+
+      // Group events by game phase
+      const phaseGroups = {};
+      const phaseOrder = ['Q1', 'Q2', 'halftime', 'Q3', 'Q4'];
+
+      gameEvents.forEach(event => {
+        const phase = event.gamePhase || 'Q1';
+        if (!phaseGroups[phase]) phaseGroups[phase] = [];
+        phaseGroups[phase].push(event);
+      });
+
+      // Get all phases including OT
+      const allPhases = [...new Set(gameEvents.map(e => e.gamePhase || 'Q1'))];
+      // Sort phases: Q1, Q2, halftime, Q3, Q4, OT1, OT2, etc, final
+      allPhases.sort((a, b) => {
+        const order = { 'Q1': 1, 'Q2': 2, 'halftime': 3, 'Q3': 4, 'Q4': 5, 'final': 100 };
+        const aVal = order[a] || (a.startsWith('OT') ? 50 + parseInt(a.slice(2)) : 99);
+        const bVal = order[b] || (b.startsWith('OT') ? 50 + parseInt(b.slice(2)) : 99);
+        return aVal - bVal;
+      });
+
+      let html = '';
+      for (const phase of allPhases) {
+        const events = phaseGroups[phase] || [];
+        if (events.length === 0) continue;
+
+        const phaseLabel = phase === 'halftime' ? 'Halftime' : (phase === 'final' ? 'Final' : phase);
+        const phaseColor = phase === 'halftime' ? '#F59E0B' : (phase.startsWith('OT') ? '#EF4444' : '#3B82F6');
+
+        html += `
+          <div style="padding: 6px 10px; background: ${phaseColor}; color: #000; font-weight: 700; font-size: 0.75rem;">
+            ${phaseLabel}
+          </div>
         `;
+
+        events.forEach(event => {
+          const time = event.timestamp?.toDate ? event.timestamp.toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+          const isScoring = event.stat === 'points' && event.lancersScore !== undefined;
+          const isOpponent = event.team === 'opponent';
+          const isTimeout = event.type === 'timeout';
+          const isPhase = event.type === 'phase';
+
+          // Color based on event type and team
+          let textColor = 'var(--text-primary)';
+          let bgColor = 'transparent';
+          if (isOpponent) textColor = '#EF4444'; // Red for opponent
+          if (isTimeout) { textColor = '#000'; bgColor = '#F59E0B'; } // Yellow bg for timeout
+          if (isPhase) textColor = '#3B82F6'; // Blue for phase
+          if (event.type === 'sub') textColor = '#8B5CF6'; // Purple for subs
+
+          const scoreDisplay = isScoring ? `<span style="font-weight: 700; color: ${isOpponent ? '#EF4444' : 'var(--lancers-gold)'}; min-width: 45px; text-align: right;">${event.lancersScore}-${event.opponentScore}</span>` : '';
+          const highlight = event.id ? highlightsByEventId[event.id] : null;
+          const highlightIcon = highlight ? `<span onclick="scrollToHighlight('${highlight.id}')" style="cursor: pointer; color: #10B981; font-size: 1rem;" title="View highlight">&#9658;</span>` : '';
+          html += `
+            <div style="padding: 6px 10px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 8px; background: ${bgColor};">
+              <span style="color: ${isTimeout ? '#000' : 'var(--text-muted)'}; font-size: 0.7rem; min-width: 50px;">${time}</span>
+              <span style="flex: 1; font-size: 0.8rem; color: ${textColor}; font-weight: ${isTimeout ? '700' : '400'};">${event.description}</span>
+              ${highlightIcon}
+              ${scoreDisplay}
+            </div>
+          `;
+        });
+      }
+
+      pbpContent.innerHTML = html || '<div style="padding: 16px; text-align: center; color: var(--text-secondary);">No play-by-play data</div>';
+    }
+
+    function scrollToHighlight(highlightId) {
+      const highlightEl = document.getElementById('highlight-' + highlightId);
+      if (highlightEl) {
+        highlightEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        highlightEl.style.animation = 'pulse 0.5s ease-in-out 2';
+      }
+    }
+
+    function getEventTypeColor(type) {
+      switch(type) {
+        case 'timeout': return '#F59E0B';
+        case 'phase': return '#3B82F6';
+        case 'sub': return '#8B5CF6';
+        default: return 'var(--text-primary)';
       }
     }
 
@@ -672,6 +850,8 @@
             ...doc.data()
           }));
           renderHighlights();
+          // Re-render play-by-play to update highlight icons
+          if (gameEvents.length > 0) renderPlayByPlay();
         }, (error) => {
           console.log('Error loading highlights:', error);
           renderHighlights();
@@ -720,7 +900,7 @@
             const isVideo = h.mediaType === 'video';
 
             return `
-              <div style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; background: #000;" onclick="openHighlight('${h.downloadUrl}', ${isVideo})">
+              <div id="highlight-${h.id}" style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; background: #000;" onclick="openHighlight('${h.downloadUrl}', ${isVideo})">
                 ${isVideo ? `
                   <video src="${h.downloadUrl}" style="width: 100%; height: 100%; object-fit: cover;"></video>
                   <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30px; height: 30px; background: rgba(0,0,0,0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center;">

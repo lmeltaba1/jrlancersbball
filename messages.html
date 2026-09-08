@@ -370,6 +370,7 @@
     var displayName = '';
     var rosterData = null;
     var currentTab = 'chat';
+    var effectiveEmail = ''; // Email to use for chat (emulated or real)
 
     function switchTab(tab) {
       currentTab = tab;
@@ -483,7 +484,7 @@
         title: title,
         text: content,
         authorName: displayName,
-        authorEmail: currentUser.email,
+        authorEmail: effectiveEmail,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         pinned: pinned
       }).then(function() {
@@ -561,7 +562,7 @@
       input.disabled = true;
       db.collection('posts').doc(currentPostId).collection('comments').add({
         author: displayName,
-        authorEmail: currentUser.email,
+        authorEmail: effectiveEmail,
         text: text,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       }).then(function() {
@@ -582,10 +583,10 @@
           if (change.type === 'added') {
             var m = change.doc.data();
             var div = document.createElement('div');
-            // Compare by email (works for both real and simulated messages)
-            var isMine = (m.senderEmail && currentUser.email &&
-                          m.senderEmail.toLowerCase() === currentUser.email.toLowerCase()) ||
-                         (m.uid === currentUser.uid);
+            // Compare by effective email (emulated or real)
+            var isMine = (m.senderEmail && effectiveEmail &&
+                          m.senderEmail.toLowerCase() === effectiveEmail.toLowerCase()) ||
+                         (!currentUserInfo.isEmulating && m.uid === currentUser.uid);
             div.className = 'chat-message ' + (isMine ? 'sent' : 'received');
             var html = '';
             if (!isMine) html += '<div class="sender">' + escapeHtml(m.senderName || '') + '</div>';
@@ -606,8 +607,8 @@
       db.collection('messages').add({
         text: text,
         senderName: displayName,
-        senderEmail: currentUser.email,
-        uid: currentUser.uid,
+        senderEmail: effectiveEmail,
+        uid: currentUserInfo.isEmulating ? null : currentUser.uid,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
       input.value = '';
@@ -650,6 +651,9 @@
       currentUser = auth.currentUser;
       currentUserInfo = userInfo;
 
+      // Set effective email (emulated or real)
+      effectiveEmail = userInfo.emulatedEmail || currentUser.email;
+
       // Show profile button
       var profileWrapper = document.getElementById('profileBtnWrapper');
       if (profileWrapper) profileWrapper.style.display = 'block';
@@ -672,7 +676,7 @@
       } else if (userInfo.parent && userInfo.parent.name) {
         displayName = userInfo.parent.name;
       } else {
-        displayName = currentUser.email.split('@')[0];
+        displayName = effectiveEmail.split('@')[0];
       }
 
       document.getElementById('chatUserName').textContent = displayName;

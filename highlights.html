@@ -419,6 +419,16 @@
           <p>Tap to select video or photo</p>
         </div>
 
+        <!-- Smart match suggestion banner -->
+        <div id="suggestionBanner" style="display: none; padding: 10px 12px; background: #22C55E20; border: 1px solid #22C55E; border-radius: 8px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; color: #22C55E; font-size: 0.85rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span id="suggestionText">Auto-detected game and player</span>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Game</label>
           <select id="uploadGame" required>
@@ -812,6 +822,7 @@
       document.getElementById('uploadSubmit').disabled = true;
       document.getElementById('progressBar').classList.remove('active');
       document.getElementById('progressFill').style.width = '0%';
+      document.getElementById('suggestionBanner').style.display = 'none';
 
       const picker = document.getElementById('filePicker');
       picker.classList.remove('has-file');
@@ -851,7 +862,96 @@
         <p style="margin-top: 10px;">${file.name}</p>
       `;
 
+      // Try to auto-match game/player from file timestamp
+      suggestMatchFromTimestamp(file);
+
       validateUploadForm();
+    }
+
+    // Smart matching based on file timestamp
+    async function suggestMatchFromTimestamp(file) {
+      if (!db) return;
+
+      const fileTime = file.lastModified || Date.now();
+      const fileDate = new Date(fileTime);
+      const suggestionBanner = document.getElementById('suggestionBanner');
+      const suggestionText = document.getElementById('suggestionText');
+
+      // Hide banner initially
+      suggestionBanner.style.display = 'none';
+
+      try {
+        // Find games that were live around that time
+        // Query gameStats for games that started before and ended after the file timestamp
+        const gamesSnapshot = await db.collection('gameStats').get();
+        let matchedGame = null;
+        let matchedEvents = [];
+
+        gamesSnapshot.forEach(doc => {
+          const data = doc.data();
+          const startedAt = data.startedAt?.toDate?.() || data.startedAt;
+          const endedAt = data.endedAt?.toDate?.() || data.endedAt;
+
+          if (!startedAt) return;
+
+          // Check if file was created during game (with 30 min buffer on each end)
+          const startTime = new Date(startedAt).getTime() - 30 * 60 * 1000; // 30 min before
+          const endTime = endedAt ? new Date(endedAt).getTime() + 30 * 60 * 1000 : startTime + 3 * 60 * 60 * 1000; // 30 min after or 3 hours default
+
+          if (fileTime >= startTime && fileTime <= endTime) {
+            matchedGame = { id: doc.id, ...data };
+
+            // Find events within ±2 minutes of file timestamp
+            if (data.events && data.events.length > 0) {
+              matchedEvents = data.events.filter(e => {
+                const eventTime = e.timestamp?.toDate?.()?.getTime() || e.timestamp?.seconds * 1000;
+                return eventTime && Math.abs(eventTime - fileTime) < 2 * 60 * 1000;
+              });
+            }
+          }
+        });
+
+        if (matchedGame) {
+          // Pre-select game dropdown
+          const gameSelect = document.getElementById('uploadGame');
+          const gameId = matchedGame.gameId || matchedGame.id;
+          if (gameSelect.querySelector(`option[value="${gameId}"]`)) {
+            gameSelect.value = gameId;
+          }
+
+          let suggestionMessage = '';
+
+          // Check if we have matching events with player info
+          const playerEvents = matchedEvents.filter(e => e.playerId && e.type === 'stat');
+
+          if (playerEvents.length === 1) {
+            // Single player match - pre-select
+            const playerId = playerEvents[0].playerId;
+            const playerSelect = document.getElementById('uploadPlayer');
+            if (playerSelect.querySelector(`option[value="${playerId}"]`)) {
+              playerSelect.value = playerId;
+            }
+            suggestionMessage = `Matched: ${playerEvents[0].description}`;
+          } else if (playerEvents.length > 1) {
+            suggestionMessage = `Game matched! ${playerEvents.length} plays found near this time`;
+          } else {
+            // Get opponent name from schedule
+            const gameOption = document.getElementById('uploadGame').querySelector(`option[value="${gameId}"]`);
+            const gameName = gameOption ? gameOption.textContent : 'Game';
+            suggestionMessage = `Auto-matched to ${gameName}`;
+          }
+
+          // Show suggestion banner
+          if (suggestionMessage) {
+            suggestionText.textContent = suggestionMessage;
+            suggestionBanner.style.display = 'block';
+          }
+
+          validateUploadForm();
+        }
+      } catch (error) {
+        console.log('Smart match error:', error);
+      }
     }
 
     function validateUploadForm() {

@@ -150,7 +150,7 @@
     <!-- My Volunteer Stats (shown when logged in) -->
     <div id="my-volunteer-card" class="card" style="display: none;">
       <div class="card-title" style="display: flex; align-items: center; justify-content: space-between;">
-        <span>My Volunteering</span>
+        <span>Family Volunteering</span>
       </div>
       <div id="my-volunteer-stats" style="margin-bottom: 12px;">
         <!-- Stats will be populated by JS -->
@@ -457,26 +457,64 @@
     async function getNextEvent() {
       const data = await loadSchedule();
       const now = getCurrentDate();
-      now.setHours(0, 0, 0, 0);
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(now);
+      todayEnd.setHours(23, 59, 59, 999);
+
+      // Fetch game results from Firestore for today's games
+      const gameResults = {};
+      if (db) {
+        try {
+          const snapshot = await db.collection('gameStats').get();
+          snapshot.forEach(doc => {
+            const gameData = doc.data();
+            if (gameData.result) {
+              gameResults[doc.id] = gameData.result;
+            }
+          });
+        } catch (e) {
+          console.log('Error fetching game results:', e);
+        }
+      }
 
       const allEvents = [];
       for (const game of data.games) {
-        if (!game.result) {
-          allEvents.push({ ...game, eventType: 'game' });
+        const [year, month, day] = game.date.split('-').map(Number);
+        const gameDate = new Date(year, month - 1, day);
+        const isToday = gameDate >= todayStart && gameDate <= todayEnd;
+
+        // Get result from Firestore (or schedule.json as fallback)
+        const result = gameResults[game.id.toString()] || game.result;
+
+        // Include games from today (even if completed) or future games without results
+        if (isToday || !result) {
+          allEvents.push({ ...game, eventType: 'game', isToday, result });
         }
       }
       if (data.events) {
         for (const event of data.events) {
-          allEvents.push({ ...event, eventType: event.type });
+          const [year, month, day] = event.date.split('-').map(Number);
+          const eventDate = new Date(year, month - 1, day);
+          const isToday = eventDate >= todayStart && eventDate <= todayEnd;
+          allEvents.push({ ...event, eventType: event.type, isToday });
         }
       }
 
       allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+      // First, check if there's a today event
+      for (const event of allEvents) {
+        if (event.isToday) {
+          return event;
+        }
+      }
+
+      // Otherwise, find the next upcoming event
       for (const event of allEvents) {
         const [year, month, day] = event.date.split('-').map(Number);
         const eventDate = new Date(year, month - 1, day);
-        if (eventDate >= now) {
+        if (eventDate >= todayStart) {
           return event;
         }
       }
@@ -585,9 +623,9 @@
       }
     }
 
-    // Load user's personal volunteer stats
-    async function loadMyVolunteerStats(userEmail) {
-      if (!db || !userEmail) return;
+    // Load family's volunteer stats (by playerId)
+    async function loadMyVolunteerStats(playerId) {
+      if (!db || !playerId) return;
 
       const card = document.getElementById('my-volunteer-card');
       const statsContainer = document.getElementById('my-volunteer-stats');
@@ -596,7 +634,7 @@
         const data = await loadSchedule();
         const snapshot = await db.collection('volunteers').get();
 
-        // Count volunteer signups by role
+        // Count volunteer signups by role for the family (by playerId)
         let stats = {
           scorekeeper: { past: 0, upcoming: 0 },
           tableWorker: { past: 0, upcoming: 0 }
@@ -604,7 +642,6 @@
 
         const now = getCurrentDate();
         now.setHours(0, 0, 0, 0);
-        const emailLower = userEmail.toLowerCase();
 
         snapshot.forEach(doc => {
           const vol = doc.data();
@@ -617,14 +654,14 @@
           const gameDate = new Date(year, month - 1, day);
           const isPast = gameDate < now;
 
-          // Check scorekeeper
-          if (vol.scorekeeper && vol.scorekeeper.email.toLowerCase() === emailLower) {
+          // Check scorekeeper - match by playerId (family)
+          if (vol.scorekeeper && vol.scorekeeper.playerId === playerId) {
             if (isPast) stats.scorekeeper.past++;
             else stats.scorekeeper.upcoming++;
           }
 
-          // Check table worker
-          if (vol.tableWorker && vol.tableWorker.email.toLowerCase() === emailLower) {
+          // Check table worker - match by playerId (family)
+          if (vol.tableWorker && vol.tableWorker.playerId === playerId) {
             if (isPast) stats.tableWorker.past++;
             else stats.tableWorker.upcoming++;
           }
@@ -807,11 +844,48 @@
 
           if (nextEvent.eventType === 'game') {
             // Display as game card
-            eventTitle.textContent = 'Next Game';
-
-            // Check if in live stats window (10 min before to 90 min after game start)
-            const showLiveStats = isInLiveStatsWindow(nextEvent.date, nextEvent.time);
+            const isCompleted = !!nextEvent.result;
+            const showLiveStats = !isCompleted && isInLiveStatsWindow(nextEvent.date, nextEvent.time);
             upcomingGameForLiveStats = showLiveStats ? nextEvent : null;
+
+            // Set title based on state
+            if (isCompleted) {
+              eventTitle.textContent = "Today's Game";
+            } else if (nextEvent.isToday) {
+              eventTitle.textContent = "Today's Game";
+            } else {
+              eventTitle.textContent = 'Next Game';
+            }
+
+            // Build the button section
+            let buttonHtml = '';
+            if (isCompleted) {
+              // Game finished - show result and view button
+              buttonHtml = `
+                <div style="margin-top: 16px; text-align: center;">
+                  <div style="font-size: 1.1rem; font-weight: 700; color: ${nextEvent.result === 'W' ? '#22C55E' : '#EF4444'}; margin-bottom: 8px;">
+                    ${nextEvent.result === 'W' ? 'WIN' : 'LOSS'}
+                  </div>
+                  <a href="${eventLink}" class="btn btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="event.stopPropagation();">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    View Game Results
+                  </a>
+                </div>
+              `;
+            } else if (showLiveStats) {
+              buttonHtml = `
+                <div id="live-stats-btn-container" style="margin-top: 16px; text-align: center;">
+                  <a id="live-stats-btn" href="game-stats.html?game=${nextEvent.id}&view=1" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="event.stopPropagation();">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    View Live Stats
+                  </a>
+                </div>
+              `;
+            }
 
             eventContent.innerHTML = `
               <div class="game-card" style="margin: 0; cursor: pointer;" onclick="window.location.href='${eventLink}'">
@@ -840,26 +914,19 @@
                       ${nextEvent.location}
                     </span>
                   </div>
-                  <div style="text-align: center; margin-top: 10px;">
-                    <span class="jersey-indicator ${nextEvent.jersey}">${formatJerseyLabel(nextEvent.jersey)}</span>
-                  </div>
-                  <div id="next-event-rsvp" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); text-align: center;"></div>
-                  ${showLiveStats ? `
-                    <div id="live-stats-btn-container" style="margin-top: 16px; text-align: center;">
-                      <a id="live-stats-btn" href="game-stats.html?game=${nextEvent.id}&view=1" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="event.stopPropagation();">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                        View Live Stats
-                      </a>
+                  ${!isCompleted ? `
+                    <div style="text-align: center; margin-top: 10px;">
+                      <span class="jersey-indicator ${nextEvent.jersey}">${formatJerseyLabel(nextEvent.jersey)}</span>
                     </div>
                   ` : ''}
+                  <div id="next-event-rsvp" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); text-align: center;"></div>
+                  ${buttonHtml}
                 </div>
               </div>
             `;
           } else if (nextEvent.eventType === 'practice') {
             // Display as practice card
-            eventTitle.textContent = 'Next Practice';
+            eventTitle.textContent = nextEvent.isToday ? "Today's Practice" : 'Next Practice';
             eventContent.innerHTML = `
               <div class="game-card" style="margin: 0; cursor: pointer;" onclick="window.location.href='${eventLink}'">
                 <div class="game-card-header practice" style="background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);">
@@ -892,7 +959,7 @@
             `;
           } else {
             // Display as general event card
-            eventTitle.textContent = 'Next Event';
+            eventTitle.textContent = nextEvent.isToday ? "Today's Event" : 'Next Event';
             eventContent.innerHTML = `
               <div class="game-card" style="margin: 0; cursor: pointer;" onclick="window.location.href='${eventLink}'">
                 <div class="game-card-header event" style="background: linear-gradient(135deg, var(--gold) 0%, #B8860B 100%);">
@@ -1014,13 +1081,24 @@
         // Hide nav items that viewers can't access
         if (userInfo.isViewer) {
           hideViewerRestrictedNav();
-        } else {
-          // Load volunteer stats for parents and coaches (not viewers)
-          loadMyVolunteerStats(auth.currentUser.email);
         }
 
-        // Load leaderboard for all logged-in users
-        loadLeaderboard(auth.currentUser.email);
+        // Hide all volunteer panels for coaches and viewers
+        console.log('User info:', userInfo.isCoach, userInfo.isViewer, userInfo.isParent);
+        if (userInfo.isCoach || userInfo.isViewer) {
+          console.log('Hiding volunteer panels for coach/viewer');
+          document.getElementById('volunteer-status-card').style.display = 'none';
+        }
+
+        // Load volunteer stats only for parents (not coaches or viewers)
+        if (userInfo.isParent && userInfo.player && !userInfo.isCoach) {
+          loadMyVolunteerStats(userInfo.player.id);
+        }
+
+        // Load leaderboard for parents and coaches (not viewers)
+        if (!userInfo.isViewer) {
+          loadLeaderboard(auth.currentUser.email);
+        }
 
         // Check if notifications need to be enabled
         checkNotificationStatus();

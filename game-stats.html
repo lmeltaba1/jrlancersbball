@@ -118,6 +118,35 @@
     .stat-btn.pts { background: #fff; color: #000; }
     .stat-btn.pos { background: #22C55E; color: #fff; }
     .stat-btn.neg { background: #EF4444; color: #fff; }
+
+    /* Disabled state before game starts / at halftime / game ended */
+    .stats-panel.disabled {
+      position: relative;
+      pointer-events: none;
+    }
+    .stats-panel.disabled::after {
+      content: attr(data-message);
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--lancers-gold);
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-align: center;
+      padding: 20px;
+      z-index: 10;
+    }
+    .stats-panel.disabled .stat-btn,
+    .stats-panel.disabled .timeout-btn,
+    .stats-panel.disabled .action-btn.sub {
+      opacity: 0.3;
+    }
     .edit-btn {
       min-width: 34px;
       height: 40px;
@@ -192,6 +221,14 @@
     }
     .action-btn.end {
       background: #fff;
+      color: #000;
+    }
+    .action-btn.phase {
+      background: #22C55E;
+      color: #000;
+    }
+    .action-btn.ot {
+      background: #F59E0B;
       color: #000;
     }
 
@@ -404,23 +441,52 @@
         </div>
       </div>
 
-      <!-- On-Court Players -->
-      <div id="court-players"></div>
+      <!-- Play-by-Play Feed -->
+      <div id="playByPlay" class="card" style="margin-bottom: 8px; padding: 0; overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--bg-elevated); border-bottom: 1px solid var(--border-subtle);">
+          <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">Play-by-Play</span>
+          <span id="gamePhaseDisplay" style="background: #3B82F6; color: #000; font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; font-weight: 700;">PRE</span>
+        </div>
+        <div id="eventFeed" style="max-height: 120px; overflow-y: auto;"></div>
+      </div>
 
-      <!-- Opponent + Actions -->
-      <div class="opponent-row">
-        <span class="opp-label">OPP</span>
-        <div class="opp-btns">
-          <button class="stat-btn" onclick="addOppScore(2)">+2</button>
-          <button class="stat-btn" onclick="addOppScore(3)">+3</button>
-          <button class="stat-btn" onclick="addOppScore(1)">+1</button>
-          <button class="stat-btn" onclick="addOppScore(-1)">-1</button>
+      <!-- Stats Panel (disabled until game starts) -->
+      <div id="stats-panel" class="stats-panel disabled" data-message="Press START GAME to begin tracking">
+        <!-- On-Court Players -->
+        <div id="court-players"></div>
+
+        <!-- Opponent + Actions -->
+        <div class="opponent-row">
+          <span class="opp-label">OPP</span>
+          <div class="opp-btns">
+            <button class="stat-btn" onclick="addOppScore(2)">+2</button>
+            <button class="stat-btn" onclick="addOppScore(3)">+3</button>
+            <button class="stat-btn" onclick="addOppScore(1)">+1</button>
+            <button class="stat-btn" onclick="addOppScore(-1)">-1</button>
+          </div>
+        </div>
+
+        <!-- Timeout Controls -->
+        <div class="timeout-row" style="display: flex; gap: 8px; margin-top: 6px;">
+          <button class="timeout-btn lancers" onclick="callTimeout('lancers')" style="flex: 1; padding: 10px; background: var(--lancers-gold); color: #000; border: none; border-radius: 6px; font-weight: 700; font-size: 0.85rem;">
+            Lancers TO <span id="lancersTORemaining">(4)</span>
+          </button>
+          <button class="timeout-btn opponent" onclick="callTimeout('opponent')" style="flex: 1; padding: 10px; background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-weight: 700; font-size: 0.85rem;">
+            Opponent TO <span id="opponentTORemaining">(4)</span>
+          </button>
+        </div>
+
+        <div class="bottom-actions">
+          <button class="action-btn sub" onclick="openSubModal()">SUB</button>
         </div>
       </div>
 
-      <div class="bottom-actions">
-        <button class="action-btn sub" onclick="openSubModal()">SUB</button>
-        <button class="action-btn end" onclick="endGame()">END GAME</button>
+      <div class="bottom-actions" style="margin-top: 8px;">
+        <div class="phase-controls" style="display: flex; gap: 8px;">
+          <button id="phaseBtn" class="action-btn phase" onclick="advancePhase()">START GAME</button>
+          <button id="otBtn" class="action-btn ot" onclick="startOvertime()" style="display:none;">OT</button>
+          <button id="endBtn" class="action-btn end" onclick="endGame()" style="display:none;">END GAME</button>
+        </div>
       </div>
     </div>
 
@@ -624,6 +690,274 @@
     let isScorekeeper = false; // Whether current user is the designated scorekeeper
     let viewOnlyMode = false; // True = can only view, False = can edit
 
+    // Phase tracking
+    let gamePhase = 'pre'; // 'pre', 'Q1', 'Q2', 'halftime', 'Q3', 'Q4', 'OT1', 'OT2', ..., 'final'
+    let phaseStartedAt = null;
+    let events = []; // Play-by-play events
+
+    // Timeout tracking (youth rules: 4 per half, 2 per OT)
+    let timeouts = {
+      lancers: { first: 0, second: 0, OT: 0 },
+      opponent: { first: 0, second: 0, OT: 0 }
+    };
+
+    // Helper to get player name for event descriptions
+    function getPlayerName(playerId) {
+      const player = players.find(p => p.id === playerId);
+      return player ? player.firstName : 'Unknown';
+    }
+
+    // Generate UUID for events
+    function generateEventId() {
+      return 'evt-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Log an event to the play-by-play
+    function logEvent(eventData) {
+      const event = {
+        id: generateEventId(),
+        timestamp: firebase.firestore.Timestamp.now(),
+        gamePhase: gamePhase,
+        ...eventData
+      };
+      events.push(event);
+      renderEventFeed();
+      return event;
+    }
+
+    // Get current Lancers score total
+    function getLancersScore() {
+      let total = 0;
+      Object.values(playerStats).forEach(s => total += s.points || 0);
+      return total;
+    }
+
+    // Get current half for timeout tracking
+    function getCurrentHalf() {
+      if (gamePhase === 'Q1' || gamePhase === 'Q2') return 'first';
+      if (gamePhase === 'Q3' || gamePhase === 'Q4') return 'second';
+      if (gamePhase.startsWith('OT')) return 'OT';
+      return 'first';
+    }
+
+    // Format timestamp for display
+    function formatEventTime(timestamp) {
+      if (!timestamp) return '';
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    // Render the play-by-play feed
+    function renderEventFeed() {
+      const feed = document.getElementById('eventFeed');
+      if (!feed) return;
+
+      const recentEvents = (events || []).slice(-20).reverse(); // Last 20, newest first
+
+      if (recentEvents.length === 0) {
+        feed.innerHTML = '<div style="color: var(--text-muted); padding: 8px; text-align: center; font-size: 0.85rem;">No events yet</div>';
+        return;
+      }
+
+      feed.innerHTML = recentEvents.map(e => {
+        const isScoring = e.stat === 'points' && e.lancersScore !== undefined;
+        const isOpponent = e.team === 'opponent';
+        const isTimeout = e.type === 'timeout';
+
+        let textColor = getEventColor(e.type);
+        let bgColor = 'transparent';
+        if (isOpponent) textColor = '#EF4444';
+        if (isTimeout) { textColor = '#000'; bgColor = '#F59E0B'; }
+
+        const scoreDisplay = isScoring ? `<span style="font-weight: 700; color: ${isOpponent ? '#EF4444' : 'var(--lancers-gold)'}; min-width: 40px; text-align: right;">${e.lancersScore}-${e.opponentScore}</span>` : '';
+        return `
+        <div class="event-item ${e.type}" style="padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 8px; align-items: center; background: ${bgColor};">
+          <span style="color: ${isTimeout ? '#000' : 'var(--text-muted)'}; font-size: 0.75rem; min-width: 50px;">${formatEventTime(e.timestamp)}</span>
+          <span style="background: ${getPhaseColor(e.gamePhase)}; color: #000; font-size: 0.65rem; padding: 2px 6px; border-radius: 3px; font-weight: 600;">${e.gamePhase}</span>
+          <span style="flex: 1; font-size: 0.85rem; color: ${textColor}; font-weight: ${isTimeout ? '700' : '400'};">${e.description}</span>
+          ${scoreDisplay}
+        </div>
+      `}).join('');
+
+      // Auto-scroll to top (newest)
+      feed.scrollTop = 0;
+    }
+
+    function getPhaseColor(phase) {
+      if (phase === 'halftime') return '#F59E0B';
+      if (phase.startsWith('OT')) return '#EF4444';
+      return '#3B82F6';
+    }
+
+    function getEventColor(type) {
+      switch(type) {
+        case 'timeout': return '#F59E0B';
+        case 'phase': return '#3B82F6';
+        case 'sub': return '#8B5CF6';
+        default: return 'var(--text-primary)';
+      }
+    }
+
+    // Phase progression
+    const PHASES = ['pre', 'Q1', 'Q2', 'halftime', 'Q3', 'Q4'];
+    const PHASE_LABELS = {
+      'pre': 'START GAME',
+      'Q1': 'START Q2',
+      'Q2': 'HALFTIME',
+      'halftime': 'START Q3',
+      'Q3': 'START Q4',
+      'Q4': null  // Show OT + END buttons instead
+    };
+
+    // Update phase display and button states
+    function updatePhaseDisplay() {
+      const phaseDisplay = document.getElementById('gamePhaseDisplay');
+      if (phaseDisplay) {
+        phaseDisplay.textContent = gamePhase === 'pre' ? 'PRE' : gamePhase;
+        phaseDisplay.style.background = getPhaseColor(gamePhase);
+      }
+
+      // Enable/disable stats panel based on phase
+      const statsPanel = document.getElementById('stats-panel');
+      if (statsPanel) {
+        const isPlayable = gamePhase !== 'pre' && gamePhase !== 'halftime' && gamePhase !== 'final';
+        if (isPlayable) {
+          statsPanel.classList.remove('disabled');
+        } else {
+          statsPanel.classList.add('disabled');
+          // Set appropriate message
+          if (gamePhase === 'pre') {
+            statsPanel.setAttribute('data-message', 'Press START GAME to begin tracking');
+          } else if (gamePhase === 'halftime') {
+            statsPanel.setAttribute('data-message', 'HALFTIME — Press START Q3 to continue');
+          } else if (gamePhase === 'final') {
+            statsPanel.setAttribute('data-message', 'Game Over');
+          }
+        }
+      }
+
+      // Update phase button
+      const phaseBtn = document.getElementById('phaseBtn');
+      const otBtn = document.getElementById('otBtn');
+      const endBtn = document.getElementById('endBtn');
+
+      if (!phaseBtn) return;
+
+      // Handle Q4 and OT phases - show OT and END buttons
+      if (gamePhase === 'Q4' || gamePhase.startsWith('OT')) {
+        phaseBtn.style.display = 'none';
+        otBtn.style.display = 'block';
+        endBtn.style.display = 'block';
+      } else if (gamePhase === 'final') {
+        // Game ended
+        phaseBtn.style.display = 'none';
+        otBtn.style.display = 'none';
+        endBtn.style.display = 'none';
+      } else {
+        // Normal phases - show phase button
+        phaseBtn.style.display = 'block';
+        otBtn.style.display = 'none';
+        endBtn.style.display = 'none';
+        phaseBtn.textContent = PHASE_LABELS[gamePhase] || 'START GAME';
+      }
+
+      // Update timeout displays if they exist
+      updateTimeoutDisplay();
+    }
+
+    // Advance to next phase
+    async function advancePhase() {
+      const currentIndex = PHASES.indexOf(gamePhase);
+      if (currentIndex === -1 || currentIndex >= PHASES.length - 1) return;
+
+      const nextPhase = PHASES[currentIndex + 1];
+
+      // Log phase change event
+      logEvent({
+        type: 'phase',
+        description: nextPhase === 'halftime' ? 'HALFTIME' : `${nextPhase} started`
+      });
+
+      gamePhase = nextPhase;
+      phaseStartedAt = firebase.firestore.Timestamp.now();
+
+      await saveStats();
+      updatePhaseDisplay();
+    }
+
+    // Track overtime number
+    let overtimeNumber = 0;
+
+    // Start overtime period
+    async function startOvertime() {
+      overtimeNumber++;
+      const otPhase = 'OT' + overtimeNumber;
+
+      // Reset OT timeouts
+      timeouts.lancers.OT = 0;
+      timeouts.opponent.OT = 0;
+
+      // Log OT start
+      logEvent({
+        type: 'phase',
+        description: `Overtime ${overtimeNumber} started`
+      });
+
+      gamePhase = otPhase;
+      phaseStartedAt = firebase.firestore.Timestamp.now();
+
+      await saveStats();
+      updatePhaseDisplay();
+    }
+
+    // Timeout functions
+    async function callTimeout(team) {
+      const half = getCurrentHalf();
+      const maxTOs = half === 'OT' ? 2 : 4;
+      const used = timeouts[team][half] || 0;
+
+      if (used >= maxTOs) {
+        alert(`${team === 'lancers' ? 'Lancers' : 'Opponent'} has no timeouts remaining!`);
+        return;
+      }
+
+      timeouts[team][half] = used + 1;
+
+      // Log timeout event
+      logEvent({
+        type: 'timeout',
+        team: team,
+        description: `${team === 'lancers' ? 'Lancers' : 'Opponent'} TIMEOUT (${maxTOs - used - 1} left)`
+      });
+
+      updateTimeoutDisplay();
+      await saveStats();
+    }
+
+    // Update timeout display
+    function updateTimeoutDisplay() {
+      const half = getCurrentHalf();
+      const maxTOs = half === 'OT' ? 2 : 4;
+
+      const lancersUsed = timeouts.lancers[half] || 0;
+      const opponentUsed = timeouts.opponent[half] || 0;
+
+      const lancersRemaining = maxTOs - lancersUsed;
+      const opponentRemaining = maxTOs - opponentUsed;
+
+      const lancersEl = document.getElementById('lancersTORemaining');
+      const opponentEl = document.getElementById('opponentTORemaining');
+
+      if (lancersEl) {
+        lancersEl.textContent = `(${lancersRemaining})`;
+        lancersEl.parentElement.style.opacity = lancersRemaining === 0 ? '0.5' : '1';
+      }
+      if (opponentEl) {
+        opponentEl.textContent = `(${opponentRemaining})`;
+        opponentEl.parentElement.style.opacity = opponentRemaining === 0 ? '0.5' : '1';
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', async function() {
       // Allow all authenticated users (including viewers) to view
       requireAuth().then(async function(userInfo) {
@@ -756,8 +1090,9 @@
       if (viewOnlyMode) {
         document.body.classList.add('view-only-mode');
         document.querySelector('header h1 a').innerHTML = '<img src="images/lancers-logo.jpg?v=2" alt="Lancers" class="header-logo">Live Stats <span style="font-size: 0.6em; opacity: 0.7;">(View Only)</span>';
-        // Hide opponent controls and action buttons
+        // Hide opponent controls, timeout controls, and action buttons
         document.querySelector('.opponent-row').style.display = 'none';
+        document.querySelector('.timeout-row').style.display = 'none';
         document.querySelector('.bottom-actions').style.display = 'none';
       }
 
@@ -771,6 +1106,11 @@
           playerStats = data.playerStats || {};
           opponentScore = data.opponentScore || 0;
           onCourt = data.onCourt || [2, 6, 4, 1, 5];
+          // Load new fields
+          gamePhase = data.gamePhase || 'pre';
+          events = data.events || [];
+          timeouts = data.timeouts || { lancers: { first: 0, second: 0, OT: 0 }, opponent: { first: 0, second: 0, OT: 0 } };
+          phaseStartedAt = data.phaseStartedAt || null;
         } else if (viewOnlyMode) {
           // View-only user and no game in progress - show message
           document.getElementById('court-players').innerHTML = `
@@ -787,12 +1127,18 @@
             playerStats[p.id] = {
               name: p.firstName + ' ' + p.lastName.charAt(0) + '.',
               points: 0, rebounds: 0, assists: 0, steals: 0,
-              turnovers: 0, fouls: 0
+              turnovers: 0, fouls: 0,
+              twoPointersMade: 0, threePointersMade: 0, freeThrowsMade: 0
             };
           });
           opponentScore = 0;
           // Default starting lineup: Camden(2), Dean(6), Rylan(4), Raequan(1), Ashton(5)
           onCourt = [2, 6, 4, 1, 5];
+
+          // Initialize new tracking fields
+          gamePhase = 'pre';
+          events = [];
+          timeouts = { lancers: { first: 0, second: 0, OT: 0 }, opponent: { first: 0, second: 0, OT: 0 } };
 
           await docRef.set({
             gameId: currentGameId,
@@ -800,6 +1146,9 @@
             opponentScore: 0,
             playerStats: playerStats,
             onCourt: onCourt,
+            gamePhase: gamePhase,
+            events: events,
+            timeouts: timeouts,
             trackedBy: auth.currentUser.email,
             startedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
@@ -812,8 +1161,15 @@
             playerStats = data.playerStats || playerStats;
             opponentScore = data.opponentScore || 0;
             onCourt = data.onCourt || onCourt;
+            // Sync new fields
+            gamePhase = data.gamePhase || gamePhase;
+            events = data.events || events;
+            timeouts = data.timeouts || timeouts;
+            phaseStartedAt = data.phaseStartedAt || phaseStartedAt;
             updateScoreboard();
             renderCourtPlayers();
+            renderEventFeed();
+            updatePhaseDisplay();
           }
         });
       } else {
@@ -831,14 +1187,20 @@
           playerStats[p.id] = {
             name: p.firstName,
             points: 0, rebounds: 0, assists: 0, steals: 0,
-            turnovers: 0, fouls: 0
+            turnovers: 0, fouls: 0,
+            twoPointersMade: 0, threePointersMade: 0, freeThrowsMade: 0
           };
         });
         onCourt = [2, 6, 4, 1, 5];
+        gamePhase = 'pre';
+        events = [];
+        timeouts = { lancers: { first: 0, second: 0, OT: 0 }, opponent: { first: 0, second: 0, OT: 0 } };
       }
 
       renderCourtPlayers();
       updateScoreboard();
+      renderEventFeed();
+      updatePhaseDisplay();
     }
 
     function renderCourtPlayers() {
@@ -963,11 +1325,35 @@
       renderCourtPlayers();
     }
 
-    // Stat functions
+    // Stat functions with event logging
     async function addPts(playerId, pts) {
       const s = playerStats[playerId];
       if (!s) return;
       s.points = (s.points || 0) + pts;
+
+      // Track shot type made
+      if (pts === 2) {
+        s.twoPointersMade = (s.twoPointersMade || 0) + 1;
+      } else if (pts === 3) {
+        s.threePointersMade = (s.threePointersMade || 0) + 1;
+      } else if (pts === 1) {
+        s.freeThrowsMade = (s.freeThrowsMade || 0) + 1;
+      }
+
+      // Log event with current score
+      const playerName = getPlayerName(playerId);
+      const shotType = pts === 3 ? '3-pointer' : (pts === 2 ? '2 points' : 'free throw');
+      logEvent({
+        type: 'stat',
+        playerId: playerId,
+        stat: 'points',
+        value: pts,
+        team: 'lancers',
+        lancersScore: getLancersScore(),
+        opponentScore: opponentScore,
+        description: `${playerName} scores ${shotType}`
+      });
+
       await saveStats();
       renderCourtPlayers();
       updateScoreboard();
@@ -977,16 +1363,56 @@
       const s = playerStats[playerId];
       if (!s || (s.points || 0) <= 0) return;
       s.points = (s.points || 0) - 1;
+
+      // Log correction event
+      const playerName = getPlayerName(playerId);
+      logEvent({
+        type: 'stat',
+        playerId: playerId,
+        stat: 'points',
+        value: -1,
+        team: 'lancers',
+        description: `${playerName} -1 point (correction)`
+      });
+
       await saveStats();
       renderCourtPlayers();
       updateScoreboard();
     }
 
+    const statLabels = {
+      rebounds: 'rebound',
+      assists: 'assist',
+      steals: 'steal',
+      turnovers: 'turnover',
+      fouls: 'foul'
+    };
+
     async function addStat(playerId, stat) {
       const s = playerStats[playerId];
       if (!s) return;
       s[stat] = (s[stat] || 0) + 1;
+
+      // Log event
+      const playerName = getPlayerName(playerId);
+      const statLabel = statLabels[stat] || stat;
+      logEvent({
+        type: 'stat',
+        playerId: playerId,
+        stat: stat,
+        value: 1,
+        team: 'lancers',
+        description: `${playerName} ${statLabel}`
+      });
+
       if (stat === 'fouls' && s.fouls === 5) {
+        logEvent({
+          type: 'stat',
+          playerId: playerId,
+          stat: 'foulOut',
+          team: 'lancers',
+          description: `${playerName} FOULED OUT!`
+        });
         alert(s.name + ' fouled out!');
       }
       await saveStats();
@@ -997,12 +1423,52 @@
       const s = playerStats[playerId];
       if (!s || (s[stat] || 0) <= 0) return;
       s[stat] = (s[stat] || 0) - 1;
+
+      // Log correction event
+      const playerName = getPlayerName(playerId);
+      const statLabel = statLabels[stat] || stat;
+      logEvent({
+        type: 'stat',
+        playerId: playerId,
+        stat: stat,
+        value: -1,
+        team: 'lancers',
+        description: `${playerName} -1 ${statLabel} (correction)`
+      });
+
       await saveStats();
       renderCourtPlayers();
     }
 
     async function addOppScore(pts) {
+      const oldScore = opponentScore;
       opponentScore = Math.max(0, opponentScore + pts);
+      const actualChange = opponentScore - oldScore;
+
+      // Log event with current score
+      if (actualChange > 0) {
+        const shotType = pts === 3 ? '3-pointer' : (pts === 2 ? '2 points' : 'free throw');
+        logEvent({
+          type: 'stat',
+          stat: 'points',
+          value: pts,
+          team: 'opponent',
+          lancersScore: getLancersScore(),
+          opponentScore: opponentScore,
+          description: `Opponent scores ${shotType}`
+        });
+      } else if (pts < 0) {
+        logEvent({
+          type: 'stat',
+          stat: 'points',
+          value: pts,
+          team: 'opponent',
+          lancersScore: getLancersScore(),
+          opponentScore: opponentScore,
+          description: `Opponent ${pts} point (correction)`
+        });
+      }
+
       await saveStats();
       updateScoreboard();
     }
@@ -1086,7 +1552,18 @@
       if (selectedPlayerId && selectedFrom === 'bench') {
         const idx = onCourt.indexOf(playerId);
         if (idx !== -1) {
+          const playerOut = getPlayerName(playerId);
+          const playerIn = getPlayerName(selectedPlayerId);
           onCourt[idx] = selectedPlayerId;
+
+          // Log substitution event
+          logEvent({
+            type: 'sub',
+            playerIn: selectedPlayerId,
+            playerOut: playerId,
+            description: `SUB: ${playerIn} in for ${playerOut}`
+          });
+
           selectedPlayerId = null;
           selectedFrom = null;
           await saveStats();
@@ -1115,7 +1592,18 @@
       if (selectedPlayerId && selectedFrom === 'court') {
         const idx = onCourt.indexOf(selectedPlayerId);
         if (idx !== -1) {
+          const playerOut = getPlayerName(selectedPlayerId);
+          const playerIn = getPlayerName(playerId);
           onCourt[idx] = playerId;
+
+          // Log substitution event
+          logEvent({
+            type: 'sub',
+            playerIn: playerId,
+            playerOut: selectedPlayerId,
+            description: `SUB: ${playerIn} in for ${playerOut}`
+          });
+
           selectedPlayerId = null;
           selectedFrom = null;
           await saveStats();
@@ -1139,6 +1627,15 @@
       const result = total > opponentScore ? 'W' : (total < opponentScore ? 'L' : 'T');
       const finalScore = `${total}-${opponentScore}`;
 
+      // Log game end event
+      const resultText = result === 'W' ? 'WIN' : (result === 'L' ? 'LOSS' : 'TIE');
+      logEvent({
+        type: 'phase',
+        description: `FINAL: Lancers ${resultText} ${total}-${opponentScore}`
+      });
+
+      gamePhase = 'final';
+
       if (db) {
         await db.collection('gameStats').doc(currentGameId.toString()).update({
           isLive: false,
@@ -1146,6 +1643,8 @@
           finalScore: finalScore,
           lancersScore: total,
           opponentScore: opponentScore,
+          gamePhase: 'final',
+          events: events,
           endedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       }
@@ -1162,6 +1661,9 @@
           playerStats: playerStats,
           opponentScore: opponentScore,
           onCourt: onCourt,
+          gamePhase: gamePhase,
+          events: events,
+          timeouts: timeouts,
           lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch (e) {
