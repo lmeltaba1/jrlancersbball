@@ -1,6 +1,42 @@
 // Jr. Lancers Basketball - Firebase Configuration
 // TODO: Replace with your Firebase project credentials
 
+// Admin email for emulation feature
+var ADMIN_EMAIL = 'lmeltabarger@icloud.com';
+
+// Emulation helpers
+function isAdmin(email) {
+  return email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+}
+
+function getEmulatedEmail() {
+  try {
+    return sessionStorage.getItem('emulatedEmail');
+  } catch (e) {
+    return null;
+  }
+}
+
+function setEmulatedEmail(email) {
+  try {
+    sessionStorage.setItem('emulatedEmail', email);
+  } catch (e) {
+    console.error('Could not save emulation state:', e);
+  }
+}
+
+function clearEmulation() {
+  try {
+    sessionStorage.removeItem('emulatedEmail');
+  } catch (e) {}
+}
+
+function getEffectiveEmail(realEmail) {
+  if (!isAdmin(realEmail)) return realEmail;
+  const emulated = getEmulatedEmail();
+  return emulated || realEmail;
+}
+
 var firebaseConfig = {
   apiKey: "AIzaSyCZDonC8aqbg5OvtM-cHdA5LTJleZn8nwk",
   authDomain: "lancers-bball.firebaseapp.com",
@@ -244,8 +280,12 @@ function requireAuth(options = {}) {
         return;
       }
 
-      // Check if user is in roster
-      const userInfo = await getPlayerFromRoster(user.email);
+      // Check for emulation (admin only)
+      const effectiveEmail = getEffectiveEmail(user.email);
+      const isEmulating = effectiveEmail !== user.email;
+
+      // Check if user is in roster (use effective email for emulation)
+      const userInfo = await getPlayerFromRoster(effectiveEmail);
       if (!userInfo) {
         // User not in roster - sign them out and redirect
         await auth.signOut();
@@ -261,6 +301,12 @@ function requireAuth(options = {}) {
         reject('Viewer not allowed');
         return;
       }
+
+      // Add emulation info
+      userInfo.isEmulating = isEmulating;
+      userInfo.emulatedEmail = isEmulating ? effectiveEmail : null;
+      userInfo.realEmail = user.email;
+      userInfo.isRealAdmin = isAdmin(user.email);
 
       // Store user info globally
       currentUserInfo = userInfo;
@@ -358,5 +404,69 @@ async function isEmailInRoster(email) {
   } catch (e) {
     console.error('Error checking roster:', e);
     return false;
+  }
+}
+
+// Get all users from roster for emulation (admin only)
+async function getAllRosterUsers() {
+  try {
+    const res = await fetch('data/roster.json?v=' + Date.now());
+    if (!res.ok) return [];
+    const data = await res.json();
+    const users = [];
+
+    // Add coaches
+    if (data.coaches) {
+      for (const coach of data.coaches) {
+        users.push({
+          email: coach.email,
+          name: coach.name,
+          role: 'Coach',
+          player: null
+        });
+      }
+    }
+
+    // Add parents
+    for (const player of data.players) {
+      if (player.parents) {
+        for (const parent of player.parents) {
+          // Check if already added (might be parent of multiple players)
+          const existing = users.find(u => u.email.toLowerCase() === parent.email.toLowerCase());
+          if (!existing) {
+            users.push({
+              email: parent.email,
+              name: parent.name,
+              role: 'Parent',
+              player: `#${player.number} ${player.firstName}`
+            });
+          }
+        }
+      }
+    }
+
+    // Add viewers from roster
+    for (const player of data.players) {
+      if (player.viewers) {
+        for (const viewer of player.viewers) {
+          const existing = users.find(u => u.email.toLowerCase() === viewer.email.toLowerCase());
+          if (!existing) {
+            users.push({
+              email: viewer.email,
+              name: viewer.name,
+              role: 'Viewer',
+              player: `#${player.number} ${player.firstName}`
+            });
+          }
+        }
+      }
+    }
+
+    // Sort by name
+    users.sort((a, b) => a.name.localeCompare(b.name));
+    return users;
+  } catch (e) {
+    console.error('Error loading roster users:', e);
+    return [];
   }
 }

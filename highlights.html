@@ -357,6 +357,13 @@
               <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase;">Switch Player</div>
               <div id="playerSwitcherButtons"></div>
             </div>
+            <!-- Emulate User (admin only) -->
+            <div id="emulateSection" style="display: none; padding: 12px; border-bottom: 1px solid var(--border-color);">
+              <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase;">Emulate User</div>
+              <select id="emulateSelect" onchange="emulateUser(this.value)" style="width: 100%; padding: 10px; background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.85rem;">
+                <option value="">-- Select User --</option>
+              </select>
+            </div>
             <div style="padding: 8px;">
               <button onclick="handleLogout()" style="width: 100%; padding: 12px; background: transparent; border: none; color: #EF4444; font-size: 0.9rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 8px;">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 18px; height: 18px;">
@@ -370,6 +377,12 @@
       </div>
     </div>
   </header>
+
+  <!-- Emulation Banner (shown when admin is emulating another user) -->
+  <div id="emulationBanner" style="display: none; background: #7C3AED; color: white; padding: 8px 16px; text-align: center; font-size: 0.85rem; font-weight: 600;">
+    <span id="emulationText">Viewing as: </span>
+    <button onclick="stopEmulation()" style="background: white; color: #7C3AED; border: none; padding: 4px 12px; border-radius: 4px; font-weight: 600; margin-left: 12px; cursor: pointer;">Stop</button>
+  </div>
 
   <!-- Filter Bar -->
   <div class="filter-bar">
@@ -526,6 +539,29 @@
       if (wrapper && menu && !wrapper.contains(e.target)) menu.style.display = 'none';
     });
 
+    // Emulation functions (admin only)
+    async function populateEmulateDropdown() {
+      const select = document.getElementById('emulateSelect');
+      if (!select) return;
+      const users = await getAllRosterUsers();
+      const currentEmulated = getEmulatedEmail();
+      select.innerHTML = '<option value="">-- Select User --</option>' +
+        users.map(u => {
+          const selected = currentEmulated && currentEmulated.toLowerCase() === u.email.toLowerCase();
+          return `<option value="${u.email}" ${selected ? 'selected' : ''}>${u.name} (${u.role}${u.player ? ' - ' + u.player : ''})</option>`;
+        }).join('');
+    }
+    function emulateUser(email) {
+      if (!email) { clearEmulation(); } else { setEmulatedEmail(email); }
+      window.location.reload();
+    }
+    function stopEmulation() { clearEmulation(); window.location.reload(); }
+    function showEmulationBanner(emulatedEmail) {
+      const banner = document.getElementById('emulationBanner');
+      const text = document.getElementById('emulationText');
+      if (banner && text) { text.textContent = 'Viewing as: ' + emulatedEmail; banner.style.display = 'block'; }
+    }
+
     let games = [];
     let players = [];
     let highlights = [];
@@ -556,6 +592,12 @@
         if (userInfo.allPlayers && userInfo.allPlayers.length > 1) {
           populatePlayerSwitcher(userInfo.allPlayers, userInfo.player ? userInfo.player.id : null);
         }
+        // Show emulation controls for admin
+        if (userInfo.isRealAdmin) {
+          const emulateSection = document.getElementById('emulateSection');
+          if (emulateSection) { emulateSection.style.display = 'block'; populateEmulateDropdown(); }
+        }
+        if (userInfo.isEmulating) { showEmulationBanner(userInfo.emulatedEmail); }
 
         // Show upload button for all authenticated users (including viewers)
         document.getElementById('uploadBtn').style.display = 'flex';
