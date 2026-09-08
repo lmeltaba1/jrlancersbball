@@ -72,30 +72,29 @@
     <button onclick="stopEmulation()" style="background: white; color: #7C3AED; border: none; padding: 4px 12px; border-radius: 4px; font-weight: 600; margin-left: 12px; cursor: pointer;">Stop</button>
   </div>
 
-  <!-- Fixed Header Section (stays visible during scroll) -->
-  <div id="sticky-header" style="position: fixed; top: 58px; left: 0; right: 0; z-index: 10; background: var(--bg-body); padding: 12px; max-width: 600px; margin: 0 auto;">
-    <!-- Season Record -->
-    <div class="card" style="margin-bottom: 0;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div class="card-title" style="margin-bottom: 4px;">Season Record</div>
-          <div id="season-record" style="font-size: 1.5rem; font-weight: 800; color: var(--lancers-gold);">-- - --</div>
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Sticky Section: Season Record + Filter Tabs -->
+    <div id="sticky-section" style="position: sticky; top: 0; z-index: 100; background: var(--bg-body); margin: 0 -16px; padding: 0 16px;">
+      <!-- Season Record -->
+      <div class="card" style="margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div class="card-title" style="margin-bottom: 4px;">Season Record</div>
+            <div id="season-record" style="font-size: 1.5rem; font-weight: 800; color: var(--lancers-gold);">-- - --</div>
+          </div>
+          <div id="record-breakdown" style="text-align: right; font-size: 0.75rem; color: var(--text-secondary);"></div>
         </div>
-        <div id="record-breakdown" style="text-align: right; font-size: 0.75rem; color: var(--text-secondary);"></div>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="section-tabs" style="padding-bottom: 8px;">
+        <button class="section-tab active" data-filter="all">All</button>
+        <button class="section-tab" data-filter="games">Games</button>
+        <button class="section-tab" data-filter="parkrock">Park Rock</button>
+        <button class="section-tab" data-filter="cnr">CNR</button>
       </div>
     </div>
-
-    <!-- Filter Tabs -->
-    <div class="section-tabs" style="margin-top: 8px;">
-      <button class="section-tab active" data-filter="all">All</button>
-      <button class="section-tab" data-filter="games">Games</button>
-      <button class="section-tab" data-filter="parkrock">Park Rock</button>
-      <button class="section-tab" data-filter="cnr">CNR</button>
-    </div>
-  </div>
-
-  <!-- Main Content -->
-  <main class="main-content" style="padding-top: 130px;">
     <!-- Schedule List -->
     <div class="schedule-list" id="schedule-list">
       <div style="text-align: center; padding: 40px;">
@@ -266,6 +265,14 @@
     };
 
     document.addEventListener('DOMContentLoaded', async function() {
+      // Set sticky section position based on actual header height
+      const header = document.querySelector('header.header');
+      const stickySection = document.getElementById('sticky-section');
+      if (header && stickySection) {
+        const headerHeight = header.offsetHeight;
+        stickySection.style.top = headerHeight + 'px';
+      }
+
       // Require auth - all users can view schedule
       requireAuth().then(async function(userInfo) {
         currentUserInfo = userInfo; // Store for use in renderSchedule
@@ -643,9 +650,12 @@
         const eventDate = new Date(year, month - 1, day);
         if (eventDate >= now) {
           setTimeout(() => {
-            // Get sticky header height for offset (main header 60px + sticky section ~100px + padding)
-            const stickyHeader = document.getElementById('sticky-header');
-            const headerOffset = 60 + (stickyHeader ? stickyHeader.offsetHeight : 100) + 20;
+            // Calculate offset from actual element heights
+            const header = document.querySelector('header.header');
+            const stickySection = document.getElementById('sticky-section');
+            const headerHeight = header ? header.offsetHeight : 60;
+            const stickyHeight = stickySection ? stickySection.offsetHeight : 100;
+            const headerOffset = headerHeight + stickyHeight + 10;
             const cardTop = card.getBoundingClientRect().top + window.pageYOffset - headerOffset;
             window.scrollTo({ top: cardTop, behavior: 'smooth' });
             // Add highlight effect
