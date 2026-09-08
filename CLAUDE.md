@@ -144,6 +144,11 @@ Every stat action during live tracking logs an event to `gameStats/{gameId}.even
 - `playHighlight(url, mediaType)` - Opens fullscreen modal for video/image playback
 - Navigation to highlights.html pre-filters by current game via URL param
 
+### Inline Highlight Upload
+- "Add" button opens modal directly on game-detail page (no navigation away)
+- Upload flow: Select file → Auto-match to play-by-play → Confirm or select player
+- Uses same timestamp matching logic as highlights.html
+
 ## Home Page Features
 
 - Player/Coach banner when logged in
@@ -191,8 +196,12 @@ Key functions in `highlights.html`:
 - Simulated: `url` field (fake example.com URLs)
 - Code checks both: `highlight.downloadUrl || highlight.url`
 
-## Bottom Navigation (7 tabs)
+## Navigation
 
+### Back Button
+All pages (except Home) have a back arrow (←) in the header that uses `history.back()` to return to the exact previous page. This enables natural navigation flow when drilling down through the app.
+
+### Bottom Navigation (7 tabs)
 Order on all pages: Home → Roster → Schedule → Messages → Plays → Stats → Highlights
 
 Note: Messages and Plays hidden for viewers via `hideViewerRestrictedNav()`
@@ -229,6 +238,16 @@ lancers/
 └── README.md              # Project readme
 ```
 
+## Push Notifications (Cloud Functions)
+
+| Function | Trigger | Message |
+|----------|---------|---------|
+| `onNewMessage` | New chat message | "{sender}: {message}" |
+| `onGameStarted` | gamePhase changes to 'Q1' | "Game Started! Lancers vs {opponent} is now LIVE!" |
+| `onGameEnded` | gamePhase changes to 'final' | "Game Over - {result}! Lancers {score} - {opponent} {score}. Now is the time to upload highlights!" |
+| `sendAttendanceReminders` | Daily 9 AM | Reminds parents who haven't RSVP'd for games/practices in next 4 days |
+| `sendAnnouncement` | Manual (coach) | Custom announcement to all users |
+
 ## Development & Testing Tools
 
 ### Season Simulation (simulate-season.html)
@@ -240,11 +259,12 @@ Requires clicking **Run Full Simulation** button. Creates:
 - Simulated highlights with fake URLs (example.com) matching play-by-play timestamps
 
 Buttons:
-- **Delete Fake Highlights Only** - Removes highlights with example.com URLs without re-running simulation
+- **Run Full Simulation** - Clears and regenerates all simulation data
+- **Delete Fake Highlights Only** - Removes highlights with example.com URLs
+- **Delete Incomplete Games** - Removes gameStats docs without gamePhase='final'
 
 ## Known Issues / Future Work
 
 None currently blocking. Potential enhancements:
-- Push notifications for chat (currently only on new messages, not mentions)
 - Video compression before upload
 - Multi-player tagging in highlights
