@@ -259,7 +259,7 @@
     .upload-submit {
       width: 100%;
       padding: 14px;
-      background: var(--lancers-gold);
+      background: #fff;
       color: #000;
       border: none;
       border-radius: 8px;
@@ -270,6 +270,9 @@
     .upload-submit:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+    .upload-submit.uploading {
+      background: var(--lancers-gold);
     }
 
     /* Video Modal */
@@ -518,7 +521,9 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.min.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
   <script>
     // Profile menu functions
@@ -576,6 +581,100 @@
     let games = [];
     let players = [];
     let highlights = [];
+
+    // Parse MP4 creation_time from mvhd atom (browser-compatible)
+    async function getMp4CreationTime(file) {
+      const buffer = await file.slice(0, Math.min(file.size, 50 * 1024)).arrayBuffer(); // Read first 50KB
+      const view = new DataView(buffer);
+      const len = view.byteLength;
+
+      // Search for 'mvhd' atom (movie header)
+      for (let i = 0; i < len - 20; i++) {
+        // Look for 'mvhd' signature
+        if (view.getUint8(i) === 0x6D && view.getUint8(i+1) === 0x76 &&
+            view.getUint8(i+2) === 0x68 && view.getUint8(i+3) === 0x64) {
+          // Found mvhd at position i
+          const version = view.getUint8(i + 4);
+          let creationTime;
+
+          if (version === 0) {
+            // 32-bit timestamps
+            creationTime = view.getUint32(i + 8);
+          } else {
+            // 64-bit timestamps (version 1) - read as two 32-bit parts
+            const high = view.getUint32(i + 8);
+            const low = view.getUint32(i + 12);
+            creationTime = high * 0x100000000 + low;
+          }
+
+          // Convert from Mac HFS+ epoch (1904) to Unix epoch (1970)
+          // Difference is 2082844800 seconds
+          const unixTime = (creationTime - 2082844800) * 1000;
+          const date = new Date(unixTime);
+
+          // Sanity check - date should be reasonable (after 2000, before 2100)
+          if (date.getFullYear() >= 2000 && date.getFullYear() <= 2100) {
+            return date;
+          }
+        }
+      }
+      return null;
+    }
+
+    // Extract capture timestamp from file (EXIF for photos, MP4 metadata for videos)
+    async function getCaptureTimestamp(file) {
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+
+      // For photos: Read EXIF DateTimeOriginal
+      if (isImage && typeof EXIF !== 'undefined') {
+        return new Promise((resolve) => {
+          EXIF.getData(file, function() {
+            // Try DateTimeOriginal first (when photo was taken)
+            // Then DateTimeDigitized, then DateTime
+            const dateOriginal = EXIF.getTag(this, 'DateTimeOriginal');
+            const dateDigitized = EXIF.getTag(this, 'DateTimeDigitized');
+            const dateTime = EXIF.getTag(this, 'DateTime');
+
+            const exifDate = dateOriginal || dateDigitized || dateTime;
+
+            if (exifDate) {
+              // EXIF format: "YYYY:MM:DD HH:MM:SS" -> "YYYY-MM-DD HH:MM:SS"
+              const normalized = exifDate.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+              const parsed = new Date(normalized);
+              if (!isNaN(parsed.getTime())) {
+                console.log('📷 Using EXIF date:', exifDate, '->', parsed);
+                resolve(parsed);
+                return;
+              }
+            }
+
+            console.log('📷 No EXIF date, using lastModified:', new Date(file.lastModified));
+            resolve(new Date(file.lastModified));
+          });
+        });
+      }
+
+      // For videos: Read MP4/MOV creation time from mvhd atom
+      if (isVideo) {
+        try {
+          const creationTime = await getMp4CreationTime(file);
+          if (creationTime) {
+            console.log('🎬 Using MP4 creation time:', creationTime);
+            return creationTime;
+          }
+        } catch (e) {
+          console.log('🎬 MP4 metadata parse error:', e.message);
+        }
+
+        console.log('🎬 No MP4 creation time, using lastModified:', new Date(file.lastModified));
+        return new Date(file.lastModified);
+      }
+
+      // Fallback for other file types
+      console.log('📁 Using lastModified:', new Date(file.lastModified));
+      return new Date(file.lastModified);
+    }
     let currentUser = null;
     // currentUserInfo is declared in firebase-config.js
     let selectedFile = null;
@@ -667,8 +766,12 @@
       const gameFilter = document.getElementById('gameFilter');
       const playerFilter = document.getElementById('playerFilter');
 
+      // Only show past/current games (not future)
+      const today = typeof getCurrentDate === 'function' ? getCurrentDate() : new Date();
+      const todayStr = today.toISOString().split('T')[0];
+
       games.forEach(game => {
-        if (game.opponent) {
+        if (game.opponent && game.date <= todayStr) {
           const opt = document.createElement('option');
           opt.value = game.id;
           opt.textContent = `vs ${game.opponent} - ${formatDate(game.date)}`;
@@ -688,8 +791,12 @@
       const gameSelect = document.getElementById('uploadGame');
       const playerSelect = document.getElementById('uploadPlayer');
 
+      // Only show past games (highlights can only be uploaded for games that happened)
+      const today = typeof getCurrentDate === 'function' ? getCurrentDate() : new Date();
+      const todayStr = today.toISOString().split('T')[0];
+
       games.forEach(game => {
-        if (game.opponent) {
+        if (game.opponent && game.date <= todayStr) {
           const opt = document.createElement('option');
           opt.value = game.id;
           opt.textContent = `vs ${game.opponent} - ${formatDate(game.date)}`;
@@ -820,7 +927,10 @@
       document.getElementById('uploadGame').value = '';
       document.getElementById('uploadPlayer').value = '';
       document.getElementById('uploadCaption').value = '';
-      document.getElementById('uploadSubmit').disabled = true;
+      const submitBtn = document.getElementById('uploadSubmit');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Upload';
+      submitBtn.classList.remove('uploading');
       document.getElementById('progressBar').classList.remove('active');
       document.getElementById('progressFill').style.width = '0%';
       document.getElementById('suggestionBanner').style.display = 'none';
@@ -869,89 +979,92 @@
       validateUploadForm();
     }
 
-    // Smart matching based on file timestamp
+    // Smart matching based on file timestamp (EXIF for photos, MP4 metadata for videos)
     async function suggestMatchFromTimestamp(file) {
       if (!db) return;
 
-      const fileTime = file.lastModified || Date.now();
-      const fileDate = new Date(fileTime);
       const suggestionBanner = document.getElementById('suggestionBanner');
       const suggestionText = document.getElementById('suggestionText');
-
-      // Hide banner initially
       suggestionBanner.style.display = 'none';
 
+      // Show loading state
+      suggestionText.textContent = 'Reading file metadata...';
+      suggestionBanner.style.display = 'block';
+      suggestionBanner.style.background = 'var(--bg-elevated)';
+
       try {
-        // Find games that were live around that time
-        // Query gameStats for games that started before and ended after the file timestamp
+        // Get capture timestamp from EXIF (photo) or MP4 metadata (video)
+        const captureTime = await getCaptureTimestamp(file);
+        const captureMs = captureTime.getTime();
+
+        console.log('🔍 Searching for play-by-play match at:', captureTime.toLocaleString());
+
+        // Query all gameStats with events
         const gamesSnapshot = await db.collection('gameStats').get();
-        let matchedGame = null;
-        let matchedEvents = [];
+        let bestMatch = null;
+        let bestDiff = Infinity;
 
         gamesSnapshot.forEach(doc => {
           const data = doc.data();
-          const startedAt = data.startedAt?.toDate?.() || data.startedAt;
-          const endedAt = data.endedAt?.toDate?.() || data.endedAt;
+          if (!data.events || data.events.length === 0) return;
 
-          if (!startedAt) return;
+          // Search through scoring events for this game
+          data.events.forEach(event => {
+            // Only match scoring plays (points) with a player
+            if (event.type !== 'stat' || event.stat !== 'points' || !event.playerId) return;
+            if (event.team === 'opponent') return; // Skip opponent scores
 
-          // Check if file was created during game (with 30 min buffer on each end)
-          const startTime = new Date(startedAt).getTime() - 30 * 60 * 1000; // 30 min before
-          const endTime = endedAt ? new Date(endedAt).getTime() + 30 * 60 * 1000 : startTime + 3 * 60 * 60 * 1000; // 30 min after or 3 hours default
+            const eventTime = event.timestamp?.toDate?.()?.getTime() ||
+                              (event.timestamp?.seconds ? event.timestamp.seconds * 1000 : 0);
+            if (!eventTime) return;
 
-          if (fileTime >= startTime && fileTime <= endTime) {
-            matchedGame = { id: doc.id, ...data };
-
-            // Find events within ±2 minutes of file timestamp
-            if (data.events && data.events.length > 0) {
-              matchedEvents = data.events.filter(e => {
-                const eventTime = e.timestamp?.toDate?.()?.getTime() || e.timestamp?.seconds * 1000;
-                return eventTime && Math.abs(eventTime - fileTime) < 2 * 60 * 1000;
-              });
+            // Highlight should be captured 0-8 seconds BEFORE the event
+            const diff = eventTime - captureMs;
+            if (diff >= 0 && diff < 8000 && diff < bestDiff) {
+              bestDiff = diff;
+              bestMatch = {
+                gameId: data.gameId || parseInt(doc.id),
+                playerId: event.playerId,
+                event: event,
+                diffSeconds: Math.round(diff / 1000)
+              };
             }
-          }
+          });
         });
 
-        if (matchedGame) {
+        if (bestMatch) {
+          console.log('✅ Found match:', bestMatch.event.description, `(${bestMatch.diffSeconds}s before recording)`);
+
           // Pre-select game dropdown
           const gameSelect = document.getElementById('uploadGame');
-          const gameId = matchedGame.gameId || matchedGame.id;
-          if (gameSelect.querySelector(`option[value="${gameId}"]`)) {
-            gameSelect.value = gameId;
+          if (gameSelect.querySelector(`option[value="${bestMatch.gameId}"]`)) {
+            gameSelect.value = bestMatch.gameId;
           }
 
-          let suggestionMessage = '';
-
-          // Check if we have matching events with player info
-          const playerEvents = matchedEvents.filter(e => e.playerId && e.type === 'stat');
-
-          if (playerEvents.length === 1) {
-            // Single player match - pre-select
-            const playerId = playerEvents[0].playerId;
-            const playerSelect = document.getElementById('uploadPlayer');
-            if (playerSelect.querySelector(`option[value="${playerId}"]`)) {
-              playerSelect.value = playerId;
-            }
-            suggestionMessage = `Matched: ${playerEvents[0].description}`;
-          } else if (playerEvents.length > 1) {
-            suggestionMessage = `Game matched! ${playerEvents.length} plays found near this time`;
-          } else {
-            // Get opponent name from schedule
-            const gameOption = document.getElementById('uploadGame').querySelector(`option[value="${gameId}"]`);
-            const gameName = gameOption ? gameOption.textContent : 'Game';
-            suggestionMessage = `Auto-matched to ${gameName}`;
+          // Pre-select player dropdown
+          const playerSelect = document.getElementById('uploadPlayer');
+          if (playerSelect.querySelector(`option[value="${bestMatch.playerId}"]`)) {
+            playerSelect.value = bestMatch.playerId;
           }
 
-          // Show suggestion banner
-          if (suggestionMessage) {
-            suggestionText.textContent = suggestionMessage;
-            suggestionBanner.style.display = 'block';
-          }
+          // Show success banner
+          suggestionText.textContent = `✓ Matched: ${bestMatch.event.description}`;
+          suggestionBanner.style.background = 'rgba(34, 197, 94, 0.2)';
+          suggestionBanner.style.display = 'block';
 
           validateUploadForm();
+        } else {
+          // No match found - show message prompting manual selection
+          console.log('❌ No play-by-play match found within 8 seconds');
+          suggestionText.textContent = 'No auto-match found. Please select game and player.';
+          suggestionBanner.style.background = 'rgba(239, 68, 68, 0.15)';
+          suggestionBanner.style.display = 'block';
         }
       } catch (error) {
         console.log('Smart match error:', error);
+        suggestionText.textContent = 'Could not read file metadata. Please select game and player.';
+        suggestionBanner.style.background = 'rgba(239, 68, 68, 0.15)';
+        suggestionBanner.style.display = 'block';
       }
     }
 
@@ -1012,6 +1125,13 @@
 
       const submitBtn = document.getElementById('uploadSubmit');
       submitBtn.disabled = true;
+      submitBtn.classList.add('uploading');
+      submitBtn.textContent = 'Reading metadata...';
+
+      // Extract capture timestamp (EXIF for photos, lastModified for videos)
+      const captureTime = await getCaptureTimestamp(selectedFile);
+      console.log('Capture timestamp:', captureTime);
+
       submitBtn.textContent = 'Uploading...';
 
       const progressBar = document.getElementById('progressBar');
@@ -1053,6 +1173,7 @@
             alert('Upload failed. Please try again.');
             submitBtn.disabled = false;
             submitBtn.textContent = 'Upload';
+            submitBtn.classList.remove('uploading');
           },
           async () => {
             // Upload complete - get download URL
@@ -1069,7 +1190,7 @@
               downloadUrl: downloadUrl,
               thumbnailUrl: thumbnailUrl,
               caption: caption,
-              timestamp: firebase.firestore.FieldValue.serverTimestamp()
+              timestamp: firebase.firestore.Timestamp.fromDate(captureTime)
             });
 
             closeUploadModal();
@@ -1080,6 +1201,7 @@
         alert('Upload failed. Please try again.');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Upload';
+        submitBtn.classList.remove('uploading');
       }
     }
 

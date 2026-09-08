@@ -4,16 +4,16 @@
 
 This is a mobile-first web app for managing a youth basketball team (Jr. Lancers, 5th grade boys). Built with vanilla HTML/CSS/JavaScript and Firebase backend. No build step required.
 
-## Current State (as of Sept 2024)
+## Current State (as of Sept 2026)
 
-The app is fully functional with all core features implemented:
+The app is fully functional with all core features implemented. **Season simulation is active** with 3 completed games (Dec 5, 6, 12) containing full play-by-play event logs and simulated highlights.
 
 ### Completed Features
 
 1. **Home (index.html)** - Dashboard with next game, volunteer stats, live stats button
 2. **Roster (roster.html)** - Player cards, parent directory, player profile modals with stats and highlights, viewer management
 3. **Schedule (schedule.html)** - Season schedule with game cards
-4. **Game Detail (game-detail.html)** - Individual game info, attendance, volunteers, highlights
+4. **Game Detail (game-detail.html)** - Individual game info, attendance, volunteers, highlights, play-by-play
 5. **Messages (messages.html)** - 3-tab messaging hub (parents/coaches only):
    - **Group Chat** - Real-time team messaging (default tab)
    - **Posts** - Coach announcements (coaches can post, all can view)
@@ -111,6 +111,39 @@ The app is fully functional with all core features implemented:
 - Button links directly to game (no selection needed)
 - Green button for scorekeeper/coach, blue for viewers
 
+### Play-by-Play Event Logging
+
+Every stat action during live tracking logs an event to `gameStats/{gameId}.events[]`:
+
+```javascript
+{
+  id: "evt-{gameId}-{n}",
+  timestamp: Firestore.Timestamp,
+  gamePhase: "Q1" | "Q2" | "halftime" | "Q3" | "Q4" | "OT" | "final",
+  type: "stat" | "timeout" | "phase",
+  description: "Grant W. scores 3-pointer",
+  playerId: 3,           // For player stats
+  stat: "points",        // points, rebounds, assists, steals, fouls, turnovers
+  value: 3,
+  team: "lancers" | "opponent",
+  lancersScore: 12,      // Running score at time of event
+  opponentScore: 8
+}
+```
+
+## Game Detail Features (game-detail.html)
+
+### Play-by-Play Section
+- Shows chronological event feed for completed games
+- Groups events by quarter with headers
+- Scoring events show highlight icon if matched highlight exists
+- Click play button opens fullscreen video/image modal
+
+### Highlight-Event Matching
+- Highlights linked to events by comparing timestamps (within 8 seconds)
+- `playHighlight(url, mediaType)` - Opens fullscreen modal for video/image playback
+- Navigation to highlights.html pre-filters by current game via URL param
+
 ## Home Page Features
 
 - Player/Coach banner when logged in
@@ -136,6 +169,27 @@ Recent plays added: Box, Stack, Triangle, Dub (inbound plays)
 - Embedded in: game-detail.html, roster.html player modals
 - Main page: highlights.html with game/player filters
 - URL params: `?game=5`, `?player=3`, `?upload=true`
+
+### Smart Timestamp Matching (NEW)
+
+When uploading highlights, the app reads the file's capture timestamp and auto-matches to play-by-play events:
+
+1. **Photos**: Reads EXIF `DateTimeOriginal` via exif-js library
+2. **Videos**: Reads MP4 `creation_time` from mvhd atom (inline parser, handles Mac HFS+ epoch 1904)
+3. **Matching Logic**: Finds scoring events where highlight was captured 0-8 seconds BEFORE the event timestamp
+4. **Auto-populate**: If match found, game and player dropdowns are pre-selected
+5. **Visual Feedback**: Red banner if no match found, green banner if match found
+
+Key functions in `highlights.html`:
+- `getCaptureTimestamp(file)` - Extracts timestamp from EXIF or MP4 metadata
+- `getMp4CreationTime(file)` - Inline MP4 parser for creation_time
+- `suggestMatchFromTimestamp(file)` - Searches all games' events for matches
+
+### Highlight Fields
+
+- Real uploads: `downloadUrl` field (Firebase Storage URL)
+- Simulated: `url` field (fake example.com URLs)
+- Code checks both: `highlight.downloadUrl || highlight.url`
 
 ## Bottom Navigation (7 tabs)
 
@@ -175,6 +229,40 @@ lancers/
 └── README.md              # Project readme
 ```
 
+## Development & Testing Tools
+
+### Season Simulation (simulate-season.html)
+
+**WARNING**: This page auto-runs on load and WIPES all data (gameStats, volunteers, attendance, highlights).
+
+Creates:
+- Volunteers for games 1-6
+- Attendance for games 1-6
+- Completed game stats for games 1-3 with full play-by-play events
+- Simulated highlights with fake URLs (example.com) matching play-by-play timestamps
+
+Buttons:
+- **Delete Fake Highlights Only** - Removes highlights with example.com URLs without re-running simulation
+
+### Test Highlight Files
+
+Located in `/Users/meltabargerl/Downloads/`:
+
+**MATCH files** (should auto-populate game & player on upload):
+- `MATCH_game1_Grant.mp4` - 3 sec before Grant's 3-pointer (Game 1, Dec 5)
+- `MATCH_game1_Camden.mp4` - 5 sec before Camden's 2 points (Game 1, Dec 5)
+- `MATCH_game2_Camden.mp4` - 4 sec before Camden's 2 points (Game 2, Dec 6)
+- `MATCH_game3_Rylan.mp4` - 2 sec before Rylan's 2 points (Game 3, Dec 12)
+
+**NOMATCH files** (require manual game/player selection):
+- `NOMATCH_random_time.mp4` - Nov 1, no game
+- `NOMATCH_too_early.mp4` - Dec 5, 2 min before any event
+- `NOMATCH_wrong_date.mp4` - Jan 15, wrong date
+
+To recreate test files after re-simulation:
+1. Query current events: `curl "https://firestore.googleapis.com/v1/projects/lancers-bball/databases/(default)/documents/gameStats/1"`
+2. Create MP4s with `ffmpeg -metadata creation_time="TIMESTAMP"` set 1-7 seconds before event timestamps
+
 ## Known Issues / Future Work
 
 None currently blocking. Potential enhancements:
@@ -182,3 +270,4 @@ None currently blocking. Potential enhancements:
 - Video compression before upload
 - Multi-player tagging in highlights
 - Season stats aggregation page
+- Fix simulate-season.html to not auto-run (require button click)

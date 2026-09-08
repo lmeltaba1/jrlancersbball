@@ -12,6 +12,7 @@
 <body>
 <h1>Season Simulation</h1>
 <p>This will clear gameStats, volunteers, attendance, and highlights, then create fresh simulation data.</p>
+<button onclick="deleteFakeHighlights()" style="background: #EF4444; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-bottom: 10px;">Delete Fake Highlights Only</button>
 <div id="status">Loading...</div>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -62,6 +63,45 @@ const GAMES = [
 function log(msg) {
   document.getElementById('status').innerHTML += msg + '<br>';
   document.getElementById('status').scrollTop = document.getElementById('status').scrollHeight;
+}
+
+async function deleteFakeHighlights() {
+  document.getElementById('status').innerHTML = '';
+  log('<b>DELETING FAKE HIGHLIGHTS</b>');
+  log('================');
+  log('');
+
+  if (!auth.currentUser) {
+    log('<span style="color: #EF4444;">Not logged in. Please wait for auth...</span>');
+    return;
+  }
+
+  log('Finding highlights with fake URLs (example.com)...');
+
+  try {
+    const snapshot = await db.collection('highlights').get();
+    let deleted = 0;
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const url = data.url || data.downloadUrl || '';
+
+      if (url.includes('example.com')) {
+        await doc.ref.delete();
+        deleted++;
+        log(`  Deleted: ${doc.id} (${data.playerName || 'Unknown'})`);
+      }
+    }
+
+    log('');
+    log('================');
+    log(`<b style="color: #22C55E;">Done! Deleted ${deleted} fake highlights.</b>`);
+    log('');
+    log('<a href="highlights.html">View Highlights</a>');
+  } catch (e) {
+    log(`<span style="color: #EF4444;">ERROR: ${e.message}</span>`);
+    console.error(e);
+  }
 }
 
 function randomInt(min, max) {
@@ -347,6 +387,10 @@ auth.onAuthStateChanged(async user => {
         const player = PLAYERS.find(p => p.id === event.playerId);
         if (!player) continue;
 
+        // Highlight captured 1-7 seconds BEFORE scorekeeper records (realistic timing)
+        const eventTime = event.timestamp.toDate().getTime();
+        const highlightTime = new Date(eventTime - randomInt(1000, 7000)); // 1-7 sec before
+
         highlightNum++;
         await db.collection('highlights').add({
           gameId: gameId,
@@ -356,14 +400,14 @@ auth.onAuthStateChanged(async user => {
           url: `https://storage.example.com/highlights/game${gameId}_highlight${highlightNum}.mp4`,
           thumbnailUrl: `https://storage.example.com/thumbnails/game${gameId}_highlight${highlightNum}.jpg`,
           description: event.description,
-          timestamp: event.timestamp, // EXACT match for autotagging test
+          timestamp: firebase.firestore.Timestamp.fromDate(highlightTime),
           uploadedBy: pickRandom(VOLUNTEERS).email,
           uploadedAt: firebase.firestore.FieldValue.serverTimestamp(),
           _matchedEventId: event.id // For verification
         });
 
-        log(`  Highlight ${highlightNum}: Game ${gameId} - ${player.firstName} @ ${event.timestamp.toDate().toLocaleTimeString()}`);
-        log(`    -> Matches: "${event.description}"`);
+        log(`  Highlight ${highlightNum}: Game ${gameId} - ${player.firstName}`);
+        log(`    -> Captured ${Math.round((eventTime - highlightTime.getTime())/1000)}s before: "${event.description}"`);
       }
     }
 

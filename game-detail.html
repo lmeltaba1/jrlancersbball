@@ -182,7 +182,7 @@
       </svg>
       <span>Stats</span>
     </a>
-    <a href="highlights.html" class="nav-item">
+    <a href="highlights.html" class="nav-item" id="highlightsNavLink">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
       </svg>
@@ -327,6 +327,12 @@
         if (!game) {
           showError();
           return;
+        }
+
+        // Update highlights nav link to include game filter
+        const highlightsNav = document.getElementById('highlightsNavLink');
+        if (highlightsNav) {
+          highlightsNav.href = `highlights.html?game=${game.id}`;
         }
 
         // Load highlights for this game
@@ -684,9 +690,27 @@
       console.log('Events by phase:', gameEvents.reduce((acc, e) => { acc[e.gamePhase] = (acc[e.gamePhase] || 0) + 1; return acc; }, {}));
 
       // Build map of eventId -> highlight for quick lookup
+      // Supports explicit eventId, _matchedEventId, or timestamp matching (within 2 min)
       const highlightsByEventId = {};
       (highlights || []).forEach(h => {
+        // Direct eventId match
         if (h.eventId) highlightsByEventId[h.eventId] = h;
+        // Simulation's _matchedEventId field
+        if (h._matchedEventId) highlightsByEventId[h._matchedEventId] = h;
+        // Timestamp matching - highlight captured 0-8 sec BEFORE scorekeeper records event
+        if (h.timestamp && h.playerId) {
+          const hTime = h.timestamp.toDate ? h.timestamp.toDate().getTime() : new Date(h.timestamp).getTime();
+          gameEvents.forEach(event => {
+            if (event.id && event.playerId === h.playerId && event.stat === 'points') {
+              const eTime = event.timestamp?.toDate ? event.timestamp.toDate().getTime() : 0;
+              // Highlight should be 0-8 sec BEFORE the event
+              const diff = eTime - hTime;
+              if (diff >= 0 && diff < 8 * 1000) {
+                highlightsByEventId[event.id] = h;
+              }
+            }
+          });
+        }
       });
 
       // Group events by game phase
@@ -740,7 +764,8 @@
 
           const scoreDisplay = isScoring ? `<span style="font-weight: 700; color: ${isOpponent ? '#EF4444' : 'var(--lancers-gold)'}; min-width: 45px; text-align: right;">${event.lancersScore}-${event.opponentScore}</span>` : '';
           const highlight = event.id ? highlightsByEventId[event.id] : null;
-          const highlightIcon = highlight ? `<span onclick="scrollToHighlight('${highlight.id}')" style="cursor: pointer; color: #10B981; font-size: 1rem;" title="View highlight">&#9658;</span>` : '';
+          const highlightUrl = highlight ? (highlight.downloadUrl || highlight.url || '') : '';
+          const highlightIcon = highlight ? `<span onclick="playHighlight('${highlightUrl}', '${highlight.mediaType || highlight.type || 'video'}')" style="cursor: pointer; color: #10B981; font-size: 1rem;" title="View highlight">&#9658;</span>` : '';
           html += `
             <div style="padding: 6px 10px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 8px; background: ${bgColor};">
               <span style="color: ${isTimeout ? '#000' : 'var(--text-muted)'}; font-size: 0.7rem; min-width: 50px;">${time}</span>
@@ -755,12 +780,40 @@
       pbpContent.innerHTML = html || '<div style="padding: 16px; text-align: center; color: var(--text-secondary);">No play-by-play data</div>';
     }
 
-    function scrollToHighlight(highlightId) {
-      const highlightEl = document.getElementById('highlight-' + highlightId);
-      if (highlightEl) {
-        highlightEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        highlightEl.style.animation = 'pulse 0.5s ease-in-out 2';
+    function playHighlight(url, mediaType) {
+      if (!url) {
+        alert('Highlight not available');
+        return;
       }
+
+      // Create modal overlay
+      const modal = document.createElement('div');
+      modal.id = 'highlightModal';
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px;';
+      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+      let content;
+      if (mediaType === 'video') {
+        content = document.createElement('video');
+        content.src = url;
+        content.controls = true;
+        content.autoplay = true;
+        content.style.cssText = 'max-width: 100%; max-height: 90vh; border-radius: 8px;';
+      } else {
+        content = document.createElement('img');
+        content.src = url;
+        content.style.cssText = 'max-width: 100%; max-height: 90vh; border-radius: 8px;';
+      }
+
+      // Close button
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '&times;';
+      closeBtn.style.cssText = 'position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: #fff; font-size: 2rem; width: 44px; height: 44px; border-radius: 50%; cursor: pointer;';
+      closeBtn.onclick = () => modal.remove();
+
+      modal.appendChild(content);
+      modal.appendChild(closeBtn);
+      document.body.appendChild(modal);
     }
 
     function getEventTypeColor(type) {

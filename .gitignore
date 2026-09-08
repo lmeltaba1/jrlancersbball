@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+functions/node_modules/
+
+# Lock files (regenerated on install)
+package-lock.json
+functions/package-lock.json
+
+# Firebase
+.firebase/
+
+# Dev scripts
+scripts/
+functions/seed-highlights.js
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
