@@ -504,7 +504,7 @@ exports.triggerAttendanceReminders = onRequest(async (request, response) => {
 });
 
 // Sync schedule and roster from hosted JSON to Firestore
-exports.syncConfig = onRequest(async (request, response) => {
+exports.syncConfig = onRequest({ invoker: 'public' }, async (request, response) => {
   const apiKey = request.query.key;
   if (apiKey !== 'lancers2026') {
     response.status(403).send('Unauthorized');

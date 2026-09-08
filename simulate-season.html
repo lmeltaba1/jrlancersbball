@@ -12,8 +12,9 @@
 <body>
 <h1>Season Simulation</h1>
 <p>This will clear gameStats, volunteers, attendance, and highlights, then create fresh simulation data.</p>
-<button onclick="deleteFakeHighlights()" style="background: #EF4444; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-bottom: 10px;">Delete Fake Highlights Only</button>
-<div id="status">Loading...</div>
+<button onclick="runSimulation()" style="background: #FFD700; color: #000; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-right: 10px; font-weight: bold;">Run Full Simulation</button>
+<button onclick="deleteFakeHighlights()" style="background: #EF4444; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Delete Fake Highlights Only</button>
+<div id="status" style="margin-top: 15px;">Checking auth...</div>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -254,12 +255,21 @@ function generatePlayerStats(isWin) {
   return stats;
 }
 
-auth.onAuthStateChanged(async user => {
+auth.onAuthStateChanged(user => {
   if (!user) {
     document.getElementById('status').textContent = 'Please log in first at login.html';
     return;
   }
+  document.getElementById('status').innerHTML = '<span style="color: #22C55E;">Ready.</span> Click a button above to run.';
+});
 
+async function runSimulation() {
+  if (!auth.currentUser) {
+    document.getElementById('status').textContent = 'Please log in first';
+    return;
+  }
+
+  document.getElementById('status').innerHTML = '';
   log('<b>SEASON SIMULATION</b>');
   log('================');
   log('');
@@ -427,7 +437,7 @@ auth.onAuthStateChanged(async user => {
     log(`<span style="color: #EF4444;">ERROR: ${e.message}</span>`);
     console.error(e);
   }
-});
+}
 </script>
 </body>
 </html>

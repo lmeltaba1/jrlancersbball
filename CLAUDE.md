@@ -233,9 +233,7 @@ lancers/
 
 ### Season Simulation (simulate-season.html)
 
-**WARNING**: This page auto-runs on load and WIPES all data (gameStats, volunteers, attendance, highlights).
-
-Creates:
+Requires clicking **Run Full Simulation** button. Creates:
 - Volunteers for games 1-6
 - Attendance for games 1-6
 - Completed game stats for games 1-3 with full play-by-play events
@@ -247,8 +245,6 @@ Buttons:
 ## Known Issues / Future Work
 
 None currently blocking. Potential enhancements:
-- Push notifications for chat
+- Push notifications for chat (currently only on new messages, not mentions)
 - Video compression before upload
 - Multi-player tagging in highlights
-- Season stats aggregation page
-- Fix simulate-season.html to not auto-run (require button click)
