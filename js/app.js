@@ -3,10 +3,14 @@
 // SIMULATION: Set to null for real date, or a date string for testing
 const SIMULATED_DATE = '2026-12-13';
 
-// Get current date (uses simulated date if set)
+// Get current date (uses simulated date if set, but keeps actual time)
 function getCurrentDate() {
   if (SIMULATED_DATE) {
-    return new Date(SIMULATED_DATE + 'T12:00:00');
+    const now = new Date();
+    const simDate = new Date(SIMULATED_DATE + 'T00:00:00');
+    // Use simulated date but actual current time
+    simDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+    return simDate;
   }
   return new Date();
 }

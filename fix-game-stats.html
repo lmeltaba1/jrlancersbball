@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head><title>Fix Game Stats</title>  <link rel="icon" type="image/png" href="images/lancers-logo-192.png">
+</head>
+<body>
+<h1>Fixing Game Stats - Adding isComplete flag</h1>
+<div id="status">Loading...</div>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    document.getElementById('status').textContent = 'Please log in first at login.html';
+    return;
+  }
+
+  const statusEl = document.getElementById('status');
+  statusEl.innerHTML = 'Checking game stats...<br>';
+
+  try {
+    const snapshot = await db.collection('gameStats').get();
+    let fixed = 0;
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const gameId = doc.id;
+
+      // Check if game has stats but missing isComplete
+      if (data.playerStats && !data.isComplete && data.result) {
+        // Calculate ourScore from playerStats if missing
+        let ourScore = data.ourScore || data.lancersScore;
+        if (!ourScore && data.playerStats) {
+          ourScore = Object.values(data.playerStats).reduce((sum, p) => sum + (p.points || 0), 0);
+        }
+
+        statusEl.innerHTML += `Fixing game ${gameId}: Adding isComplete=true, ourScore=${ourScore}<br>`;
+
+        await db.collection('gameStats').doc(gameId).update({
+          isComplete: true,
+          ourScore: ourScore || 0
+        });
+        fixed++;
+      } else if (data.playerStats && data.isComplete && !data.ourScore) {
+        // Has isComplete but missing ourScore
+        let ourScore = data.lancersScore;
+        if (!ourScore && data.playerStats) {
+          ourScore = Object.values(data.playerStats).reduce((sum, p) => sum + (p.points || 0), 0);
+        }
+
+        statusEl.innerHTML += `Fixing game ${gameId}: Adding ourScore=${ourScore}<br>`;
+
+        await db.collection('gameStats').doc(gameId).update({
+          ourScore: ourScore || 0
+        });
+        fixed++;
+      } else {
+        statusEl.innerHTML += `Game ${gameId}: OK (isComplete=${data.isComplete}, ourScore=${data.ourScore})<br>`;
+      }
+    }
+
+    statusEl.innerHTML += `<br><span style="color:green">Done! Fixed ${fixed} games.</span><br><a href="roster.html">Go to Roster</a>`;
+  } catch(e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    console.error(e);
+  }
+});
+</script>
+</body>
+</html>

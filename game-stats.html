@@ -142,10 +142,23 @@
       padding: 20px;
       z-index: 10;
     }
+    /* Hide the overlay for view-only mode - use card message instead */
+    body.view-only-mode .stats-panel.disabled::after {
+      display: none;
+    }
     .stats-panel.disabled .stat-btn,
     .stats-panel.disabled .timeout-btn,
     .stats-panel.disabled .action-btn.sub {
       opacity: 0.3;
+    }
+    /* Keep phase buttons clickable when panel is disabled */
+    .stats-panel.disabled .action-btn.phase,
+    .stats-panel.disabled .action-btn.ot,
+    .stats-panel.disabled .action-btn.end,
+    .stats-panel.disabled .bottom-actions {
+      pointer-events: auto;
+      position: relative;
+      z-index: 20;
     }
     .edit-btn {
       min-width: 34px;
@@ -396,6 +409,7 @@
       display: none;
     }
   </style>
+  <link rel="icon" type="image/png" href="images/lancers-logo-192.png">
 </head>
 <body>
   <header class="header">
@@ -1166,11 +1180,12 @@
           timeouts = data.timeouts || { lancers: { first: 0, second: 0, OT: 0 }, opponent: { first: 0, second: 0, OT: 0 } };
           phaseStartedAt = data.phaseStartedAt || null;
         } else if (viewOnlyMode) {
-          // View-only user and no game in progress - show message
+          // View-only user and no game in progress - show waiting message
+          document.getElementById('stats-panel').setAttribute('data-message', 'Waiting for game to start');
           document.getElementById('court-players').innerHTML = `
             <div class="card" style="text-align: center; padding: 24px;">
-              <p style="color: var(--text-secondary); margin-bottom: 8px;">No live stats available yet.</p>
-              <p style="font-size: 0.85rem; color: var(--text-muted);">The scorekeeper hasn't started tracking this game.</p>
+              <p style="color: var(--text-secondary); margin-bottom: 8px;">Waiting for game to start...</p>
+              <p style="font-size: 0.85rem; color: var(--text-muted);">The scorekeeper will begin tracking shortly.</p>
             </div>
           `;
           return;
@@ -1761,8 +1776,10 @@
       if (db) {
         await db.collection('gameStats').doc(currentGameId.toString()).update({
           isLive: false,
+          isComplete: true,
           result: result,
           finalScore: finalScore,
+          ourScore: total,
           lancersScore: total,
           opponentScore: opponentScore,
           gamePhase: 'final',
