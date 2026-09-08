@@ -147,6 +147,18 @@
       </p>
       <a href="login.html" class="btn btn-primary" style="width: 100%;">Log In</a>
     </div>
+
+    <!-- Notification Section (shown when logged in and notifications not enabled) -->
+    <div id="notificationSection" class="card" style="display: none;">
+      <button id="enableNotificationsBtn" style="width: 100%; padding: 12px; background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="enableNotifications()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        Enable Notifications
+      </button>
+      <div id="notificationError" style="display: none; text-align: center; color: #DC2626; font-size: 0.85rem; padding: 8px;"></div>
+    </div>
   </main>
 
   <!-- Bottom Navigation -->
@@ -200,6 +212,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/gamification.js"></script>
@@ -227,6 +240,108 @@
     }
 
     const leagueNames = { parkrock: 'Park Rock', cnr: 'CNR' };
+
+    // FCM Notifications
+    var messaging = null;
+    if (typeof firebase !== 'undefined' && typeof firebase.messaging === 'function') {
+      try {
+        messaging = firebase.messaging();
+      } catch (e) {
+        console.log('FCM not available:', e);
+      }
+    }
+
+    async function enableNotifications() {
+      const btn = document.getElementById('enableNotificationsBtn');
+      const errorDiv = document.getElementById('notificationError');
+
+      if (errorDiv) errorDiv.style.display = 'none';
+
+      if (!messaging) {
+        if (errorDiv) {
+          errorDiv.textContent = 'Push notifications not supported in this browser';
+          errorDiv.style.display = 'block';
+        }
+        return;
+      }
+
+      if (!auth || !auth.currentUser) {
+        if (errorDiv) {
+          errorDiv.textContent = 'Please sign in first';
+          errorDiv.style.display = 'block';
+        }
+        return;
+      }
+
+      if (btn) btn.textContent = 'Enabling...';
+
+      try {
+        if (Notification.permission === 'default') {
+          const permission = await Notification.requestPermission();
+          if (permission !== 'granted') {
+            if (errorDiv) {
+              errorDiv.textContent = 'Permission denied. Enable in browser settings.';
+              errorDiv.style.display = 'block';
+            }
+            if (btn) btn.textContent = 'Enable Notifications';
+            return;
+          }
+        } else if (Notification.permission === 'denied') {
+          if (errorDiv) {
+            errorDiv.textContent = 'Notifications blocked. Enable in browser settings.';
+            errorDiv.style.display = 'block';
+          }
+          if (btn) btn.style.display = 'none';
+          return;
+        }
+
+        const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('Service Worker registered:', swRegistration);
+
+        const token = await messaging.getToken({
+          vapidKey: 'BP4liMqNZXn23mOL1sGsutauAN88uEy1lCH3vZ3qs18_47U6zGlToDDsmM7CU0prkvyenA9bf7FIHV84HxSCqWM',
+          serviceWorkerRegistration: swRegistration
+        });
+
+        console.log('FCM Token:', token);
+
+        if (token && db) {
+          await db.collection('fcmTokens').doc(auth.currentUser.uid).set({
+            token: token,
+            uid: auth.currentUser.uid,
+            email: auth.currentUser.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          console.log('Token saved to Firestore');
+        }
+
+        const section = document.getElementById('notificationSection');
+        if (section) section.style.display = 'none';
+
+      } catch (e) {
+        console.error('Error enabling notifications:', e);
+        if (errorDiv) {
+          errorDiv.textContent = 'Error: ' + e.message;
+          errorDiv.style.display = 'block';
+        }
+        if (btn) btn.textContent = 'Enable Notifications';
+      }
+    }
+
+    function checkNotificationStatus() {
+      const section = document.getElementById('notificationSection');
+      if (!section) return;
+
+      if ('Notification' in window && auth && auth.currentUser) {
+        if (Notification.permission === 'granted' || Notification.permission === 'denied') {
+          section.style.display = 'none';
+        } else {
+          section.style.display = 'block';
+        }
+      } else {
+        section.style.display = 'none';
+      }
+    }
 
     async function getNextEvent() {
       const data = await loadSchedule();
@@ -365,7 +480,7 @@
 
       try {
         const data = await loadSchedule();
-        const now = new Date();
+        const now = getCurrentDate();
         now.setHours(0, 0, 0, 0);
 
         // Find next upcoming game
@@ -810,6 +925,9 @@
 
         // Load leaderboard for all logged-in users
         loadLeaderboard(auth.currentUser.email);
+
+        // Check if notifications need to be enabled
+        checkNotificationStatus();
 
         // Update live stats button for scorekeeper or coach
         if (upcomingGameForLiveStats && db) {
