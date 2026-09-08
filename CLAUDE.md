@@ -244,25 +244,6 @@ Creates:
 Buttons:
 - **Delete Fake Highlights Only** - Removes highlights with example.com URLs without re-running simulation
 
-### Test Highlight Files
-
-Located in `/Users/meltabargerl/Downloads/`:
-
-**MATCH files** (should auto-populate game & player on upload):
-- `MATCH_game1_Grant.mp4` - 3 sec before Grant's 3-pointer (Game 1, Dec 5)
-- `MATCH_game1_Camden.mp4` - 5 sec before Camden's 2 points (Game 1, Dec 5)
-- `MATCH_game2_Camden.mp4` - 4 sec before Camden's 2 points (Game 2, Dec 6)
-- `MATCH_game3_Rylan.mp4` - 2 sec before Rylan's 2 points (Game 3, Dec 12)
-
-**NOMATCH files** (require manual game/player selection):
-- `NOMATCH_random_time.mp4` - Nov 1, no game
-- `NOMATCH_too_early.mp4` - Dec 5, 2 min before any event
-- `NOMATCH_wrong_date.mp4` - Jan 15, wrong date
-
-To recreate test files after re-simulation:
-1. Query current events: `curl "https://firestore.googleapis.com/v1/projects/lancers-bball/databases/(default)/documents/gameStats/1"`
-2. Create MP4s with `ffmpeg -metadata creation_time="TIMESTAMP"` set 1-7 seconds before event timestamps
-
 ## Known Issues / Future Work
 
 None currently blocking. Potential enhancements:
