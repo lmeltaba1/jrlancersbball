@@ -31,10 +31,10 @@
     </div>
   </header>
 
-  <!-- Main Content -->
-  <main class="main-content">
+  <!-- Fixed Header Section (stays visible during scroll) -->
+  <div id="sticky-header" style="position: fixed; top: 60px; left: 0; right: 0; z-index: 10; background: var(--bg-body); padding: 12px; max-width: 600px; margin: 0 auto;">
     <!-- Season Record -->
-    <div class="card">
+    <div class="card" style="margin-bottom: 0;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
           <div class="card-title" style="margin-bottom: 4px;">Season Record</div>
@@ -45,13 +45,16 @@
     </div>
 
     <!-- Filter Tabs -->
-    <div class="section-tabs">
+    <div class="section-tabs" style="margin-top: 8px;">
       <button class="section-tab active" data-filter="all">All</button>
       <button class="section-tab" data-filter="games">Games</button>
       <button class="section-tab" data-filter="parkrock">Park Rock</button>
       <button class="section-tab" data-filter="cnr">CNR</button>
     </div>
+  </div>
 
+  <!-- Main Content -->
+  <main class="main-content" style="padding-top: 130px;">
     <!-- Schedule List -->
     <div class="schedule-list" id="schedule-list">
       <div style="text-align: center; padding: 40px;">
@@ -114,6 +117,12 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
   <script>
+    // SIMULATION: Set to null for real date, or a date string for testing
+    const SIMULATED_DATE = '2027-01-18';
+    function getCurrentDate() {
+      return SIMULATED_DATE ? new Date(SIMULATED_DATE + 'T12:00:00') : new Date();
+    }
+
     // Inline loadSchedule and formatDate to bypass caching
     async function loadSchedule() {
       const response = await fetch('data/schedule.json?v=' + Date.now());
@@ -176,15 +185,26 @@
         // Load game results and attendance from Firestore
         if (db) {
           try {
-            // Load game stats (results)
+            // Load game stats (results) - check for data from endGame()
             const gameStatsSnapshot = await db.collection('gameStats').get();
             gameStatsSnapshot.forEach(doc => {
               const data = doc.data();
+              // Check for completed games - use result/finalScore from endGame() or calculate from scores
               if (data.result && data.finalScore) {
-                gameResults[data.gameId] = {
+                // Game ended properly with endGame()
+                gameResults[doc.id] = {
                   result: data.result,
                   finalScore: data.finalScore,
-                  lancersScore: data.lancersScore,
+                  lancersScore: data.lancersScore || data.ourScore,
+                  opponentScore: data.opponentScore
+                };
+              } else if (data.isComplete && data.ourScore !== undefined && data.opponentScore !== undefined) {
+                // Fallback: calculate from scores
+                const result = data.ourScore > data.opponentScore ? 'W' : (data.ourScore < data.opponentScore ? 'L' : 'T');
+                gameResults[doc.id] = {
+                  result: result,
+                  finalScore: `${data.ourScore}-${data.opponentScore}`,
+                  lancersScore: data.ourScore,
                   opponentScore: data.opponentScore
                 };
               }
@@ -337,7 +357,7 @@
           }
 
           return `
-            <div class="game-card" style="cursor: pointer;" onclick="window.location.href='game-detail.html?id=${event.id}'">
+            <div class="game-card" id="event-${event.id}" data-date="${event.date}" style="cursor: pointer;" onclick="window.location.href='game-detail.html?id=${event.id}'">
               <div class="game-card-header ${event.league}">
                 <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
                 <span class="league-badge ${event.league}">${leagueNames[event.league]}</span>
@@ -389,7 +409,7 @@
           `;
 
           return `
-            <div class="game-card" style="cursor: pointer;" onclick="window.location.href='attendance.html?game=${event.id}'">
+            <div class="game-card" id="event-${event.id}" data-date="${event.date}" style="cursor: pointer;" onclick="window.location.href='attendance.html?game=${event.id}'">
               <div class="game-card-header practice">
                 <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
                 <span class="league-badge practice">${typeLabel.toUpperCase()}</span>
@@ -418,6 +438,34 @@
           `;
         }
       }).join('');
+
+      // Scroll to next upcoming event after initial render
+      scrollToNextEvent();
+    }
+
+    function scrollToNextEvent() {
+      const now = getCurrentDate();
+      now.setHours(0, 0, 0, 0);
+
+      // Find the first event card with a date >= today
+      const cards = document.querySelectorAll('.game-card[data-date]');
+      for (const card of cards) {
+        const [year, month, day] = card.dataset.date.split('-').map(Number);
+        const eventDate = new Date(year, month - 1, day);
+        if (eventDate >= now) {
+          setTimeout(() => {
+            // Get sticky header height for offset
+            const stickyHeader = document.getElementById('sticky-header');
+            const headerOffset = 60 + (stickyHeader ? stickyHeader.offsetHeight : 0) + 10;
+            const cardTop = card.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+            window.scrollTo({ top: cardTop, behavior: 'smooth' });
+            // Add highlight effect
+            card.style.boxShadow = '0 0 0 2px var(--lancers-gold)';
+            setTimeout(() => { card.style.boxShadow = ''; }, 2000);
+          }, 100);
+          break;
+        }
+      }
     }
   </script>
 </body>

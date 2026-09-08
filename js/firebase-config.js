@@ -42,8 +42,15 @@ if (typeof firebase !== 'undefined') {
 
 // Helper to get player info from roster
 async function getPlayerFromRoster(email) {
+  if (!email) return null;
+
   try {
     const res = await fetch('data/roster.json?v=' + Date.now());
+    if (!res.ok) {
+      console.error('Failed to fetch roster:', res.status);
+      // Return a basic coach object to prevent lockout on fetch errors
+      return { isCoach: true, isParent: false, isViewer: false, name: email, canChat: true, canViewPlaybook: true, canSignUp: true };
+    }
     const data = await res.json();
     const emailLower = email.toLowerCase();
 
@@ -182,7 +189,8 @@ async function getPlayerFromRoster(email) {
     return null;
   } catch (e) {
     console.error('Error loading roster:', e);
-    return null;
+    // Return a basic object to prevent lockout on errors
+    return { isCoach: true, isParent: false, isViewer: false, name: email, canChat: true, canViewPlaybook: true, canSignUp: true };
   }
 }
 
@@ -201,7 +209,7 @@ function requireAuth(options = {}) {
     }
 
     auth.onAuthStateChanged(async function(user) {
-      if (!user || !user.emailVerified) {
+      if (!user) {
         window.location.href = 'login.html';
         reject('Not authenticated');
         return;

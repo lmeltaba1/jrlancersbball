@@ -476,7 +476,7 @@
     let players = [];
     let highlights = [];
     let currentUser = null;
-    let currentUserInfo = null;
+    // currentUserInfo is declared in firebase-config.js
     let selectedFile = null;
 
     // Format date helper
@@ -595,21 +595,23 @@
         return;
       }
 
-      try {
-        // Real-time listener
-        db.collection('highlights')
-          .orderBy('timestamp', 'desc')
-          .onSnapshot((snapshot) => {
+      // Real-time listener with error handler
+      db.collection('highlights')
+        .orderBy('timestamp', 'desc')
+        .onSnapshot(
+          (snapshot) => {
             highlights = snapshot.docs.map(doc => ({
               id: doc.id,
               ...doc.data()
             }));
             renderHighlights();
-          });
-      } catch (e) {
-        console.error('Error loading highlights:', e);
-        renderHighlights();
-      }
+          },
+          (error) => {
+            console.error('Error loading highlights:', error);
+            highlights = [];
+            renderHighlights();
+          }
+        );
     }
 
     function renderHighlights() {

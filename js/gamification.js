@@ -109,16 +109,22 @@ function findFamilyByPlayerId(playerId, families) {
   return null;
 }
 
+// SIMULATION: Set to null for real date, or a date string for testing
+const SIMULATED_DATE_GAMIFICATION = '2027-01-18';
+function getCurrentDateGamification() {
+  return SIMULATED_DATE_GAMIFICATION ? new Date(SIMULATED_DATE_GAMIFICATION + 'T12:00:00') : new Date();
+}
+
 // Get IDs of past games (completed)
 function getPastGameIds(schedule) {
-  const now = new Date();
-  return schedule.events
-    .filter(e => {
-      if (e.type !== 'game') return false;
-      const gameDate = new Date(e.date);
+  const now = getCurrentDateGamification();
+  const games = schedule.games || [];
+  return games
+    .filter(g => {
+      const gameDate = new Date(g.date);
       return gameDate < now;
     })
-    .map(e => e.id);
+    .map(g => g.id);
 }
 
 // Calculate all family scores

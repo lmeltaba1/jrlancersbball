@@ -63,8 +63,8 @@
       </div>
     </div>
 
-    <!-- Hero Banner (shown when not logged in) -->
-    <div id="hero-banner" class="hero-banner">
+    <!-- Hero Banner (hidden by default, shown only when needed) -->
+    <div id="hero-banner" class="hero-banner" style="display: none;">
       <h2>Go Lancers!</h2>
       <p id="welcome-text">5th Grade Basketball</p>
     </div>
@@ -204,6 +204,12 @@
   <script src="js/theme.js"></script>
   <script src="js/gamification.js"></script>
   <script>
+    // SIMULATION: Set to null for real date, or a date string for testing
+    const SIMULATED_DATE = '2027-01-18';
+    function getCurrentDate() {
+      return SIMULATED_DATE ? new Date(SIMULATED_DATE + 'T12:00:00') : new Date();
+    }
+
     // Inline functions to bypass caching
     async function loadSchedule() {
       const response = await fetch('data/schedule.json?v=' + Date.now());
@@ -224,7 +230,7 @@
 
     async function getNextEvent() {
       const data = await loadSchedule();
-      const now = new Date();
+      const now = getCurrentDate();
       now.setHours(0, 0, 0, 0);
 
       const allEvents = [];
@@ -252,11 +258,22 @@
     }
 
     async function getSeasonRecord() {
-      const data = await loadSchedule();
       let wins = 0, losses = 0;
-      for (const game of data.games) {
-        if (game.result === 'W') wins++;
-        else if (game.result === 'L') losses++;
+      if (db) {
+        try {
+          const snapshot = await db.collection('gameStats').get();
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.result === 'W') wins++;
+            else if (data.result === 'L') losses++;
+            else if (data.isComplete && data.ourScore !== undefined && data.opponentScore !== undefined) {
+              if (data.ourScore > data.opponentScore) wins++;
+              else if (data.ourScore < data.opponentScore) losses++;
+            }
+          });
+        } catch (e) {
+          console.error('Error loading season record:', e);
+        }
       }
       return { wins, losses };
     }
@@ -311,6 +328,35 @@
       }).catch(function(err) {
         console.error('Failed to copy:', err);
       });
+    }
+
+    // Update RSVP status on the next event card
+    async function updateNextEventRsvp(playerId) {
+      if (!currentNextEvent || !playerId || !db) return;
+
+      const rsvpEl = document.getElementById('next-event-rsvp');
+      if (!rsvpEl) return;
+
+      try {
+        const docId = `${currentNextEvent.id}_${playerId}`;
+        const doc = await db.collection('attendance').doc(docId).get();
+
+        if (doc.exists) {
+          const data = doc.data();
+          if (data.status === 'attending') {
+            rsvpEl.innerHTML = `<span style="color: #22C55E; font-weight: 600;">&#10003; Attending</span>`;
+          } else if (data.status === 'not_attending') {
+            rsvpEl.innerHTML = `<span style="color: #EF4444; font-weight: 600;">&#10007; Not Attending</span>`;
+          } else {
+            rsvpEl.innerHTML = `<span style="color: #F59E0B; font-weight: 600;">? Pending RSVP</span>`;
+          }
+        } else {
+          rsvpEl.innerHTML = `<span style="color: #F59E0B; font-weight: 600;">? RSVP Needed</span>`;
+        }
+        rsvpEl.style.display = 'block';
+      } catch (e) {
+        console.error('Error checking RSVP status:', e);
+      }
     }
 
     // Check for RSVP reminder - show if user hasn't responded to upcoming game
@@ -560,15 +606,23 @@
       statusCard.style.display = 'block';
     }
 
+    let currentNextEvent = null; // Store for RSVP update after auth
+
     document.addEventListener('DOMContentLoaded', async function() {
       // Load next event (practice, game, or event)
       try {
         const nextEvent = await getNextEvent();
+        currentNextEvent = nextEvent; // Store globally
         if (nextEvent) {
           const eventCard = document.getElementById('next-event-card');
           const eventTitle = document.getElementById('next-event-title');
           const eventContent = document.getElementById('next-event-content');
           const dateInfo = formatDate(nextEvent.date);
+
+          // Determine link URL based on event type
+          const eventLink = nextEvent.eventType === 'game'
+            ? `game-detail.html?id=${nextEvent.id}`
+            : `attendance.html?game=${nextEvent.id}`;
 
           if (nextEvent.eventType === 'game') {
             // Display as game card
@@ -579,7 +633,7 @@
             upcomingGameForLiveStats = showLiveStats ? nextEvent : null;
 
             eventContent.innerHTML = `
-              <div class="game-card" style="margin: 0;">
+              <div class="game-card" style="margin: 0; cursor: pointer;" onclick="window.location.href='${eventLink}'">
                 <div class="game-card-header ${nextEvent.league}">
                   <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
                   <span class="league-badge ${nextEvent.league}">${leagueNames[nextEvent.league]}</span>
@@ -597,7 +651,7 @@
                       </svg>
                       ${nextEvent.time}
                     </span>
-                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--gold); cursor: pointer;">
+                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--gold); cursor: pointer;" onclick="event.stopPropagation();">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -608,9 +662,10 @@
                   <div style="text-align: center; margin-top: 10px;">
                     <span class="jersey-indicator ${nextEvent.jersey}">${formatJerseyLabel(nextEvent.jersey)}</span>
                   </div>
+                  <div id="next-event-rsvp" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); text-align: center;"></div>
                   ${showLiveStats ? `
                     <div id="live-stats-btn-container" style="margin-top: 16px; text-align: center;">
-                      <a id="live-stats-btn" href="game-stats.html?game=${nextEvent.id}&view=1" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                      <a id="live-stats-btn" href="game-stats.html?game=${nextEvent.id}&view=1" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="event.stopPropagation();">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
@@ -625,7 +680,7 @@
             // Display as practice card
             eventTitle.textContent = 'Next Practice';
             eventContent.innerHTML = `
-              <div class="game-card" style="margin: 0;">
+              <div class="game-card" style="margin: 0; cursor: pointer;" onclick="window.location.href='${eventLink}'">
                 <div class="game-card-header practice" style="background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);">
                   <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
                   <span class="league-badge" style="background: rgba(255,255,255,0.2); color: white;">Practice</span>
@@ -641,7 +696,7 @@
                       </svg>
                       ${nextEvent.time}${nextEvent.endTime ? ' - ' + nextEvent.endTime : ''}
                     </span>
-                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--gold); cursor: pointer;">
+                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--gold); cursor: pointer;" onclick="event.stopPropagation();">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -650,6 +705,7 @@
                     </span>
                   </div>
                   ${nextEvent.notes ? `<div style="text-align: center; margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem;">${nextEvent.notes}</div>` : ''}
+                  <div id="next-event-rsvp" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); text-align: center;"></div>
                 </div>
               </div>
             `;
@@ -657,7 +713,7 @@
             // Display as general event card
             eventTitle.textContent = 'Next Event';
             eventContent.innerHTML = `
-              <div class="game-card" style="margin: 0;">
+              <div class="game-card" style="margin: 0; cursor: pointer;" onclick="window.location.href='${eventLink}'">
                 <div class="game-card-header event" style="background: linear-gradient(135deg, var(--gold) 0%, #B8860B 100%);">
                   <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
                   <span class="league-badge" style="background: rgba(0,0,0,0.3); color: white;">Event</span>
@@ -733,6 +789,8 @@
           // Check if user needs to RSVP for upcoming game (only for parents, not viewers)
           if (!userInfo.isViewer) {
             checkRsvpReminder(userInfo.player.id, userInfo.playerName);
+            // Update RSVP status on next event card
+            updateNextEventRsvp(userInfo.player.id);
           }
         } else if (userInfo && userInfo.isCoach) {
           // Show coach banner

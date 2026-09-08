@@ -1,5 +1,16 @@
 // Jr. Lancers Basketball - Main App JavaScript
 
+// SIMULATION: Set to null for real date, or a date string for testing
+const SIMULATED_DATE = '2027-01-18';
+
+// Get current date (uses simulated date if set)
+function getCurrentDate() {
+  if (SIMULATED_DATE) {
+    return new Date(SIMULATED_DATE + 'T12:00:00');
+  }
+  return new Date();
+}
+
 // Data loading functions
 async function loadRoster() {
   // Always fetch fresh data with cache-busting
@@ -56,7 +67,7 @@ function formatTime(timeString) {
 // Get next upcoming game
 async function getNextGame() {
   const data = await loadSchedule();
-  const now = new Date();
+  const now = getCurrentDate();
   now.setHours(0, 0, 0, 0);
 
   for (const game of data.games) {
@@ -72,7 +83,7 @@ async function getNextGame() {
 // Get next upcoming event (practice, game, or event)
 async function getNextEvent() {
   const data = await loadSchedule();
-  const now = new Date();
+  const now = getCurrentDate();
   now.setHours(0, 0, 0, 0);
 
   // Combine games and events into a single array
