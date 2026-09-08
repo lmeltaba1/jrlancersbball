@@ -462,11 +462,15 @@
       const todayEnd = new Date(now);
       todayEnd.setHours(23, 59, 59, 999);
 
-      // Fetch game results from Firestore for today's games
+      // Fetch game results from Firestore for today's games (with timeout)
       const gameResults = {};
       if (db) {
         try {
-          const snapshot = await db.collection('gameStats').get();
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), 3000)
+          );
+          const fetchPromise = db.collection('gameStats').get();
+          const snapshot = await Promise.race([fetchPromise, timeoutPromise]);
           snapshot.forEach(doc => {
             const gameData = doc.data();
             if (gameData.result) {
@@ -474,7 +478,7 @@
             }
           });
         } catch (e) {
-          console.log('Error fetching game results:', e);
+          console.log('Error or timeout fetching game results:', e.message);
         }
       }
 
@@ -827,7 +831,38 @@
     let currentNextEvent = null; // Store for RSVP update after auth
 
     document.addEventListener('DOMContentLoaded', async function() {
-      // Load next event (practice, game, or event)
+      // Load all sections in parallel for faster page load
+      const loadNextEventPromise = loadNextEventSection();
+      const loadSeasonRecordPromise = loadSeasonRecordSection();
+      const loadVolunteerStatusPromise = loadVolunteerStatusSection();
+
+      // Wait for critical sections (don't block on failures)
+      await Promise.allSettled([loadNextEventPromise, loadSeasonRecordPromise, loadVolunteerStatusPromise]);
+
+      // Then handle auth-dependent sections
+      requireAuth().then(handleAuthenticatedUser).catch(e => console.error('Auth error:', e));
+    });
+
+    async function loadSeasonRecordSection() {
+      try {
+        const record = await getSeasonRecord();
+        document.getElementById('season-record').innerHTML = `
+          <span style="font-size: 2rem; font-weight: 800; color: var(--gold);">${record.wins} - ${record.losses}</span>
+        `;
+      } catch (e) {
+        console.error('Error loading record:', e);
+      }
+    }
+
+    async function loadVolunteerStatusSection() {
+      try {
+        await loadVolunteerStatus();
+      } catch (e) {
+        console.error('Error loading volunteer status:', e);
+      }
+    }
+
+    async function loadNextEventSection() {
       try {
         const nextEvent = await getNextEvent();
         currentNextEvent = nextEvent; // Store globally
@@ -1003,26 +1038,9 @@
       } catch (e) {
         console.error('Error loading next event:', e);
       }
+    }
 
-      // Load season record
-      try {
-        const record = await getSeasonRecord();
-        document.getElementById('season-record').innerHTML = `
-          <span style="font-size: 2rem; font-weight: 800; color: var(--gold);">${record.wins} - ${record.losses}</span>
-        `;
-      } catch (e) {
-        console.error('Error loading record:', e);
-      }
-
-      // Load volunteer status for next 7 days
-      try {
-        await loadVolunteerStatus();
-      } catch (e) {
-        console.error('Error loading volunteer status:', e);
-      }
-
-      // Require auth - redirect to login if not authenticated
-      requireAuth().then(async function(userInfo) {
+    async function handleAuthenticatedUser(userInfo) {
         document.getElementById('login-prompt').style.display = 'none';
 
         // Show and populate profile button
@@ -1130,10 +1148,7 @@
             console.log('Error checking scorekeeper status:', e);
           }
         }
-      }).catch(function(err) {
-        console.log('Auth required:', err);
-      });
-    });
+    }
 
     function goToPlayerProfile() {
       if (window.currentPlayerNumber !== undefined) {
