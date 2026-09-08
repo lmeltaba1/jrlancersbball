@@ -679,6 +679,50 @@ exports.onGameStarted = onDocumentUpdated('gameStats/{gameId}', async (event) =>
   }
 });
 
+// Trigger notification when game ends (phase changes to 'final')
+exports.onGameEnded = onDocumentUpdated('gameStats/{gameId}', async (event) => {
+  const before = event.data.before.data();
+  const after = event.data.after.data();
+
+  // Only trigger when phase changes TO 'final' (and wasn't already final)
+  if (before.gamePhase === 'final' || after.gamePhase !== 'final') {
+    return null;
+  }
+
+  const gameId = event.params.gameId;
+  console.log(`Game ${gameId} ended! Sending notifications...`);
+
+  try {
+    // Get game details from schedule
+    const scheduleDoc = await db.collection('config').doc('schedule').get();
+    const games = scheduleDoc.exists ? scheduleDoc.data().games || [] : [];
+    const game = games.find(g => g.id.toString() === gameId);
+
+    const opponentName = game ? game.opponent : 'Opponent';
+    const lancersScore = after.lancersScore || 0;
+    const oppScore = after.opponentScore || 0;
+    const result = lancersScore > oppScore ? 'WIN' : (lancersScore < oppScore ? 'LOSS' : 'TIE');
+    const gameUrl = `/game-detail.html?id=${gameId}`;
+
+    // Send notification to all devices
+    await sendToAllDevices(
+      `Game Over - ${result}!`,
+      `Lancers ${lancersScore} - ${opponentName} ${oppScore}. Now is the time to upload highlights!`,
+      {
+        type: 'gameEnded',
+        url: gameUrl,
+        gameId: gameId
+      }
+    );
+
+    console.log(`Game end notification sent for game ${gameId}`);
+    return null;
+  } catch (error) {
+    console.error('Error sending game end notification:', error);
+    return null;
+  }
+});
+
 // ============================================================
 // SIMULATION ENDPOINT - Creates realistic play-by-play data
 // ============================================================

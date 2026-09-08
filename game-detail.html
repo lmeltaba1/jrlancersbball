@@ -144,6 +144,58 @@
     </div>
   </main>
 
+  <!-- Upload Highlight Modal -->
+  <div id="uploadModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 2000; padding: 20px; overflow-y: auto;">
+    <div style="max-width: 500px; margin: 40px auto; background: var(--bg-card); border-radius: 12px; padding: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0; font-size: 1.2rem;">Add Highlight</h2>
+        <button onclick="closeUploadModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer;">&times;</button>
+      </div>
+
+      <!-- Step 1: File Selection -->
+      <div id="uploadStep1">
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 15px;">Select a photo or video from the game</p>
+        <label style="display: block; background: var(--bg-body); border: 2px dashed var(--border-accent); border-radius: 8px; padding: 40px 20px; text-align: center; cursor: pointer;">
+          <input type="file" id="highlightFile" accept="image/*,video/*" style="display: none;" onchange="handleFileSelected(this)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 48px; height: 48px; color: var(--text-secondary); margin-bottom: 10px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <div style="color: var(--lancers-gold); font-weight: 600;">Tap to select file</div>
+        </label>
+      </div>
+
+      <!-- Step 2: Matching/Selection -->
+      <div id="uploadStep2" style="display: none;">
+        <div id="matchStatus" style="padding: 15px; border-radius: 8px; margin-bottom: 15px;"></div>
+
+        <div id="playerSelectContainer" style="display: none; margin-bottom: 15px;">
+          <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 5px;">Select Player</label>
+          <select id="playerSelect" style="width: 100%; padding: 12px; border-radius: 8px; background: var(--bg-body); border: 1px solid var(--border-accent); color: var(--text-primary); font-size: 1rem;">
+            <option value="">-- Select Player --</option>
+          </select>
+        </div>
+
+        <div id="uploadProgress" style="display: none; margin-bottom: 15px;">
+          <div style="background: var(--bg-body); border-radius: 4px; height: 8px; overflow: hidden;">
+            <div id="progressBar" style="background: var(--lancers-gold); height: 100%; width: 0%; transition: width 0.3s;"></div>
+          </div>
+          <p style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; margin-top: 8px;">Uploading...</p>
+        </div>
+
+        <button id="uploadBtn" onclick="uploadHighlight()" class="btn btn-primary" style="width: 100%; padding: 14px;">Upload Highlight</button>
+      </div>
+
+      <!-- Step 3: Success -->
+      <div id="uploadStep3" style="display: none; text-align: center;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 64px; height: 64px; color: #22C55E; margin-bottom: 15px;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p style="color: #22C55E; font-weight: 600; margin-bottom: 20px;">Highlight uploaded!</p>
+        <button onclick="closeUploadModal(); loadHighlights();" class="btn btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Bottom Navigation -->
   <nav class="bottom-nav">
     <a href="index.html" class="nav-item">
@@ -982,12 +1034,221 @@
       `;
     }
 
+    // ========== UPLOAD MODAL FUNCTIONS ==========
+    let selectedFile = null;
+    let matchedPlayerId = null;
+    let matchedEvent = null;
+
     function addHighlight() {
-      window.location.href = 'highlights.html?game=' + game.id + '&upload=true';
+      // Reset modal state
+      selectedFile = null;
+      matchedPlayerId = null;
+      matchedEvent = null;
+      document.getElementById('highlightFile').value = '';
+      document.getElementById('uploadStep1').style.display = 'block';
+      document.getElementById('uploadStep2').style.display = 'none';
+      document.getElementById('uploadStep3').style.display = 'none';
+      document.getElementById('uploadModal').style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeUploadModal() {
+      document.getElementById('uploadModal').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    // MP4 metadata parser (same as highlights.html)
+    async function getMp4CreationTime(file) {
+      try {
+        const buffer = await file.slice(0, Math.min(file.size, 50 * 1024)).arrayBuffer();
+        const view = new DataView(buffer);
+        let offset = 0;
+        while (offset < view.byteLength - 8) {
+          const size = view.getUint32(offset);
+          if (size < 8 || offset + size > view.byteLength) break;
+          const type = String.fromCharCode(
+            view.getUint8(offset + 4), view.getUint8(offset + 5),
+            view.getUint8(offset + 6), view.getUint8(offset + 7)
+          );
+          if (type === 'moov') {
+            let moovOffset = offset + 8;
+            while (moovOffset < offset + size - 8) {
+              const atomSize = view.getUint32(moovOffset);
+              if (atomSize < 8) break;
+              const atomType = String.fromCharCode(
+                view.getUint8(moovOffset + 4), view.getUint8(moovOffset + 5),
+                view.getUint8(moovOffset + 6), view.getUint8(moovOffset + 7)
+              );
+              if (atomType === 'mvhd') {
+                const version = view.getUint8(moovOffset + 8);
+                let creationTime;
+                if (version === 0) {
+                  creationTime = view.getUint32(moovOffset + 12);
+                } else {
+                  const high = view.getUint32(moovOffset + 12);
+                  const low = view.getUint32(moovOffset + 16);
+                  creationTime = high * 0x100000000 + low;
+                }
+                // Convert from Mac HFS+ epoch (Jan 1, 1904) to Unix epoch (Jan 1, 1970)
+                const unixTimestamp = (creationTime - 2082844800) * 1000;
+                if (unixTimestamp > 0 && unixTimestamp < Date.now() + 86400000) {
+                  return new Date(unixTimestamp);
+                }
+              }
+              moovOffset += atomSize;
+            }
+          }
+          offset += size;
+        }
+      } catch (e) {
+        console.log('MP4 parse error:', e);
+      }
+      return null;
+    }
+
+    async function getCaptureTimestamp(file) {
+      const isVideo = file.type.startsWith('video/');
+      if (isVideo) {
+        const mp4Time = await getMp4CreationTime(file);
+        if (mp4Time) return mp4Time;
+      }
+      // Fallback to file modification time
+      return file.lastModified ? new Date(file.lastModified) : null;
+    }
+
+    async function handleFileSelected(input) {
+      if (!input.files || !input.files[0]) return;
+      selectedFile = input.files[0];
+
+      // Move to step 2
+      document.getElementById('uploadStep1').style.display = 'none';
+      document.getElementById('uploadStep2').style.display = 'block';
+
+      const matchStatus = document.getElementById('matchStatus');
+      matchStatus.innerHTML = '<p style="color: var(--text-secondary);">Analyzing timestamp...</p>';
+
+      // Get capture timestamp
+      const captureTime = await getCaptureTimestamp(selectedFile);
+
+      if (!captureTime) {
+        showNoMatch('Could not read file timestamp');
+        return;
+      }
+
+      // Try to match to play-by-play events for this game
+      if (gameStats && gameStats.events && gameStats.events.length > 0) {
+        const captureMs = captureTime.getTime();
+
+        // Find scoring events for Lancers
+        const scoringEvents = gameStats.events.filter(e =>
+          e.type === 'stat' && e.stat === 'points' && e.team === 'lancers' && e.playerId
+        );
+
+        // Find event where highlight was captured 0-8 seconds BEFORE the event
+        for (const event of scoringEvents) {
+          const eventMs = event.timestamp.toDate ? event.timestamp.toDate().getTime() : event.timestamp.seconds * 1000;
+          const diff = eventMs - captureMs;
+          if (diff >= 0 && diff <= 8000) {
+            // Match found!
+            matchedPlayerId = event.playerId;
+            matchedEvent = event;
+            const player = rosterData.players.find(p => p.id === event.playerId);
+            const playerName = player ? `${player.firstName} ${player.lastName}` : 'Unknown';
+
+            matchStatus.style.background = 'rgba(34, 197, 94, 0.2)';
+            matchStatus.innerHTML = `
+              <p style="color: #22C55E; font-weight: 600; margin-bottom: 5px;">Match found!</p>
+              <p style="color: var(--text-primary);">${playerName}: ${event.description}</p>
+            `;
+            document.getElementById('playerSelectContainer').style.display = 'none';
+            return;
+          }
+        }
+      }
+
+      // No match found
+      showNoMatch('No matching play found - select player manually');
+    }
+
+    function showNoMatch(message) {
+      const matchStatus = document.getElementById('matchStatus');
+      matchStatus.style.background = 'rgba(239, 68, 68, 0.2)';
+      matchStatus.innerHTML = `<p style="color: #EF4444;">${message}</p>`;
+
+      // Show player dropdown
+      const playerSelect = document.getElementById('playerSelect');
+      playerSelect.innerHTML = '<option value="">-- Select Player --</option>';
+      rosterData.players.forEach(p => {
+        playerSelect.innerHTML += `<option value="${p.id}">${p.firstName} ${p.lastName}</option>`;
+      });
+      document.getElementById('playerSelectContainer').style.display = 'block';
+    }
+
+    async function uploadHighlight() {
+      if (!selectedFile) return;
+
+      const playerId = matchedPlayerId || document.getElementById('playerSelect').value;
+      if (!playerId) {
+        alert('Please select a player');
+        return;
+      }
+
+      const player = rosterData.players.find(p => p.id == playerId);
+      if (!player) return;
+
+      // Show progress
+      document.getElementById('uploadBtn').disabled = true;
+      document.getElementById('uploadProgress').style.display = 'block';
+
+      try {
+        const storage = firebase.storage();
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${player.firstName}.${fileExt}`;
+        const storageRef = storage.ref(`highlights/${game.id}/${fileName}`);
+
+        const uploadTask = storageRef.put(selectedFile);
+
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+          },
+          (error) => {
+            console.error('Upload error:', error);
+            alert('Upload failed: ' + error.message);
+            document.getElementById('uploadBtn').disabled = false;
+            document.getElementById('uploadProgress').style.display = 'none';
+          },
+          async () => {
+            const downloadUrl = await uploadTask.snapshot.ref.getDownloadURL();
+
+            // Save to Firestore
+            await db.collection('highlights').add({
+              gameId: game.id,
+              playerId: parseInt(playerId),
+              playerName: `${player.firstName} ${player.lastName}`,
+              type: selectedFile.type.startsWith('video/') ? 'video' : 'image',
+              downloadUrl: downloadUrl,
+              description: matchedEvent ? matchedEvent.description : '',
+              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+              uploadedBy: firebase.auth().currentUser.email,
+              uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Show success
+            document.getElementById('uploadStep2').style.display = 'none';
+            document.getElementById('uploadStep3').style.display = 'block';
+          }
+        );
+      } catch (e) {
+        console.error('Upload error:', e);
+        alert('Upload failed: ' + e.message);
+        document.getElementById('uploadBtn').disabled = false;
+        document.getElementById('uploadProgress').style.display = 'none';
+      }
     }
 
     function openHighlight(url, isVideo) {
-      // Simple viewer - open in new modal or navigate to highlights page
       window.location.href = 'highlights.html?game=' + game.id;
     }
   </script>

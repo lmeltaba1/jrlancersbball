@@ -545,7 +545,12 @@
         gamesPlayed[p.id] = 0;
       });
 
-      Object.values(allGameStats).forEach(gameData => {
+      // Only count completed games (gamePhase === 'final' or isComplete === true)
+      const completedGames = Object.values(allGameStats).filter(g =>
+        g.gamePhase === 'final' || g.isComplete
+      );
+
+      completedGames.forEach(gameData => {
         if (!gameData.playerStats) return;
         Object.entries(gameData.playerStats).forEach(([playerId, stats]) => {
           if (!seasonTotals[playerId]) return;
@@ -565,7 +570,7 @@
         teamStl += s.steals;
       });
 
-      const gamesCount = Object.keys(allGameStats).length;
+      const gamesCount = completedGames.length;
 
       document.getElementById('summary-stats').innerHTML = `
         <div class="stat-card">

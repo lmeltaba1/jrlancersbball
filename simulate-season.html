@@ -13,7 +13,8 @@
 <h1>Season Simulation</h1>
 <p>This will clear gameStats, volunteers, attendance, and highlights, then create fresh simulation data.</p>
 <button onclick="runSimulation()" style="background: #FFD700; color: #000; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-right: 10px; font-weight: bold;">Run Full Simulation</button>
-<button onclick="deleteFakeHighlights()" style="background: #EF4444; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Delete Fake Highlights Only</button>
+<button onclick="deleteFakeHighlights()" style="background: #EF4444; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-right: 10px;">Delete Fake Highlights</button>
+<button onclick="deleteIncompleteGames()" style="background: #F59E0B; color: #000; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Delete Incomplete Games</button>
 <div id="status" style="margin-top: 15px;">Checking auth...</div>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -99,6 +100,44 @@ async function deleteFakeHighlights() {
     log(`<b style="color: #22C55E;">Done! Deleted ${deleted} fake highlights.</b>`);
     log('');
     log('<a href="highlights.html">View Highlights</a>');
+  } catch (e) {
+    log(`<span style="color: #EF4444;">ERROR: ${e.message}</span>`);
+    console.error(e);
+  }
+}
+
+async function deleteIncompleteGames() {
+  document.getElementById('status').innerHTML = '';
+  log('<b>DELETING INCOMPLETE GAMES</b>');
+  log('================');
+  log('');
+
+  if (!auth.currentUser) {
+    log('<span style="color: #EF4444;">Not logged in. Please wait for auth...</span>');
+    return;
+  }
+
+  log('Finding games without gamePhase=final...');
+
+  try {
+    const snapshot = await db.collection('gameStats').get();
+    let deleted = 0;
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      // Delete if not complete (gamePhase !== 'final' and isComplete !== true)
+      if (data.gamePhase !== 'final' && !data.isComplete) {
+        await doc.ref.delete();
+        deleted++;
+        log(`  Deleted: Game ${doc.id} (phase: ${data.gamePhase || 'none'})`);
+      }
+    }
+
+    log('');
+    log('================');
+    log(`<b style="color: #22C55E;">Done! Deleted ${deleted} incomplete games.</b>`);
+    log('');
+    log('<a href="stats-view.html">View Stats</a>');
   } catch (e) {
     log(`<span style="color: #EF4444;">ERROR: ${e.message}</span>`);
     console.error(e);
