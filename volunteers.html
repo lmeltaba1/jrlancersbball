@@ -185,6 +185,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
   <script>
     // Profile menu functions
@@ -206,8 +207,8 @@
       if (!switcher || !buttons) return;
       switcher.style.display = 'block';
       buttons.innerHTML = allPlayers.map(p => {
-        const isActive = p.player.id === currentPlayerId;
-        return `<button onclick="switchPlayer(${p.player.id})" style="width: 100%; padding: 8px; margin-bottom: 4px; background: ${isActive ? 'var(--lancers-gold)' : 'var(--bg-elevated)'}; color: ${isActive ? '#000' : 'var(--text-primary)'}; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font-weight: ${isActive ? '600' : '400'};">#${p.player.number} ${p.player.firstName}</button>`;
+        const isActive = p.id === currentPlayerId;
+        return `<button onclick="switchPlayer(${p.id})" style="width: 100%; padding: 8px; margin-bottom: 4px; background: ${isActive ? 'var(--lancers-gold)' : 'var(--bg-elevated)'}; color: ${isActive ? '#000' : 'var(--text-primary)'}; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font-weight: ${isActive ? '600' : '400'};">#${p.number} ${p.firstName}</button>`;
       }).join('');
     }
     document.addEventListener('click', function(e) {
@@ -255,11 +256,7 @@
       };
     }
 
-    // SIMULATION: Set to null for real date, or a date string for testing
-    const SIMULATED_DATE = '2027-01-18';
-    function getCurrentDate() {
-      return SIMULATED_DATE ? new Date(SIMULATED_DATE + 'T12:00:00') : new Date();
-    }
+    // getCurrentDate() is defined in js/app.js with SIMULATED_DATE
 
     let currentUser = null;
     let userInfo = null;
@@ -268,10 +265,7 @@
     let pastGames = [];
     let upcomingGames = [];
 
-    const leagueNames = {
-      parkrock: 'Park Rock',
-      cnr: 'CNR'
-    };
+    // leagueNames is defined in js/app.js
 
     document.addEventListener('DOMContentLoaded', async function() {
       // Require auth - viewers can't access volunteers (they can't sign up)

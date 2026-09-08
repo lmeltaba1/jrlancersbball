@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head><title>Reset Game 4</title></head>
+<body>
+<h1>Resetting Game 4 data...</h1>
+<div id="status">Loading...</div>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    document.getElementById('status').textContent = 'Please log in first at login.html';
+    return;
+  }
+  try {
+    await db.collection('gameStats').doc('4').delete();
+    document.getElementById('status').innerHTML = '<span style="color:green">Done! Game 4 data has been reset.</span><br><a href="game-stats.html?game=4">Go to Game Stats</a>';
+  } catch(e) {
+    document.getElementById('status').textContent = 'Error: ' + e.message;
+  }
+});
+</script>
+</body>
+</html>

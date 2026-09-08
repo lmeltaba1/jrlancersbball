@@ -1162,14 +1162,28 @@ exports.simulateSeasonData = onRequest({ timeoutSeconds: 300 }, async (request, 
     }
     results.created.highlights = highlightCount;
 
-    // Create volunteers for past games
+    // Create volunteers for past games, today's games, and next 3 upcoming games
     console.log('Creating volunteers...');
     let volunteerCount = 0;
     const usedParents = []; // Track which parents have volunteered to distribute evenly
 
+    // Calculate end of simulated today for comparison
+    const simulatedTodayEnd = new Date(SIMULATED_TODAY);
+    simulatedTodayEnd.setHours(23, 59, 59, 999);
+
+    // Find games that need volunteers: past, today, and next 3 upcoming
+    const upcomingGames = simGames
+      .filter(g => new Date(g.date) > simulatedTodayEnd)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .slice(0, 3);
+    const upcomingGameIds = upcomingGames.map(g => g.id);
+
     for (const game of simGames) {
       const gameDate = new Date(game.date);
-      if (gameDate >= SIMULATED_TODAY) continue;
+      // Include past games, today's games, and next 3 upcoming
+      const isPastOrToday = gameDate <= simulatedTodayEnd;
+      const isUpcoming3 = upcomingGameIds.includes(game.id);
+      if (!isPastOrToday && !isUpcoming3) continue;
 
       const gameTime = parseSimGameTime(game.date, game.time);
       const signupTime = new Date(gameDate.getTime() - simRandomInt(1, 5) * 24 * 60 * 60 * 1000);

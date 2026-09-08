@@ -1,7 +1,7 @@
 // Jr. Lancers Basketball - Main App JavaScript
 
 // SIMULATION: Set to null for real date, or a date string for testing
-const SIMULATED_DATE = '2027-01-18';
+const SIMULATED_DATE = '2026-12-13';
 
 // Get current date (uses simulated date if set)
 function getCurrentDate() {

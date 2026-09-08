@@ -352,6 +352,49 @@
     body.view-only-mode .main-content {
       padding-top: 0 !important;
     }
+    /* View-only mode: compact player cards */
+    body.view-only-mode .player-card {
+      margin-bottom: 2px;
+    }
+    body.view-only-mode .player-row-1 {
+      padding: 3px 6px;
+    }
+    body.view-only-mode .player-num {
+      font-size: 0.75rem;
+      min-width: 20px;
+    }
+    body.view-only-mode .player-name {
+      font-size: 0.7rem;
+    }
+    body.view-only-mode .player-stats-row {
+      font-size: 0.6rem;
+      gap: 2px;
+    }
+    body.view-only-mode .stat-item.pts .val {
+      font-size: 0.65rem;
+    }
+    /* Hide row 2 buttons in view mode */
+    body.view-only-mode .player-row-2 {
+      display: none;
+    }
+    /* Compact view-only stat grid */
+    body.view-only-mode .view-stats-grid {
+      padding: 4px 6px;
+      gap: 4px;
+    }
+    body.view-only-mode .view-stat-item {
+      padding: 2px 0;
+    }
+    body.view-only-mode .view-stat-item .stat-value {
+      font-size: 0.9rem;
+    }
+    body.view-only-mode .view-stat-item .stat-label {
+      font-size: 0.55rem;
+    }
+    /* Hide play-by-play for scorekeepers (non-view-only) */
+    body:not(.view-only-mode) #playByPlay {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -447,7 +490,7 @@
           <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">Play-by-Play</span>
           <span id="gamePhaseDisplay" style="background: #3B82F6; color: #000; font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; font-weight: 700;">PRE</span>
         </div>
-        <div id="eventFeed" style="max-height: 120px; overflow-y: auto;"></div>
+        <div id="eventFeed" style="max-height: 150px; overflow-y: auto;"></div>
       </div>
 
       <!-- Stats Panel (disabled until game starts) -->
@@ -463,26 +506,22 @@
             <button class="stat-btn" onclick="addOppScore(3)">+3</button>
             <button class="stat-btn" onclick="addOppScore(1)">+1</button>
             <button class="stat-btn" onclick="addOppScore(-1)">-1</button>
+            <button class="stat-btn" onclick="addOppFoul()" style="background: #7C3AED;">F<span id="oppFoulCount" style="font-size: 0.7rem; margin-left: 2px;">0</span></button>
           </div>
         </div>
 
         <!-- Timeout Controls -->
         <div class="timeout-row" style="display: flex; gap: 8px; margin-top: 6px;">
           <button class="timeout-btn lancers" onclick="callTimeout('lancers')" style="flex: 1; padding: 10px; background: var(--lancers-gold); color: #000; border: none; border-radius: 6px; font-weight: 700; font-size: 0.85rem;">
-            Lancers TO <span id="lancersTORemaining">(4)</span>
+            Lancers TO <span id="lancersTORemaining">(2)</span>
           </button>
           <button class="timeout-btn opponent" onclick="callTimeout('opponent')" style="flex: 1; padding: 10px; background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-weight: 700; font-size: 0.85rem;">
-            Opponent TO <span id="opponentTORemaining">(4)</span>
+            Opponent TO <span id="opponentTORemaining">(2)</span>
           </button>
         </div>
 
-        <div class="bottom-actions">
+        <div class="bottom-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button class="action-btn sub" onclick="openSubModal()">SUB</button>
-        </div>
-      </div>
-
-      <div class="bottom-actions" style="margin-top: 8px;">
-        <div class="phase-controls" style="display: flex; gap: 8px;">
           <button id="phaseBtn" class="action-btn phase" onclick="advancePhase()">START GAME</button>
           <button id="otBtn" class="action-btn ot" onclick="startOvertime()" style="display:none;">OT</button>
           <button id="endBtn" class="action-btn end" onclick="endGame()" style="display:none;">END GAME</button>
@@ -567,6 +606,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
   <script>
     // Profile menu functions
@@ -588,8 +628,8 @@
       if (!switcher || !buttons) return;
       switcher.style.display = 'block';
       buttons.innerHTML = allPlayersArr.map(p => {
-        const isActive = p.player.id === currentPlayerId;
-        return `<button onclick="switchPlayer(${p.player.id})" style="width: 100%; padding: 8px; margin-bottom: 4px; background: ${isActive ? 'var(--lancers-gold)' : 'var(--bg-elevated)'}; color: ${isActive ? '#000' : 'var(--text-primary)'}; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font-weight: ${isActive ? '600' : '400'};">#${p.player.number} ${p.player.firstName}</button>`;
+        const isActive = p.id === currentPlayerId;
+        return `<button onclick="switchPlayer(${p.id})" style="width: 100%; padding: 8px; margin-bottom: 4px; background: ${isActive ? 'var(--lancers-gold)' : 'var(--bg-elevated)'}; color: ${isActive ? '#000' : 'var(--text-primary)'}; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font-weight: ${isActive ? '600' : '400'};">#${p.number} ${p.firstName}</button>`;
       }).join('');
     }
     document.addEventListener('click', function(e) {
@@ -656,7 +696,7 @@
       if (ampm === 'AM' && hours === 12) hours = 0;
 
       const gameStart = new Date(year, month - 1, day, hours, mins, 0);
-      const now = new Date();
+      const now = getCurrentDate();
 
       // Window: 10 minutes before game start
       const windowStart = new Date(gameStart.getTime() - 10 * 60 * 1000);
@@ -681,6 +721,7 @@
     let players = [];
     let playerStats = {};
     let opponentScore = 0;
+    let opponentFouls = 0;
     let onCourt = []; // Array of 5 player IDs currently on court
     let unsubscribe = null;
     let editingPlayerId = null;
@@ -689,6 +730,7 @@
 
     let isScorekeeper = false; // Whether current user is the designated scorekeeper
     let viewOnlyMode = false; // True = can only view, False = can edit
+    // currentUserInfo is defined in firebase-config.js
 
     // Phase tracking
     let gamePhase = 'pre'; // 'pre', 'Q1', 'Q2', 'halftime', 'Q3', 'Q4', 'OT1', 'OT2', ..., 'final'
@@ -752,7 +794,7 @@
       const feed = document.getElementById('eventFeed');
       if (!feed) return;
 
-      const recentEvents = (events || []).slice(-20).reverse(); // Last 20, newest first
+      const recentEvents = (events || []).slice().reverse(); // All events, newest first
 
       if (recentEvents.length === 0) {
         feed.innerHTML = '<div style="color: var(--text-muted); padding: 8px; text-align: center; font-size: 0.85rem;">No events yet</div>';
@@ -825,11 +867,11 @@
           statsPanel.classList.remove('disabled');
         } else {
           statsPanel.classList.add('disabled');
-          // Set appropriate message
+          // Set appropriate message (different for viewers vs scorekeepers)
           if (gamePhase === 'pre') {
-            statsPanel.setAttribute('data-message', 'Press START GAME to begin tracking');
+            statsPanel.setAttribute('data-message', viewOnlyMode ? 'Waiting for game to start' : 'Press START GAME to begin tracking');
           } else if (gamePhase === 'halftime') {
-            statsPanel.setAttribute('data-message', 'HALFTIME — Press START Q3 to continue');
+            statsPanel.setAttribute('data-message', viewOnlyMode ? 'HALFTIME' : 'HALFTIME — Press START Q3 to continue');
           } else if (gamePhase === 'final') {
             statsPanel.setAttribute('data-message', 'Game Over');
           }
@@ -842,6 +884,14 @@
       const endBtn = document.getElementById('endBtn');
 
       if (!phaseBtn) return;
+
+      // Hide all phase controls in view-only mode
+      if (viewOnlyMode) {
+        phaseBtn.style.display = 'none';
+        if (otBtn) otBtn.style.display = 'none';
+        if (endBtn) endBtn.style.display = 'none';
+        return;
+      }
 
       // Handle Q4 and OT phases - show OT and END buttons
       if (gamePhase === 'Q4' || gamePhase.startsWith('OT')) {
@@ -913,7 +963,7 @@
     // Timeout functions
     async function callTimeout(team) {
       const half = getCurrentHalf();
-      const maxTOs = half === 'OT' ? 2 : 4;
+      const maxTOs = half === 'OT' ? 1 : 2; // 2 per half, 1 per OT
       const used = timeouts[team][half] || 0;
 
       if (used >= maxTOs) {
@@ -937,7 +987,7 @@
     // Update timeout display
     function updateTimeoutDisplay() {
       const half = getCurrentHalf();
-      const maxTOs = half === 'OT' ? 2 : 4;
+      const maxTOs = half === 'OT' ? 1 : 2; // 2 per half, 1 per OT
 
       const lancersUsed = timeouts.lancers[half] || 0;
       const opponentUsed = timeouts.opponent[half] || 0;
@@ -961,6 +1011,7 @@
     document.addEventListener('DOMContentLoaded', async function() {
       // Allow all authenticated users (including viewers) to view
       requireAuth().then(async function(userInfo) {
+        currentUserInfo = userInfo; // Store for use in startTracking
         // Show profile button
         const profileWrapper = document.getElementById('profileBtnWrapper');
         if (profileWrapper) profileWrapper.style.display = 'block';
@@ -1056,7 +1107,9 @@
           const volDoc = await db.collection('volunteers').doc(currentGameId.toString()).get();
           if (volDoc.exists) {
             const volData = volDoc.data();
-            if (volData.scorekeeper && volData.scorekeeper.email.toLowerCase() === auth.currentUser.email.toLowerCase()) {
+            // Use emulated email if available, otherwise real email
+            const effectiveEmail = (currentUserInfo && currentUserInfo.emulatedEmail) || auth.currentUser.email;
+            if (volData.scorekeeper && volData.scorekeeper.email.toLowerCase() === effectiveEmail.toLowerCase()) {
               isScorekeeper = true;
               // Scorekeeper can only track during the time window
               if (inTrackingWindow) {
@@ -1105,6 +1158,7 @@
           const data = doc.data();
           playerStats = data.playerStats || {};
           opponentScore = data.opponentScore || 0;
+          opponentFouls = data.opponentFouls || 0;
           onCourt = data.onCourt || [2, 6, 4, 1, 5];
           // Load new fields
           gamePhase = data.gamePhase || 'pre';
@@ -1132,7 +1186,8 @@
             };
           });
           opponentScore = 0;
-          // Default starting lineup: Camden(2), Dean(6), Rylan(4), Raequan(1), Ashton(5)
+          opponentFouls = 0;
+          // Default starting lineup: Camden(2), Dean(6), Rylan(2), Raequan(1), Ashton(5)
           onCourt = [2, 6, 4, 1, 5];
 
           // Initialize new tracking fields
@@ -1144,6 +1199,7 @@
             gameId: currentGameId,
             isLive: true,
             opponentScore: 0,
+            opponentFouls: 0,
             playerStats: playerStats,
             onCourt: onCourt,
             gamePhase: gamePhase,
@@ -1160,6 +1216,7 @@
             const data = snapshot.data();
             playerStats = data.playerStats || playerStats;
             opponentScore = data.opponentScore || 0;
+            opponentFouls = data.opponentFouls || 0;
             onCourt = data.onCourt || onCourt;
             // Sync new fields
             gamePhase = data.gamePhase || gamePhase;
@@ -1170,6 +1227,9 @@
             renderCourtPlayers();
             renderEventFeed();
             updatePhaseDisplay();
+            // Update opponent foul display
+            const oppFoulEl = document.getElementById('oppFoulCount');
+            if (oppFoulEl) oppFoulEl.textContent = opponentFouls;
           }
         });
       } else {
@@ -1201,6 +1261,9 @@
       updateScoreboard();
       renderEventFeed();
       updatePhaseDisplay();
+      // Update opponent foul display
+      const oppFoulEl = document.getElementById('oppFoulCount');
+      if (oppFoulEl) oppFoulEl.textContent = opponentFouls;
     }
 
     function renderCourtPlayers() {
@@ -1340,9 +1403,29 @@
         s.freeThrowsMade = (s.freeThrowsMade || 0) + 1;
       }
 
+      // Check for recent assist (within last 10 seconds, by different player)
+      let assistedBy = null;
+      if (events.length > 0 && pts > 1) { // Only check for 2pt/3pt, not free throws
+        const recentEvents = events.slice(-3); // Check last 3 events
+        const now = Date.now();
+        for (let i = recentEvents.length - 1; i >= 0; i--) {
+          const e = recentEvents[i];
+          if (e.stat === 'assists' && e.team === 'lancers' && e.playerId !== playerId) {
+            const eventTime = e.timestamp.toDate ? e.timestamp.toDate().getTime() : e.timestamp;
+            if (now - eventTime < 10000) { // Within 10 seconds
+              assistedBy = getPlayerName(e.playerId);
+              break;
+            }
+          }
+        }
+      }
+
       // Log event with current score
       const playerName = getPlayerName(playerId);
       const shotType = pts === 3 ? '3-pointer' : (pts === 2 ? '2 points' : 'free throw');
+      const description = assistedBy
+        ? `${playerName} scores ${shotType} (assisted by ${assistedBy})`
+        : `${playerName} scores ${shotType}`;
       logEvent({
         type: 'stat',
         playerId: playerId,
@@ -1351,7 +1434,7 @@
         team: 'lancers',
         lancersScore: getLancersScore(),
         opponentScore: opponentScore,
-        description: `${playerName} scores ${shotType}`
+        description: description
       });
 
       await saveStats();
@@ -1393,16 +1476,40 @@
       if (!s) return;
       s[stat] = (s[stat] || 0) + 1;
 
-      // Log event
       const playerName = getPlayerName(playerId);
       const statLabel = statLabels[stat] || stat;
+
+      // Special handling for assists - check if there was a recent basket to attribute
+      if (stat === 'assists' && events.length > 0) {
+        const now = Date.now();
+        // Find recent scoring event by a different Lancers player (within last 10 seconds)
+        for (let i = events.length - 1; i >= Math.max(0, events.length - 3); i--) {
+          const e = events[i];
+          if (e.stat === 'points' && e.team === 'lancers' && e.playerId !== playerId && e.value > 1) {
+            const eventTime = e.timestamp.toDate ? e.timestamp.toDate().getTime() : e.timestamp;
+            if (now - eventTime < 10000 && !e.description.includes('assisted by')) {
+              // Update the previous scoring event to include assist
+              e.description = e.description.replace(/scores (.+)$/, `scores $1 (assisted by ${playerName})`);
+              renderEventFeed(); // Re-render to show updated description
+              break;
+            }
+          }
+        }
+      }
+
+      // Log event - include team foul total for fouls
+      let description = `${playerName} ${statLabel}`;
+      if (stat === 'fouls') {
+        const teamFouls = Object.values(playerStats).reduce((sum, p) => sum + (p.fouls || 0), 0);
+        description = `${playerName} foul (${teamFouls} team)`;
+      }
       logEvent({
         type: 'stat',
         playerId: playerId,
         stat: stat,
         value: 1,
         team: 'lancers',
-        description: `${playerName} ${statLabel}`
+        description: description
       });
 
       if (stat === 'fouls' && s.fouls === 5) {
@@ -1471,6 +1578,21 @@
 
       await saveStats();
       updateScoreboard();
+    }
+
+    async function addOppFoul() {
+      opponentFouls++;
+      document.getElementById('oppFoulCount').textContent = opponentFouls;
+
+      logEvent({
+        type: 'stat',
+        stat: 'fouls',
+        value: 1,
+        team: 'opponent',
+        description: `Opponent foul (${opponentFouls} team)`
+      });
+
+      await saveStats();
     }
 
     function updateScoreboard() {
@@ -1660,6 +1782,7 @@
         await db.collection('gameStats').doc(currentGameId.toString()).update({
           playerStats: playerStats,
           opponentScore: opponentScore,
+          opponentFouls: opponentFouls,
           onCourt: onCourt,
           gamePhase: gamePhase,
           events: events,

@@ -487,8 +487,8 @@
       if (!switcher || !buttons) return;
       switcher.style.display = 'block';
       buttons.innerHTML = allPlayersArr.map(p => {
-        const isActive = p.player.id === currentPlayerId;
-        return `<button onclick="switchPlayer(${p.player.id})" style="width: 100%; padding: 8px; margin-bottom: 4px; background: ${isActive ? 'var(--lancers-gold)' : 'var(--bg-elevated)'}; color: ${isActive ? '#000' : 'var(--text-primary)'}; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font-weight: ${isActive ? '600' : '400'};">#${p.player.number} ${p.player.firstName}</button>`;
+        const isActive = p.id === currentPlayerId;
+        return `<button onclick="switchPlayer(${p.id})" style="width: 100%; padding: 8px; margin-bottom: 4px; background: ${isActive ? 'var(--lancers-gold)' : 'var(--bg-elevated)'}; color: ${isActive ? '#000' : 'var(--text-primary)'}; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font-weight: ${isActive ? '600' : '400'};">#${p.number} ${p.firstName}</button>`;
       }).join('');
     }
     document.addEventListener('click', function(e) {
