@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simulate Season Data</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; background: #111; color: #fff; }
+    h1 { color: #FFD700; }
+    .section { margin: 20px 0; padding: 15px; background: #222; border-radius: 8px; }
+    .section h3 { margin-top: 0; color: #FFD700; }
+    .log { font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; background: #000; padding: 10px; border-radius: 4px; }
+    button { padding: 15px 30px; font-size: 18px; cursor: pointer; background: #FFD700; color: #000; border: none; border-radius: 8px; font-weight: bold; }
+    button:hover { background: #FFA500; }
+    button:disabled { background: #666; cursor: not-allowed; }
+    .success { color: #4CAF50; }
+    .error { color: #f44336; }
+    #status { margin-top: 20px; padding: 15px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Simulate Halfway Through Season</h1>
+  <p>This will populate test data for games 1-11, including stats, volunteers, highlights, chat messages, and coach posts.</p>
+
+  <button id="runBtn" onclick="runSimulation()">Run Season Simulation</button>
+
+  <div id="status"></div>
+
+  <div class="section">
+    <h3>Game Stats</h3>
+    <div id="statsLog" class="log">Waiting...</div>
+  </div>
+
+  <div class="section">
+    <h3>Volunteers</h3>
+    <div id="volunteersLog" class="log">Waiting...</div>
+  </div>
+
+  <div class="section">
+    <h3>Highlights</h3>
+    <div id="highlightsLog" class="log">Waiting...</div>
+  </div>
+
+  <div class="section">
+    <h3>Chat Messages</h3>
+    <div id="chatLog" class="log">Waiting...</div>
+  </div>
+
+  <div class="section">
+    <h3>Coach Posts</h3>
+    <div id="postsLog" class="log">Waiting...</div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCZDonC8aqbg5OvtM-cHdA5LTJleZn8nwk",
+      authDomain: "lancers-bball.firebaseapp.com",
+      projectId: "lancers-bball",
+      storageBucket: "lancers-bball.firebasestorage.app",
+      messagingSenderId: "856557066012",
+      appId: "1:856557066012:web:8e00dcea70587e69e94c1e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // Player roster
+    const players = [
+      { id: 1, firstName: 'Raequan', lastName: 'Brimer', number: 1 },
+      { id: 2, firstName: 'Camden', lastName: 'Kreyling', number: 9 },
+      { id: 3, firstName: 'Grant', lastName: 'Weltz', number: 14 },
+      { id: 4, firstName: 'Rylan', lastName: 'Trott', number: 19 },
+      { id: 5, firstName: 'Ashton', lastName: 'Carney', number: 22 },
+      { id: 6, firstName: 'Dean', lastName: 'Meltabarger', number: 30 },
+      { id: 7, firstName: 'Wyatt', lastName: 'Weems', number: 29 },
+      { id: 8, firstName: 'Peyton', lastName: 'Parks', number: 23 },
+      { id: 9, firstName: 'Jeevan', lastName: 'Sabharwal', number: 12 },
+      { id: 10, firstName: 'Easton', lastName: 'Moore', number: 5 }
+    ];
+
+    // Parents for volunteering
+    const parents = [
+      { name: 'Mindy Carney', email: 'mindy.m.carney@gmail.com' },
+      { name: 'Ryan Carney', email: 'ryancar20@gmail.com' },
+      { name: 'Melissa Kreyling', email: 'mkreyling@yahoo.com' },
+      { name: 'Gregg Kreyling', email: 'gakreyling@hotmail.com' },
+      { name: 'Carey Weltz', email: 'careypatton@hotmail.com' },
+      { name: 'Drew Weltz', email: 'andrew.weltz@yahoo.com' },
+      { name: 'Brittany Trott', email: 'brittany28@aol.com' },
+      { name: 'Kevin Trott', email: 'ktjetski16@aol.com' },
+      { name: 'Bailey Meltabarger', email: 'bemeltabarger@gmail.com' },
+      { name: 'Jillian Weems', email: 'jillian.weems@me.com' },
+      { name: 'Jamie Parks', email: 'jamieparks86@gmail.com' },
+      { name: 'Rebecca Sabharwal', email: 'ral0709@charter.net' }
+    ];
+
+    // Completed games (halfway through season)
+    const completedGames = [
+      { id: 1, opponent: 'Warriors', date: '2026-12-05', result: 'W', ourScore: 32, theirScore: 24 },
+      { id: 2, opponent: 'Eagles', date: '2026-12-06', result: 'L', ourScore: 18, theirScore: 26 },
+      { id: 3, opponent: 'Hawks', date: '2026-12-12', result: 'W', ourScore: 28, theirScore: 22 },
+      { id: 4, opponent: 'Celtics', date: '2026-12-13', result: 'W', ourScore: 35, theirScore: 30 },
+      { id: 5, opponent: 'Thunder', date: '2026-12-19', result: 'L', ourScore: 20, theirScore: 25 },
+      { id: 6, opponent: 'Rockets', date: '2026-12-20', result: 'W', ourScore: 30, theirScore: 22 },
+      { id: 7, opponent: 'Blazers', date: '2027-01-03', result: 'W', ourScore: 27, theirScore: 19 },
+      { id: 8, opponent: 'Spurs', date: '2027-01-09', result: 'L', ourScore: 22, theirScore: 28 },
+      { id: 9, opponent: 'Grizzlies', date: '2027-01-10', result: 'W', ourScore: 31, theirScore: 25 },
+      { id: 10, opponent: 'Pelicans', date: '2027-01-16', result: 'W', ourScore: 29, theirScore: 21 },
+      { id: 11, opponent: 'Mavericks', date: '2027-01-17', result: 'W', ourScore: 33, theirScore: 27 }
+    ];
+
+    function log(elementId, text) {
+      const el = document.getElementById(elementId);
+      el.textContent += text + '\n';
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function generatePlayerStats(player, isStarter, teamTotalPoints) {
+      const maxPoints = isStarter ? Math.floor(teamTotalPoints * 0.35) : Math.floor(teamTotalPoints * 0.15);
+      const points = Math.floor(Math.random() * maxPoints);
+      const threes = Math.floor(Math.random() * Math.min(3, Math.floor(points / 3)));
+      const remainingPoints = points - (threes * 3);
+      const twos = Math.floor(remainingPoints / 2);
+      const actualPoints = (twos * 2) + (threes * 3);
+      const ftMade = Math.floor(Math.random() * 3);
+
+      return {
+        name: `${player.firstName} ${player.lastName.charAt(0)}.`,
+        points: actualPoints,
+        rebounds: Math.floor(Math.random() * (isStarter ? 8 : 4)),
+        assists: Math.floor(Math.random() * (isStarter ? 5 : 2)),
+        steals: Math.floor(Math.random() * 3),
+        blocks: Math.floor(Math.random() * 2),
+        turnovers: Math.floor(Math.random() * 3),
+        fouls: Math.floor(Math.random() * 4),
+        twoPointersMade: twos,
+        twoPointersAttempted: twos + Math.floor(Math.random() * 4),
+        threePointersMade: threes,
+        threePointersAttempted: threes + Math.floor(Math.random() * 3),
+        freeThrowsMade: ftMade,
+        freeThrowsAttempted: ftMade + Math.floor(Math.random() * 2)
+      };
+    }
+
+    // Generate game stats exactly like the scorekeeper would
+    function generateGameStats(game) {
+      const playerStats = {};
+      let totalPoints = 0;
+
+      players.forEach((player, index) => {
+        const isStarter = index < 5;
+        const stats = generatePlayerStats(player, isStarter, game.ourScore);
+        playerStats[player.id] = stats;
+        totalPoints += stats.points;
+      });
+
+      // Adjust to match actual score
+      let diff = game.ourScore - totalPoints;
+      while (diff !== 0) {
+        const randomPlayer = players[Math.floor(Math.random() * players.length)];
+        const pStats = playerStats[randomPlayer.id];
+        if (diff > 0 && diff >= 2) {
+          pStats.points += 2;
+          pStats.twoPointersMade += 1;
+          pStats.twoPointersAttempted += 1;
+          diff -= 2;
+        } else if (diff < 0 && pStats.points >= 2) {
+          pStats.points -= 2;
+          pStats.twoPointersMade = Math.max(0, pStats.twoPointersMade - 1);
+          diff += 2;
+        } else {
+          break;
+        }
+      }
+
+      // Recalculate lancers score from player stats (like real app does)
+      const lancersScore = Object.values(playerStats).reduce((sum, s) => sum + (s.points || 0), 0);
+      const result = lancersScore > game.theirScore ? 'W' : (lancersScore < game.theirScore ? 'L' : 'T');
+      const finalScore = `${lancersScore}-${game.theirScore}`;
+
+      // Match exact format from game-stats.html endGame()
+      return {
+        gameId: game.id,
+        playerStats: playerStats,
+        opponentScore: game.theirScore,
+        onCourt: [1, 2, 3, 4, 5],
+        // Fields added when game ends
+        isLive: false,
+        isComplete: true,
+        result: result,
+        finalScore: finalScore,
+        lancersScore: lancersScore,
+        ourScore: lancersScore,
+        endedAt: firebase.firestore.Timestamp.fromDate(new Date(game.date + 'T12:00:00')),
+        lastUpdated: firebase.firestore.Timestamp.fromDate(new Date(game.date + 'T12:00:00'))
+      };
+    }
+
+    async function runSimulation() {
+      const btn = document.getElementById('runBtn');
+      const status = document.getElementById('status');
+      btn.disabled = true;
+
+      // Check auth
+      let user = auth.currentUser;
+      if (!user) {
+        status.innerHTML = '<span class="error">Not logged in. Please log in...</span>';
+        const email = prompt('Enter your email:');
+        const password = prompt('Enter your password:');
+        try {
+          await auth.signInWithEmailAndPassword(email, password);
+          user = auth.currentUser;
+          status.innerHTML = '<span class="success">Logged in! Starting simulation...</span>';
+        } catch (e) {
+          status.innerHTML = '<span class="error">Login failed: ' + e.message + '</span>';
+          btn.disabled = false;
+          return;
+        }
+      }
+
+      try {
+        // Clear existing data
+        status.innerHTML = 'Clearing existing data...';
+        const collections = ['gameStats', 'volunteers', 'highlights', 'messages', 'posts'];
+        for (const col of collections) {
+          const snapshot = await db.collection(col).get();
+          for (const doc of snapshot.docs) {
+            await doc.ref.delete();
+          }
+        }
+
+        // 1. Game Stats
+        document.getElementById('statsLog').textContent = '';
+        status.innerHTML = 'Adding game stats...';
+        for (const game of completedGames) {
+          const stats = generateGameStats(game);
+          await db.collection('gameStats').doc(game.id.toString()).set(stats);
+          log('statsLog', `Game ${game.id}: ${game.result} ${game.ourScore}-${game.theirScore} vs ${game.opponent}`);
+        }
+
+        // 2. Volunteers
+        document.getElementById('volunteersLog').textContent = '';
+        status.innerHTML = 'Adding volunteers...';
+        const volunteerAssignments = [
+          { gameId: 1, sk: parents[0], tw: parents[2] },
+          { gameId: 2, sk: parents[4], tw: parents[6] },
+          { gameId: 3, sk: parents[8], tw: parents[0] },
+          { gameId: 4, sk: parents[2], tw: parents[9] },
+          { gameId: 5, sk: parents[6], tw: parents[4] },
+          { gameId: 6, sk: parents[0], tw: parents[10] },
+          { gameId: 7, sk: parents[9], tw: parents[2] },
+          { gameId: 8, sk: parents[4], tw: parents[8] },
+          { gameId: 9, sk: parents[6], tw: parents[0] },
+          { gameId: 10, sk: parents[2], tw: parents[4] },
+          { gameId: 11, sk: parents[8], tw: parents[6] },
+          { gameId: 12, sk: parents[0], tw: parents[9] },
+          { gameId: 13, sk: parents[4], tw: null },
+          { gameId: 14, sk: null, tw: parents[2] }
+        ];
+        for (const v of volunteerAssignments) {
+          const data = {};
+          if (v.sk) data.scorekeeper = { name: v.sk.name, email: v.sk.email };
+          if (v.tw) data.tableWorker = { name: v.tw.name, email: v.tw.email };
+          await db.collection('volunteers').doc(v.gameId.toString()).set(data);
+          log('volunteersLog', `Game ${v.gameId}: SK=${v.sk?.name || 'OPEN'}, TW=${v.tw?.name || 'OPEN'}`);
+        }
+
+        // 3. Highlights - use exact field names from highlights.html upload
+        document.getElementById('highlightsLog').textContent = '';
+        status.innerHTML = 'Adding highlights...';
+        const captions = ['Great shot!', 'Amazing defense', 'Nice pass', 'Team huddle', 'Celebrating the win', 'Pregame warmup', 'Fast break', 'Big rebound', 'Steal and score', 'High five'];
+        for (let i = 0; i < 18; i++) {
+          const game = completedGames[Math.floor(Math.random() * completedGames.length)];
+          const player = players[Math.floor(Math.random() * players.length)];
+          const isVideo = Math.random() > 0.8; // 20% videos
+          const uploader = parents[Math.floor(Math.random() * parents.length)];
+          const seed = `${game.id}${player.id}${i}`;
+
+          // Use real UID for the logged-in user's uploads
+          const isCurrentUser = user.email && uploader.email.toLowerCase() === user.email.toLowerCase();
+
+          // Match exact format from highlights.html upload
+          await db.collection('highlights').add({
+            gameId: game.id,
+            playerId: player.id,
+            uploadedBy: isCurrentUser ? user.uid : uploader.email.replace(/[^a-zA-Z0-9]/g, ''),
+            uploaderName: uploader.name,
+            mediaType: isVideo ? 'video' : 'photo',
+            storagePath: null, // Simulated - no actual file
+            downloadUrl: isVideo
+              ? 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+              : `https://picsum.photos/seed/${seed}/800/600`,
+            thumbnailUrl: `https://picsum.photos/seed/${seed}/400/300`,
+            caption: captions[Math.floor(Math.random() * captions.length)],
+            timestamp: firebase.firestore.Timestamp.fromDate(new Date(game.date + 'T19:00:00'))
+          });
+          log('highlightsLog', `${player.firstName} ${player.lastName} - ${captions[i % captions.length]} (Game ${game.id})`);
+        }
+
+        // 4. Chat Messages
+        document.getElementById('chatLog').textContent = '';
+        status.innerHTML = 'Adding chat messages...';
+        const chatHistory = [
+          { sender: 'Logan Meltabarger', email: 'lmeltabarger@icloud.com', text: 'Welcome to the Jr. Lancers team chat! Looking forward to a great season.', date: '2026-10-14T18:30:00' },
+          { sender: 'Mindy Carney', email: 'mindy.m.carney@gmail.com', text: 'So excited! The boys have been practicing in the backyard every day.', date: '2026-10-14T18:45:00' },
+          { sender: 'Melissa Kreyling', email: 'mkreyling@yahoo.com', text: 'Camden is pumped! What do they need to bring to practice?', date: '2026-10-14T19:00:00' },
+          { sender: 'Logan Meltabarger', email: 'lmeltabarger@icloud.com', text: 'Just basketball shoes, water bottle, and a good attitude!', date: '2026-10-14T19:05:00' },
+          { sender: 'Carey Weltz', email: 'careypatton@hotmail.com', text: 'Grant is ready! See everyone Tuesday.', date: '2026-10-14T19:30:00' },
+          { sender: 'Brittany Trott', email: 'brittany28@aol.com', text: 'First practice was great! Rylan loved it.', date: '2026-10-14T21:00:00' },
+          { sender: 'Logan Meltabarger', email: 'lmeltabarger@icloud.com', text: 'Reminder: Team photos and uniform pickup this Saturday at 10am!', date: '2026-11-19T09:00:00' },
+          { sender: 'Jamie Parks', email: 'jamieparks86@gmail.com', text: 'Will be there! Do we need to bring anything?', date: '2026-11-19T09:15:00' },
+          { sender: 'Logan Meltabarger', email: 'lmeltabarger@icloud.com', text: 'Just black shorts - gold jersey will be provided.', date: '2026-11-19T09:20:00' },
+          { sender: 'Jillian Weems', email: 'jillian.weems@me.com', text: 'Perfect, thanks Coach!', date: '2026-11-19T10:00:00' },
+          { sender: 'Logan Meltabarger', email: 'lmeltabarger@icloud.com', text: 'FIRST GAME TOMORROW! 9am at Park Rock. Go Lancers!', date: '2026-12-04T20:00:00' },
+          { sender: 'Mindy Carney', email: 'mindy.m.carney@gmail.com', text: 'Lets gooooo!', date: '2026-12-04T20:10:00' },
+          { sender: 'Rebecca Sabharwal', email: 'ral0709@charter.net', text: 'Jeevan is so nervous but excited!', date: '2026-12-04T20:30:00' },
+          { sender: 'Logan Meltabarger', email: 'lmeltabarger@icloud.com', text: 'GREAT WIN today! 32-24 over the Warriors. So proud of the boys!', date: '2026-12-05T12:00:00' },
+          { sender: 'Carey Weltz', email: 'careypatton@hotmail.com', text: 'Amazing game! Grant had so much fun.', date: '2026-12-05T12:15:00' },
+          { sender: 'Melissa Kreyling', email: 'mkreyling@yahoo.com', text: 'Camden is already asking when the next game is!', date: '2026-12-05T12:30:00' },
+          { sender: 'Bailey Meltabarger', email: 'bemeltabarger@gmail.com', text: 'Dean said that was the best day ever!', date: '2026-12-05T13:00:00' },
+          { sender: 'Logan Meltabarger', email: 'lmeltabarger@icloud.com', text: 'Tough loss today but the boys played hard. We will bounce back!', date: '2026-12-06T16:00:00' },
+          { sender: 'Brittany Trott', email: 'brittany28@aol.com', text: 'They really did play well. Proud of them.', date: '2026-12-06T16:15:00' },
+          { sender: 'Logan Meltabarger', email: 'lmeltabarger@icloud.com', text: 'Two more wins this weekend! 8-3 now. Keep it up Lancers!', date: '2027-01-17T15:00:00' },
+          { sender: 'Jamie Parks', email: 'jamieparks86@gmail.com', text: 'Peyton is loving this season! Great coaching.', date: '2027-01-17T15:30:00' },
+          { sender: 'Jillian Weems', email: 'jillian.weems@me.com', text: 'The team chemistry is really showing!', date: '2027-01-17T16:00:00' },
+          { sender: 'Mindy Carney', email: 'mindy.m.carney@gmail.com', text: 'Both my boys are having a blast. Thanks for everything Coach Logan and Coach Matt!', date: '2027-01-17T17:00:00' }
+        ];
+        for (const msg of chatHistory) {
+          // Use real UID for the logged-in user's messages
+          const isCurrentUser = user.email && msg.email.toLowerCase() === user.email.toLowerCase();
+          await db.collection('messages').add({
+            senderName: msg.sender,
+            senderEmail: msg.email,
+            text: msg.text,
+            uid: isCurrentUser ? user.uid : msg.email.replace(/[^a-zA-Z0-9]/g, ''),
+            timestamp: firebase.firestore.Timestamp.fromDate(new Date(msg.date))
+          });
+        }
+        log('chatLog', `Added ${chatHistory.length} chat messages`);
+
+        // 5. Coach Posts
+        document.getElementById('postsLog').textContent = '';
+        status.innerHTML = 'Adding coach posts...';
+        const posts = [
+          {
+            title: 'Welcome to Jr. Lancers Basketball!',
+            content: 'Welcome to the 2026-2027 season! I am so excited to coach this group of talented young players.\n\nOur goals this season:\n- Have fun!\n- Learn the fundamentals\n- Play as a team\n- Compete hard\n\nLets have an amazing season!',
+            author: 'Logan Meltabarger',
+            authorEmail: 'lmeltabarger@icloud.com',
+            date: '2026-10-14T12:00:00',
+            pinned: false,
+            comments: [
+              { author: 'Mindy Carney', email: 'mindy.m.carney@gmail.com', text: 'So excited for this season!', date: '2026-10-14T12:30:00' },
+              { author: 'Carey Weltz', email: 'careypatton@hotmail.com', text: 'Grant cant wait to get started!', date: '2026-10-14T13:00:00' }
+            ]
+          },
+          {
+            title: 'Practice Schedule Update',
+            content: 'Just a reminder that practices are every Tuesday from 6:00-7:30 PM at Lafayette Elementary Gym.\n\nPlease make sure your player brings:\n- Basketball shoes\n- Water bottle\n- Positive attitude!',
+            author: 'Logan Meltabarger',
+            authorEmail: 'lmeltabarger@icloud.com',
+            date: '2026-10-20T10:00:00',
+            pinned: false,
+            comments: []
+          },
+          {
+            title: 'Team Photos & Uniforms - Saturday Nov 21',
+            content: 'Team photos and uniform pickup is this Saturday at 10:00 AM at Lafayette Elementary Gym.\n\nPlayers should wear BLACK SHORTS - the gold jersey will be provided.',
+            author: 'Logan Meltabarger',
+            authorEmail: 'lmeltabarger@icloud.com',
+            date: '2026-11-18T09:00:00',
+            pinned: false,
+            comments: [
+              { author: 'Melissa Kreyling', email: 'mkreyling@yahoo.com', text: 'We will be there!', date: '2026-11-18T09:30:00' }
+            ]
+          },
+          {
+            title: 'First Game This Saturday!',
+            content: 'Our first game is Saturday, December 5th at 9:00 AM vs the Warriors at Park Rock Gym!\n\nPlayers should arrive by 8:30 AM for warmups. Go Lancers!',
+            author: 'Logan Meltabarger',
+            authorEmail: 'lmeltabarger@icloud.com',
+            date: '2026-12-03T18:00:00',
+            pinned: false,
+            comments: [
+              { author: 'Bailey Meltabarger', email: 'bemeltabarger@gmail.com', text: 'Dean is so excited he cant sleep!', date: '2026-12-03T20:00:00' },
+              { author: 'Brittany Trott', email: 'brittany28@aol.com', text: 'Go Lancers!', date: '2026-12-03T21:00:00' }
+            ]
+          },
+          {
+            title: 'Midseason Update - We are 8-3!',
+            content: 'Halfway through the season and we are 8-3! The boys have been playing great basketball.\n\nSome highlights:\n- Camden is leading the team in assists\n- Grant and Ashton are dominating the boards\n- Dean and Peyton have been lights out from outside\n- Our defense has been incredible\n\nKeep up the great work!',
+            author: 'Logan Meltabarger',
+            authorEmail: 'lmeltabarger@icloud.com',
+            date: '2027-01-18T10:00:00',
+            pinned: true,
+            comments: [
+              { author: 'Jamie Parks', email: 'jamieparks86@gmail.com', text: 'So proud of these kids!', date: '2027-01-18T10:30:00' },
+              { author: 'Jillian Weems', email: 'jillian.weems@me.com', text: 'Amazing season so far!', date: '2027-01-18T11:00:00' },
+              { author: 'Mindy Carney', email: 'mindy.m.carney@gmail.com', text: 'Both my boys are having the time of their lives!', date: '2027-01-18T12:00:00' }
+            ]
+          },
+          {
+            title: 'Volunteer Appreciation',
+            content: 'Huge shoutout to all the parents who have volunteered as scorekeepers and table workers!\n\nSpecial thanks to:\n- Mindy Carney (4 games!)\n- Melissa Kreyling (4 games!)\n- Carey Weltz (4 games!)\n- Brittany Trott (4 games!)\n- Bailey Meltabarger (3 games!)\n\nWe still need volunteers for upcoming games!',
+            author: 'Logan Meltabarger',
+            authorEmail: 'lmeltabarger@icloud.com',
+            date: '2027-01-19T09:00:00',
+            pinned: false,
+            comments: [
+              { author: 'Carey Weltz', email: 'careypatton@hotmail.com', text: 'Happy to help! Its fun watching up close.', date: '2027-01-19T09:30:00' }
+            ]
+          }
+        ];
+
+        for (const post of posts) {
+          const postRef = await db.collection('posts').add({
+            title: post.title,
+            text: post.content,
+            authorName: post.author,
+            authorEmail: post.authorEmail,
+            timestamp: firebase.firestore.Timestamp.fromDate(new Date(post.date)),
+            pinned: post.pinned
+          });
+          for (const comment of post.comments) {
+            await postRef.collection('comments').add({
+              author: comment.author,
+              authorEmail: comment.email,
+              text: comment.text,
+              timestamp: firebase.firestore.Timestamp.fromDate(new Date(comment.date))
+            });
+          }
+          log('postsLog', `"${post.title}" (${post.comments.length} comments)`);
+        }
+
+        status.innerHTML = `<span class="success">
+          <h2>Simulation Complete!</h2>
+          <p><strong>Season Record:</strong> 8-3</p>
+          <p><strong>Games Played:</strong> 11 of 22</p>
+          <p><strong>Highlights:</strong> 18</p>
+          <p><strong>Chat Messages:</strong> ${chatHistory.length}</p>
+          <p><strong>Coach Posts:</strong> ${posts.length}</p>
+        </span>`;
+
+      } catch (e) {
+        status.innerHTML = '<span class="error">Error: ' + e.message + '</span>';
+        console.error(e);
+      }
+
+      btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

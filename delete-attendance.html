@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Delete Attendance</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body style="font-family: sans-serif; padding: 20px; background: #1a1a1a; color: #fff;">
+  <h1>Delete Attendance Records</h1>
+  <p id="status">Checking login...</p>
+  <button onclick="deleteRecords()" id="btn" disabled>Delete Ashton & Raequan for Jan 20 Practice + Jan 23 Game</button>
+  <pre id="output"></pre>
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyCZDonC8aqbg5OvtM-cHdA5LTJleZn8nwk",
+      authDomain: "lancers-bball.firebaseapp.com",
+      projectId: "lancers-bball"
+    });
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    
+    auth.onAuthStateChanged(user => {
+      document.getElementById('status').textContent = user ? 'Logged in as: ' + user.email : 'Not logged in';
+      document.getElementById('btn').disabled = !user;
+    });
+    
+    async function deleteRecords() {
+      const output = document.getElementById('output');
+      // Jan 20 practice = event 114, Jan 23 game = game 12
+      // Ashton = player 5, Raequan = player 1
+      const docs = ['114_1', '114_5', '12_1', '12_5'];
+      output.textContent = 'Deleting...\n';
+      for (const docId of docs) {
+        try {
+          await db.collection('attendance').doc(docId).delete();
+          output.textContent += 'Deleted: ' + docId + '\n';
+        } catch (e) {
+          output.textContent += 'Error ' + docId + ': ' + e.message + '\n';
+        }
+      }
+      output.textContent += '\nDone!';
+    }
+  </script>
+</body>
+</html>

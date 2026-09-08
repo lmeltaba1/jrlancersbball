@@ -148,6 +148,66 @@ exports.helloWorld = onRequest((request, response) => {
   response.send("Hello from Jr. Lancers Basketball!");
 });
 
+// Send test RSVP reminder to a specific email
+exports.sendTestReminder = onRequest(async (request, response) => {
+  const apiKey = request.query.key;
+  if (apiKey !== 'lancers2026') {
+    response.status(403).send('Unauthorized');
+    return;
+  }
+
+  const email = request.query.email;
+  if (!email) {
+    response.status(400).json({ error: 'email parameter required' });
+    return;
+  }
+
+  try {
+    // Find token for this email
+    const tokensSnapshot = await db.collection('fcmTokens')
+      .where('email', '==', email.toLowerCase())
+      .get();
+
+    if (tokensSnapshot.empty) {
+      response.json({
+        success: false,
+        error: 'No FCM token found for ' + email,
+        hint: 'User needs to enable notifications in the app first'
+      });
+      return;
+    }
+
+    const tokens = [];
+    tokensSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.token) tokens.push(data.token);
+    });
+
+    const notificationMessage = {
+      data: {
+        title: 'RSVP Needed',
+        body: 'Practice on Wed, Jan 20 - Let us know if your player can attend!',
+        type: 'attendance',
+        url: '/attendance.html?game=114'
+      },
+      tokens: tokens
+    };
+
+    const result = await messaging.sendEachForMulticast(notificationMessage);
+
+    response.json({
+      success: true,
+      email: email,
+      tokenCount: tokens.length,
+      sent: result.successCount,
+      failed: result.failureCount
+    });
+  } catch (error) {
+    console.error('Error sending test reminder:', error);
+    response.status(500).json({ error: error.message });
+  }
+});
+
 // Scheduled function to send attendance reminders - daily at 9 AM Central
 exports.sendAttendanceReminders = onSchedule({
   schedule: '0 9 * * *',
@@ -167,31 +227,61 @@ exports.sendAttendanceReminders = onSchedule({
     const schedule = scheduleDoc.data();
     const roster = rosterDoc.data();
 
-    if (!schedule.games || !roster.players) {
-      console.log('Invalid schedule or roster data');
+    if (!roster.players) {
+      console.log('Invalid roster data');
       return null;
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const upcomingGames = schedule.games.filter(game => {
-      const gameDate = new Date(game.date);
-      gameDate.setHours(0, 0, 0, 0);
-      const daysUntil = Math.ceil((gameDate - today) / (1000 * 60 * 60 * 24));
-      return daysUntil > 0 && daysUntil <= 4 && !game.result;
+    // Combine games and events into one list
+    const allEvents = [];
+
+    if (schedule.games) {
+      schedule.games.forEach(game => {
+        if (!game.result) {
+          allEvents.push({
+            id: game.id,
+            date: game.date,
+            time: game.time,
+            name: `vs ${game.opponent}`,
+            type: 'game'
+          });
+        }
+      });
+    }
+
+    if (schedule.events) {
+      schedule.events.forEach(event => {
+        allEvents.push({
+          id: event.id,
+          date: event.date,
+          time: event.time,
+          name: event.name,
+          type: event.type || 'event'
+        });
+      });
+    }
+
+    // Filter to events within next 4 days
+    const upcomingEvents = allEvents.filter(event => {
+      const eventDate = new Date(event.date);
+      eventDate.setHours(0, 0, 0, 0);
+      const daysUntil = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+      return daysUntil > 0 && daysUntil <= 4;
     });
 
-    if (upcomingGames.length === 0) {
-      console.log('No upcoming games within 4 days');
+    if (upcomingEvents.length === 0) {
+      console.log('No upcoming events within 4 days');
       return null;
     }
 
-    for (const game of upcomingGames) {
-      console.log(`Processing game ${game.id}: vs ${game.opponent}`);
+    for (const event of upcomingEvents) {
+      console.log(`Processing ${event.type} ${event.id}: ${event.name}`);
 
       const attendanceSnapshot = await db.collection('attendance')
-        .where('gameId', '==', game.id)
+        .where('gameId', '==', event.id)
         .get();
 
       const respondedPlayerIds = new Set();
@@ -204,11 +294,11 @@ exports.sendAttendanceReminders = onSchedule({
       );
 
       if (nonResponders.length === 0) {
-        console.log(`All players have responded for game ${game.id}`);
+        console.log(`All players have responded for ${event.type} ${event.id}`);
         continue;
       }
 
-      console.log(`Found ${nonResponders.length} non-responders for game ${game.id}`);
+      console.log(`Found ${nonResponders.length} non-responders for ${event.type} ${event.id}`);
 
       const parentEmails = new Set();
       nonResponders.forEach(player => {
@@ -232,29 +322,28 @@ exports.sendAttendanceReminders = onSchedule({
       });
 
       if (tokensToNotify.length === 0) {
-        console.log(`No FCM tokens found for non-responders of game ${game.id}`);
+        console.log(`No FCM tokens found for non-responders of ${event.type} ${event.id}`);
         continue;
       }
 
-      const gameTitle = `vs ${game.opponent}`;
-      const gameDate = new Date(game.date);
-      const dateStr = gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const eventDate = new Date(event.date);
+      const dateStr = eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
       const notificationMessage = {
         data: {
           title: 'RSVP Needed',
-          body: `${gameTitle} on ${dateStr} - Let us know if your player can attend!`,
+          body: `${event.name} on ${dateStr} - Let us know if your player can attend!`,
           type: 'attendance',
-          url: `/attendance.html?game=${game.id}`
+          url: `/attendance.html?game=${event.id}`
         },
         tokens: tokensToNotify
       };
 
       try {
         const response = await messaging.sendEachForMulticast(notificationMessage);
-        console.log(`Sent ${response.successCount} attendance reminders for game ${game.id}, ${response.failureCount} failed`);
+        console.log(`Sent ${response.successCount} attendance reminders for ${event.type} ${event.id}, ${response.failureCount} failed`);
       } catch (error) {
-        console.error(`Error sending attendance reminders for game ${game.id}:`, error);
+        console.error(`Error sending attendance reminders for ${event.type} ${event.id}:`, error);
       }
     }
 
@@ -291,18 +380,48 @@ exports.triggerAttendanceReminders = onRequest(async (request, response) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const upcomingGames = schedule.games.filter(game => {
-      const gameDate = new Date(game.date);
-      gameDate.setHours(0, 0, 0, 0);
-      const daysUntil = Math.ceil((gameDate - today) / (1000 * 60 * 60 * 24));
-      return daysUntil > 0 && daysUntil <= 4 && !game.result;
+    // Combine games and events into one list
+    const allEvents = [];
+
+    if (schedule.games) {
+      schedule.games.forEach(game => {
+        if (!game.result) {
+          allEvents.push({
+            id: game.id,
+            date: game.date,
+            time: game.time,
+            name: `vs ${game.opponent}`,
+            type: 'game'
+          });
+        }
+      });
+    }
+
+    if (schedule.events) {
+      schedule.events.forEach(event => {
+        allEvents.push({
+          id: event.id,
+          date: event.date,
+          time: event.time,
+          name: event.name,
+          type: event.type || 'event'
+        });
+      });
+    }
+
+    // Filter to events within next 4 days
+    const upcomingEvents = allEvents.filter(event => {
+      const eventDate = new Date(event.date);
+      eventDate.setHours(0, 0, 0, 0);
+      const daysUntil = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+      return daysUntil > 0 && daysUntil <= 4;
     });
 
     const results = [];
 
-    for (const game of upcomingGames) {
+    for (const event of upcomingEvents) {
       const attendanceSnapshot = await db.collection('attendance')
-        .where('gameId', '==', game.id)
+        .where('gameId', '==', event.id)
         .get();
 
       const respondedPlayerIds = new Set();
@@ -336,32 +455,33 @@ exports.triggerAttendanceReminders = onRequest(async (request, response) => {
       });
 
       if (tokensToNotify.length > 0) {
-        const gameTitle = `vs ${game.opponent}`;
-        const gameDate = new Date(game.date);
-        const dateStr = gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const eventDate = new Date(event.date);
+        const dateStr = eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
         const notificationMessage = {
           data: {
             title: 'RSVP Needed',
-            body: `${gameTitle} on ${dateStr} - Let us know if your player can attend!`,
+            body: `${event.name} on ${dateStr} - Let us know if your player can attend!`,
             type: 'attendance',
-            url: `/attendance.html?game=${game.id}`
+            url: `/attendance.html?game=${event.id}`
           },
           tokens: tokensToNotify
         };
 
         const sendResult = await messaging.sendEachForMulticast(notificationMessage);
         results.push({
-          gameId: game.id,
-          opponent: game.opponent,
+          eventId: event.id,
+          eventName: event.name,
+          eventType: event.type,
           nonResponders: nonResponders.length,
           notificationsSent: sendResult.successCount,
           notificationsFailed: sendResult.failureCount
         });
       } else {
         results.push({
-          gameId: game.id,
-          opponent: game.opponent,
+          eventId: event.id,
+          eventName: event.name,
+          eventType: event.type,
           nonResponders: nonResponders.length,
           notificationsSent: 0,
           reason: 'No FCM tokens found for non-responders'
@@ -371,7 +491,7 @@ exports.triggerAttendanceReminders = onRequest(async (request, response) => {
 
     response.json({
       success: true,
-      gamesChecked: upcomingGames.length,
+      eventsChecked: upcomingEvents.length,
       results: results
     });
   } catch (error) {

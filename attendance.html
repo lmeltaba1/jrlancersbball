@@ -222,14 +222,41 @@
         <img src="images/lancers-logo.jpg?v=2" alt="Lancers" class="header-logo">
         Attendance
       </h1>
-      <button class="theme-toggle" onclick="toggleTheme()">
-        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-        </svg>
-        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      </button>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="theme-toggle" onclick="toggleTheme()">
+          <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+          <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </button>
+        <div id="profileBtnWrapper" style="position: relative; display: none;">
+          <button id="profileBtn" onclick="toggleProfileMenu()" style="background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px; color: var(--text-primary);">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </button>
+          <div id="profileMenu" style="display: none; position: absolute; top: 44px; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; min-width: 220px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1000;">
+            <div style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+              <div id="profileName" style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">User</div>
+              <div id="profileEmail" style="font-size: 0.8rem; color: var(--text-secondary); word-break: break-all;"></div>
+            </div>
+            <div id="playerSwitcher" style="display: none; padding: 12px; border-bottom: 1px solid var(--border-color);">
+              <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase;">Switch Player</div>
+              <div id="playerSwitcherButtons"></div>
+            </div>
+            <div style="padding: 8px;">
+              <button onclick="handleLogout()" style="width: 100%; padding: 12px; background: transparent; border: none; color: #EF4444; font-size: 0.9rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 18px; height: 18px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -340,6 +367,35 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
   <script>
+    // Profile menu functions
+    function toggleProfileMenu() {
+      const menu = document.getElementById('profileMenu');
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+    function handleLogout() {
+      auth.signOut().then(() => { window.location.href = 'login.html'; });
+    }
+    function switchPlayer(playerId) {
+      localStorage.setItem('selectedPlayerId', playerId);
+      window.location.reload();
+    }
+    function populatePlayerSwitcher(allPlayersArr, currentPlayerId) {
+      if (!allPlayersArr || allPlayersArr.length <= 1) return;
+      const switcher = document.getElementById('playerSwitcher');
+      const buttons = document.getElementById('playerSwitcherButtons');
+      if (!switcher || !buttons) return;
+      switcher.style.display = 'block';
+      buttons.innerHTML = allPlayersArr.map(p => {
+        const isActive = p.player.id === currentPlayerId;
+        return `<button onclick="switchPlayer(${p.player.id})" style="width: 100%; padding: 8px; margin-bottom: 4px; background: ${isActive ? 'var(--lancers-gold)' : 'var(--bg-elevated)'}; color: ${isActive ? '#000' : 'var(--text-primary)'}; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font-weight: ${isActive ? '600' : '400'};">#${p.player.number} ${p.player.firstName}</button>`;
+      }).join('');
+    }
+    document.addEventListener('click', function(e) {
+      const wrapper = document.getElementById('profileBtnWrapper');
+      const menu = document.getElementById('profileMenu');
+      if (wrapper && menu && !wrapper.contains(e.target)) menu.style.display = 'none';
+    });
+
     // Get game ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const gameId = urlParams.get('game');
@@ -618,6 +674,15 @@
     // Require auth - viewers can't access attendance (they can't sign up)
     requireAuth({ requireParent: true }).then(async function(info) {
       currentUserEmail = auth.currentUser.email;
+
+      // Show profile button
+      const profileWrapper = document.getElementById('profileBtnWrapper');
+      if (profileWrapper) profileWrapper.style.display = 'block';
+      document.getElementById('profileName').textContent = info.name || 'User';
+      document.getElementById('profileEmail').textContent = auth.currentUser.email;
+      if (info.allPlayers && info.allPlayers.length > 1) {
+        populatePlayerSwitcher(info.allPlayers, info.player ? info.player.id : null);
+      }
 
       // Load data only after auth confirmed
       loadData();

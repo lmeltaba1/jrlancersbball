@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Notification</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #1a1a1a; color: #fff; }
+    button { padding: 15px 30px; font-size: 16px; cursor: pointer; margin: 10px; background: #FFD700; color: #000; border: none; border-radius: 8px; }
+    #output { background: #000; padding: 15px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; margin-top: 20px; }
+    input { padding: 10px; font-size: 16px; width: 300px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Test Notifications</h1>
+  <p id="status">Checking login...</p>
+
+  <h3>Check FCM Tokens</h3>
+  <button onclick="listTokens()">List All FCM Tokens</button>
+
+  <h3>Send Test RSVP Reminder</h3>
+  <input type="email" id="targetEmail" placeholder="Email to notify (e.g. mindy.m.carney@gmail.com)">
+  <br>
+  <button onclick="sendTestReminder()">Send RSVP Reminder to Email</button>
+
+  <pre id="output"></pre>
+
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyCZDonC8aqbg5OvtM-cHdA5LTJleZn8nwk",
+      authDomain: "lancers-bball.firebaseapp.com",
+      projectId: "lancers-bball"
+    });
+
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    auth.onAuthStateChanged(user => {
+      document.getElementById('status').textContent = user ? 'Logged in as: ' + user.email : 'Not logged in - please login first';
+    });
+
+    async function listTokens() {
+      const output = document.getElementById('output');
+      output.textContent = 'Fetching FCM tokens...\n\n';
+
+      try {
+        const snapshot = await db.collection('fcmTokens').get();
+        if (snapshot.empty) {
+          output.textContent += 'No FCM tokens found. Users need to enable notifications first.';
+          return;
+        }
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          output.textContent += `Email: ${data.email || 'unknown'}\n`;
+          output.textContent += `Token: ${data.token ? data.token.substring(0, 30) + '...' : 'none'}\n`;
+          output.textContent += `Updated: ${data.updatedAt ? data.updatedAt.toDate().toLocaleString() : 'unknown'}\n\n`;
+        });
+      } catch (e) {
+        output.textContent += 'Error: ' + e.message;
+      }
+    }
+
+    async function sendTestReminder() {
+      const output = document.getElementById('output');
+      const email = document.getElementById('targetEmail').value.trim().toLowerCase();
+
+      if (!email) {
+        output.textContent = 'Please enter an email address';
+        return;
+      }
+
+      output.textContent = 'Looking up FCM token for ' + email + '...\n';
+
+      try {
+        // Find token for this email
+        const snapshot = await db.collection('fcmTokens').where('email', '==', email).get();
+
+        if (snapshot.empty) {
+          output.textContent += '\nNo FCM token found for this email.\n';
+          output.textContent += 'The user needs to:\n';
+          output.textContent += '1. Log in to the app\n';
+          output.textContent += '2. Click "Enable Notifications"\n';
+          output.textContent += '3. Allow notifications in browser\n';
+          return;
+        }
+
+        const tokenData = snapshot.docs[0].data();
+        output.textContent += 'Found token: ' + tokenData.token.substring(0, 30) + '...\n\n';
+        output.textContent += 'To send a notification, you need to call the Cloud Function.\n';
+        output.textContent += 'The triggerAttendanceReminders function will send to non-responders.\n\n';
+        output.textContent += 'Token is registered - notifications should work when triggered!';
+
+      } catch (e) {
+        output.textContent += 'Error: ' + e.message;
+      }
+    }
+  </script>
+</body>
+</html>
