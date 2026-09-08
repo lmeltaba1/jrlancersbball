@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Seed Highlights</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #1a1a1a; color: #fff; }
+    button { padding: 15px 30px; font-size: 16px; cursor: pointer; margin: 10px; }
+    #output { background: #000; padding: 15px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+    .success { color: #22c55e; }
+    .error { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <h1>Seed Highlights Data</h1>
+  <p id="status">Checking login status...</p>
+  <button onclick="seedHighlights()" id="seedBtn" disabled>Add 110 Test Highlights (11 games x 10 players)</button>
+  <button onclick="clearHighlights()" id="clearBtn" disabled>Clear All Highlights First</button>
+  <pre id="output"></pre>
+
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyCZDonC8aqbg5OvtM-cHdA5LTJleZn8nwk",
+      authDomain: "lancers-bball.firebaseapp.com",
+      projectId: "lancers-bball",
+      storageBucket: "lancers-bball.firebasestorage.app",
+      messagingSenderId: "840563401504",
+      appId: "1:840563401504:web:fab87697f7129e98976d45"
+    });
+
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const players = [
+      { id: 1, name: 'Raequan Brimer' },
+      { id: 2, name: 'Camden Kreyling' },
+      { id: 3, name: 'Grant Weltz' },
+      { id: 4, name: 'Rylan Trott' },
+      { id: 5, name: 'Ashton Carney' },
+      { id: 6, name: 'Dean Meltabarger' },
+      { id: 7, name: 'Wyatt Weems' },
+      { id: 8, name: 'Peyton Parks' },
+      { id: 9, name: 'Jeevan Sabharwal' },
+      { id: 10, name: 'Easton Moore' }
+    ];
+
+    const games = [
+      { id: 1, date: '2026-12-05', opponent: 'Warriors' },
+      { id: 2, date: '2026-12-06', opponent: 'Eagles' },
+      { id: 3, date: '2026-12-12', opponent: 'Hawks' },
+      { id: 4, date: '2026-12-13', opponent: 'Celtics' },
+      { id: 5, date: '2026-12-19', opponent: 'Thunder' },
+      { id: 6, date: '2026-12-20', opponent: 'Rockets' },
+      { id: 7, date: '2027-01-03', opponent: 'Lakers' },
+      { id: 8, date: '2027-01-04', opponent: 'Bulls' },
+      { id: 9, date: '2027-01-10', opponent: 'Spurs' },
+      { id: 10, date: '2027-01-11', opponent: 'Heat' },
+      { id: 11, date: '2027-01-17', opponent: 'Nets' }
+    ];
+
+    const captions = ['Great shot!', 'Nice defense!', 'Big rebound!', 'Fast break!', 'Smooth layup!',
+                      'Three pointer!', 'Clutch play!', 'Team hustle!', 'Dunk!', 'Steal!'];
+    const uploaders = [
+      { name: 'Ryan Carney', email: 'ryancar20@gmail.com' },
+      { name: 'Mindy Carney', email: 'mindy.m.carney@gmail.com' },
+      { name: 'Melissa Kreyling', email: 'mkreyling@yahoo.com' },
+      { name: 'Gregg Kreyling', email: 'gakreyling@hotmail.com' },
+      { name: 'Carey Weltz', email: 'careypatton@hotmail.com' },
+      { name: 'Drew Weltz', email: 'andrew.weltz@yahoo.com' },
+      { name: 'Brittany Trott', email: 'brittany28@aol.com' },
+      { name: 'Kevin Trott', email: 'ktjetski16@aol.com' },
+      { name: 'Maureen Trott', email: 'maureen.trott@att.net' },
+      { name: 'Ranona Bowers', email: 'ranonab@aol.com' },
+      { name: 'Bailey Meltabarger', email: 'bemeltabarger@gmail.com' },
+      { name: 'Jillian Weems', email: 'jillian.weems@me.com' },
+      { name: 'Jamie Parks', email: 'jamieparks86@gmail.com' },
+      { name: 'Rebecca Sabharwal', email: 'ral0709@charter.net' }
+    ];
+
+    auth.onAuthStateChanged(user => {
+      const status = document.getElementById('status');
+      const seedBtn = document.getElementById('seedBtn');
+      const clearBtn = document.getElementById('clearBtn');
+
+      if (user) {
+        status.innerHTML = '<span class="success">Logged in as: ' + user.email + '</span>';
+        seedBtn.disabled = false;
+        clearBtn.disabled = false;
+      } else {
+        status.innerHTML = '<span class="error">Not logged in. <a href="index.html" style="color:#ffd700">Go login first</a></span>';
+        seedBtn.disabled = true;
+        clearBtn.disabled = true;
+      }
+    });
+
+    async function clearHighlights() {
+      const output = document.getElementById('output');
+      output.textContent = 'Clearing existing highlights...\n';
+
+      try {
+        const snapshot = await db.collection('highlights').get();
+        let count = 0;
+        for (const doc of snapshot.docs) {
+          await doc.ref.delete();
+          count++;
+          output.textContent += '.';
+        }
+        output.textContent += '\nCleared ' + count + ' highlights.\n';
+      } catch (e) {
+        output.textContent += '\nError: ' + e.message + '\n';
+      }
+    }
+
+    async function seedHighlights() {
+      const output = document.getElementById('output');
+      output.textContent = 'Adding highlights (one per player per game)...\n';
+
+      let count = 0;
+      let errors = 0;
+
+      for (const game of games) {
+        output.textContent += '\nGame ' + game.id + ' vs ' + game.opponent + ': ';
+
+        for (const player of players) {
+          const caption = captions[(count) % captions.length];
+          const uploader = uploaders[(count) % uploaders.length];
+          const imgUrl = 'https://picsum.photos/seed/p' + player.id + 'g' + game.id + '/400/300';
+
+          try {
+            await db.collection('highlights').add({
+              playerId: player.id,
+              playerName: player.name,
+              gameId: game.id,
+              gameDate: game.date,
+              opponent: game.opponent,
+              mediaType: 'photo',
+              caption: caption,
+              uploaderName: uploader.name,
+              uploaderEmail: uploader.email,
+              downloadUrl: imgUrl,
+              thumbnailUrl: imgUrl,
+              timestamp: firebase.firestore.Timestamp.fromDate(new Date(game.date + 'T12:00:00'))
+            });
+            output.textContent += '✓';
+            count++;
+          } catch (e) {
+            output.textContent += '✗';
+            errors++;
+          }
+
+          // Small delay to avoid rate limiting
+          await new Promise(r => setTimeout(r, 100));
+        }
+      }
+
+      output.textContent += '\n\nDone! Added ' + count + ' highlights';
+      if (errors > 0) output.textContent += ' (' + errors + ' errors)';
+      output.textContent += '\n\nRefresh the app to see highlights.';
+    }
+  </script>
+</body>
+</html>

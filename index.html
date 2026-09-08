@@ -63,6 +63,18 @@
       </div>
     </div>
 
+    <!-- Notification Section (shown when logged in and notifications not enabled) -->
+    <div id="notificationSection" class="card" style="display: none;">
+      <button id="enableNotificationsBtn" style="width: 100%; padding: 12px; background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="enableNotifications()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        Enable Notifications
+      </button>
+      <div id="notificationError" style="display: none; text-align: center; color: #DC2626; font-size: 0.85rem; padding: 8px;"></div>
+    </div>
+
     <!-- Hero Banner (hidden by default, shown only when needed) -->
     <div id="hero-banner" class="hero-banner" style="display: none;">
       <h2>Go Lancers!</h2>
@@ -146,18 +158,6 @@
         Log in to sign up for volunteer duties and track game stats.
       </p>
       <a href="login.html" class="btn btn-primary" style="width: 100%;">Log In</a>
-    </div>
-
-    <!-- Notification Section (shown when logged in and notifications not enabled) -->
-    <div id="notificationSection" class="card" style="display: none;">
-      <button id="enableNotificationsBtn" style="width: 100%; padding: 12px; background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="enableNotifications()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-        </svg>
-        Enable Notifications
-      </button>
-      <div id="notificationError" style="display: none; text-align: center; color: #DC2626; font-size: 0.85rem; padding: 8px;"></div>
     </div>
   </main>
 

@@ -153,12 +153,15 @@ function calculateFamilyScores(roster, schedule, volunteersData, highlightsData)
     }
   });
 
-  // Count highlight points
+  // Count highlight points (points go to uploader, not player tagged)
   highlightsData.forEach(h => {
-    const family = findFamilyByPlayerId(h.playerId, families);
-    if (family) {
-      family.highlightCount++;
-      family.highlightPoints += HIGHLIGHT_POINTS;
+    const uploaderEmail = h.uploaderEmail || h.uploadedByEmail;
+    if (uploaderEmail) {
+      const family = findFamilyByEmail(uploaderEmail, families);
+      if (family) {
+        family.highlightCount++;
+        family.highlightPoints += HIGHLIGHT_POINTS;
+      }
     }
   });
 
