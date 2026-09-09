@@ -693,25 +693,57 @@
       }
     }
 
-    // Load family's volunteer stats (by playerId)
-    async function loadMyVolunteerStats(playerId) {
-      if (!db || !playerId) return;
+    // Load family's volunteer stats (counts all family members' volunteering)
+    async function loadMyVolunteerStats(userEmail) {
+      if (!db || !userEmail) return;
 
       const card = document.getElementById('my-volunteer-card');
       const statsContainer = document.getElementById('my-volunteer-stats');
+      const emailLower = userEmail.toLowerCase();
 
       try {
+        // Load roster to find all family member emails
+        const rosterRes = await fetch('data/roster.json?v=' + Date.now());
+        const roster = await rosterRes.json();
+
+        // Find all parent emails for this family (same logic as gamification.js)
+        const familyEmails = new Set();
+        familyEmails.add(emailLower);
+
+        // Find which players this email is a parent of
+        const playerIds = [];
+        for (const player of roster.players) {
+          if (player.parents) {
+            for (const parent of player.parents) {
+              if (parent.email && parent.email.toLowerCase() === emailLower) {
+                playerIds.push(player.id);
+              }
+            }
+          }
+        }
+
+        // Now find ALL parent emails for those players (to get spouse/co-parent)
+        for (const player of roster.players) {
+          if (playerIds.includes(player.id) && player.parents) {
+            for (const parent of player.parents) {
+              if (parent.email) {
+                familyEmails.add(parent.email.toLowerCase());
+              }
+            }
+          }
+        }
+
         const data = await loadSchedule();
         const snapshot = await db.collection('volunteers').get();
 
-        // Count volunteer signups by role for the family (by playerId)
+        // Count volunteer signups by role for the ENTIRE family
         let stats = {
           scorekeeper: { past: 0, upcoming: 0 },
           tableWorker: { past: 0, upcoming: 0 }
         };
 
         const now = getCurrentDate();
-        now.setHours(0, 0, 0, 0);
+        // Don't reset hours - match gamification.js logic where today's game counts as past
 
         snapshot.forEach(doc => {
           const vol = doc.data();
@@ -724,14 +756,14 @@
           const gameDate = new Date(year, month - 1, day);
           const isPast = gameDate < now;
 
-          // Check scorekeeper - match by playerId (family)
-          if (vol.scorekeeper && vol.scorekeeper.playerId === playerId) {
+          // Check scorekeeper - match any family email
+          if (vol.scorekeeper && vol.scorekeeper.email && familyEmails.has(vol.scorekeeper.email.toLowerCase())) {
             if (isPast) stats.scorekeeper.past++;
             else stats.scorekeeper.upcoming++;
           }
 
-          // Check table worker - match by playerId (family)
-          if (vol.tableWorker && vol.tableWorker.playerId === playerId) {
+          // Check table worker - match any family email
+          if (vol.tableWorker && vol.tableWorker.email && familyEmails.has(vol.tableWorker.email.toLowerCase())) {
             if (isPast) stats.tableWorker.past++;
             else stats.tableWorker.upcoming++;
           }
@@ -1177,7 +1209,8 @@
 
         // Load volunteer stats only for parents (not coaches or viewers)
         if (userInfo.isParent && userInfo.player && !userInfo.isCoach) {
-          loadMyVolunteerStats(userInfo.player.id);
+          const effectiveEmail = userInfo.emulatedEmail || auth.currentUser.email;
+          loadMyVolunteerStats(effectiveEmail);
         }
 
         // Load leaderboard for parents and coaches (not viewers)

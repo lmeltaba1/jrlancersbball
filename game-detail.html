@@ -551,12 +551,11 @@
             wrapupData = wrapupResult.data();
             console.log('Loaded wrap-up data:', wrapupData.status);
           }
+          // Set up real-time listeners for live updates
+          setupRealtimeListeners(gameIdStr);
         }
 
         renderGame();
-
-        // Set up real-time listeners for live updates
-        setupRealtimeListeners(gameIdStr);
 
       } catch (e) {
         console.error('Error loading game:', e);
@@ -610,11 +609,13 @@
 
     function showError() {
       document.getElementById('loading').style.display = 'none';
+      document.getElementById('game-content').style.display = 'none';
       document.getElementById('error-message').style.display = 'block';
     }
 
     async function renderGame() {
       document.getElementById('loading').style.display = 'none';
+      document.getElementById('error-message').style.display = 'none';
       document.getElementById('game-content').style.display = 'block';
 
       const dateInfo = formatDate(game.date);

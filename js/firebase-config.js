@@ -76,6 +76,15 @@ if (typeof firebase !== 'undefined') {
   }
 }
 
+// Listen for navigation messages from service worker (notification clicks)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'NAVIGATE') {
+      window.location.href = event.data.url;
+    }
+  });
+}
+
 // Helper to get player info from roster
 async function getPlayerFromRoster(email) {
   if (!email) return null;

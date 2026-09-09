@@ -34,27 +34,15 @@ messaging.onBackgroundMessage((payload) => {
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Handle notification click - open app
+// Handle notification click - open URL
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const url = event.notification.data?.url || '/index.html';
 
+  // Always open the URL - this works reliably on all platforms
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        // Focus existing window if open
-        for (const client of clientList) {
-          if ('focus' in client) {
-            client.navigate(url);
-            return client.focus();
-          }
-        }
-        // Open new window
-        if (clients.openWindow) {
-          return clients.openWindow(url);
-        }
-      })
+    clients.openWindow(url)
   );
 });
 
