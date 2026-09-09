@@ -436,7 +436,7 @@
       try {
         await db.collection('chatReadStatus').doc(currentUser.uid).set({
           lastReadMessageId: messageId,
-          lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
+          lastReadAt: getFirestoreTimestamp()
         }, { merge: true });
       } catch (e) {
         console.error('Error saving last read:', e);
@@ -452,7 +452,7 @@
         senderName: displayName,
         senderEmail: currentUser.email,
         uid: currentUser.uid,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        timestamp: getFirestoreTimestamp()
       }).then(function() {
         document.getElementById('messageInput').value = '';
       }).catch(function(e) {

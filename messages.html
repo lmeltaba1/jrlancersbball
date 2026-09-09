@@ -491,7 +491,7 @@
         text: content,
         authorName: displayName,
         authorEmail: effectiveEmail,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        timestamp: getFirestoreTimestamp(),
         pinned: pinned
       }).then(function() {
         closeNewPostModal();
@@ -570,7 +570,7 @@
         author: displayName,
         authorEmail: effectiveEmail,
         text: text,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        timestamp: getFirestoreTimestamp()
       }).then(function() {
         input.value = '';
         input.disabled = false;
@@ -609,13 +609,22 @@
     function sendMessage() {
       var input = document.getElementById('messageInput');
       var text = input.value.trim();
-      if (!text || !db || !currentUser) return;
+      if (!text || !db || !currentUser) {
+        console.log('sendMessage blocked:', { text: !!text, db: !!db, currentUser: !!currentUser });
+        return;
+      }
+      console.log('Sending message:', { text, senderName: displayName, senderEmail: effectiveEmail, isEmulating: currentUserInfo.isEmulating });
       db.collection('messages').add({
         text: text,
         senderName: displayName,
         senderEmail: effectiveEmail,
         uid: currentUserInfo.isEmulating ? null : currentUser.uid,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        timestamp: getFirestoreTimestamp()
+      }).then(function(docRef) {
+        console.log('Message saved:', docRef.id);
+      }).catch(function(error) {
+        console.error('Message save failed:', error);
+        alert('Failed to send message: ' + error.message);
       });
       input.value = '';
     }

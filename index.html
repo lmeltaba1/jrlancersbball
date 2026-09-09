@@ -314,7 +314,7 @@
             token: token,
             uid: auth.currentUser.uid,
             email: auth.currentUser.email,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            updatedAt: getFirestoreTimestamp()
           });
           console.log('Token saved to Firestore');
         }

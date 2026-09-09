@@ -1226,7 +1226,7 @@
             events: events,
             timeouts: timeouts,
             trackedBy: auth.currentUser.email,
-            startedAt: firebase.firestore.FieldValue.serverTimestamp()
+            startedAt: getFirestoreTimestamp()
           });
         }
 
@@ -1789,7 +1789,7 @@
           opponentScore: opponentScore,
           gamePhase: 'final',
           events: events,
-          endedAt: firebase.firestore.FieldValue.serverTimestamp()
+          endedAt: getFirestoreTimestamp()
         });
       }
 
@@ -1809,7 +1809,7 @@
           gamePhase: gamePhase,
           events: events,
           timeouts: timeouts,
-          lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+          lastUpdated: getFirestoreTimestamp()
         });
       } catch (e) {
         console.error('Error saving:', e);

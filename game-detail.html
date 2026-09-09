@@ -1202,7 +1202,7 @@
       try {
         await db.collection('wrapups').doc(game.id.toString()).update({
           'report.narrative': newNarrative,
-          'report.editedAt': firebase.firestore.FieldValue.serverTimestamp(),
+          'report.editedAt': getFirestoreTimestamp(),
           'report.editedBy': currentUser.email
         });
 
@@ -1292,7 +1292,7 @@
         commentary: commentary || null,
         playerShoutouts: shoutouts.length > 0 ? shoutouts : null,
         gameHighlight: gameHighlight || null,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: getFirestoreTimestamp(),
         updatedBy: currentUser.email
       };
 
@@ -1485,7 +1485,7 @@
             name: name,
             email: currentUser.email,
             playerId: userInfo.player ? userInfo.player.id : null,
-            signedUpAt: firebase.firestore.FieldValue.serverTimestamp()
+            signedUpAt: getFirestoreTimestamp()
           }
         }, { merge: true });
 
@@ -1626,6 +1626,7 @@
       selectedFile = null;
       matchedPlayerId = null;
       matchedEvent = null;
+      capturedAt = null;
       document.getElementById('highlightFile').value = '';
       document.getElementById('uploadStep1').style.display = 'block';
       document.getElementById('uploadStep2').style.display = 'none';
@@ -1826,10 +1827,10 @@
               downloadUrl: downloadUrl,
               storagePath: storagePath,
               description: matchedEvent ? matchedEvent.description : '',
-              capturedAt: capturedAt ? firebase.firestore.Timestamp.fromDate(capturedAt) : null,
+              timestamp: firebase.firestore.Timestamp.fromDate(capturedAt),
               uploadedBy: firebase.auth().currentUser.uid,
               uploaderName: userInfo ? userInfo.name : firebase.auth().currentUser.email,
-              uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+              uploadedAt: getFirestoreTimestamp()
             });
 
             // Show success

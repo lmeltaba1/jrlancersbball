@@ -15,6 +15,18 @@ function getCurrentDate() {
   return new Date();
 }
 
+// Get Firestore timestamp (uses simulated date if set, real server time otherwise)
+// Use this instead of firebase.firestore.FieldValue.serverTimestamp()
+function getFirestoreTimestamp() {
+  if (typeof firebase !== 'undefined' && firebase.firestore) {
+    if (SIMULATED_DATE) {
+      return firebase.firestore.Timestamp.fromDate(getCurrentDate());
+    }
+    return firebase.firestore.FieldValue.serverTimestamp();
+  }
+  return null;
+}
+
 // Data loading functions
 async function loadRoster() {
   // Always fetch fresh data with cache-busting

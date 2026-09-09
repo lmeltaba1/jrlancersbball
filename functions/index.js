@@ -1154,12 +1154,10 @@ async function compileHighlightsVideo(gameId, videoHighlights) {
   }
 
   // Sort highlights by capture time (when video was recorded), oldest first
-  // Use capturedAt field, fall back to timestamp for older records
   const sortedHighlights = [...videoHighlights].sort((a, b) => {
     const getTime = (h) => {
-      const ts = h.capturedAt || h.timestamp;
-      if (!ts) return 0;
-      return ts.toDate ? ts.toDate().getTime() : (ts.seconds || 0) * 1000;
+      if (!h.timestamp) return 0;
+      return h.timestamp.toDate ? h.timestamp.toDate().getTime() : (h.timestamp.seconds || 0) * 1000;
     };
     return getTime(a) - getTime(b);
   });

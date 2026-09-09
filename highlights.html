@@ -1195,8 +1195,8 @@
               downloadUrl: downloadUrl,
               thumbnailUrl: thumbnailUrl,
               caption: caption,
-              capturedAt: firebase.firestore.Timestamp.fromDate(captureTime),
-              uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+              timestamp: firebase.firestore.Timestamp.fromDate(captureTime),
+              uploadedAt: getFirestoreTimestamp()
             });
 
             closeUploadModal();

@@ -564,7 +564,7 @@
             name: name,
             email: currentUser.email,
             playerId: userInfo.player ? userInfo.player.id : null,
-            signedUpAt: firebase.firestore.FieldValue.serverTimestamp()
+            signedUpAt: getFirestoreTimestamp()
           }
         }, { merge: true });
 

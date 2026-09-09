@@ -16,8 +16,7 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   const data = payload.data || {};
 
-  // Must return the Promise to keep service worker alive
-  return self.registration.showNotification(data.title || 'Jr. Lancers', {
+  self.registration.showNotification(data.title || 'Jr. Lancers', {
     body: data.body || '',
     icon: '/images/lancers-logo-192.png',
     data: { url: data.url || '/' }
