@@ -104,6 +104,97 @@
       <!-- Stats Card (for completed games) -->
       <div class="card" id="stats-card" style="display: none;"></div>
 
+      <!-- Coach Notes Card (for coaches during 3-hour window) -->
+      <div class="card" id="coach-notes-card" style="display: none;">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lancers-gold)" stroke-width="2">
+              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            Coach Notes
+          </span>
+          <span id="coach-window-timer" style="font-size: 0.75rem; color: var(--text-secondary);"></span>
+        </div>
+        <div style="padding: 0;">
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; display: block;">Game Commentary</label>
+            <textarea id="coach-commentary" placeholder="How did the team play? Any observations about the game..." style="width: 100%; min-height: 80px; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-elevated); color: var(--text-primary); font-size: 0.9rem; resize: vertical; box-sizing: border-box;"></textarea>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; display: block;">Player Shoutouts</label>
+            <div id="player-shoutouts"></div>
+            <button onclick="addShoutout()" class="btn btn-secondary" style="font-size: 0.75rem; padding: 6px 12px; margin-top: 8px;">+ Add Player Shoutout</button>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; display: block;">Game Highlight Moment</label>
+            <input type="text" id="coach-highlight" placeholder="e.g., The comeback in Q4, Dean's defensive play..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-elevated); color: var(--text-primary); font-size: 0.9rem; box-sizing: border-box;">
+          </div>
+          <button onclick="saveCoachNotes()" class="btn btn-primary" style="width: 100%;">Save Notes</button>
+          <p style="text-align: center; margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary);">Game report will generate automatically after the window closes</p>
+        </div>
+      </div>
+
+      <!-- Game Wrap-Up Card (for completed wrap-ups) -->
+      <div class="card" id="wrapup-card" style="display: none;">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lancers-gold)" stroke-width="2">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Game Wrap-Up
+        </div>
+        <div id="wrapup-video" style="display: none; margin-bottom: 16px;">
+          <div style="position: relative; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 16/9;">
+            <video id="compiled-video" controls style="width: 100%; height: 100%;"></video>
+          </div>
+          <p id="highlight-reel-count" style="text-align: center; margin-top: 6px; font-size: 0.75rem; color: var(--text-secondary);"></p>
+        </div>
+        <div id="wrapup-narrative" style="padding: 16px; background: var(--bg-elevated); border-radius: 8px; margin-bottom: 16px;">
+          <p style="font-size: 0.95rem; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap;" id="narrative-text"></p>
+        </div>
+        <div id="coach-notes-summary" style="display: none; padding: 12px; background: rgba(255, 215, 0, 0.1); border-radius: 8px; border: 1px solid var(--lancers-gold);">
+          <div style="font-size: 0.75rem; color: var(--lancers-gold); font-weight: 600; margin-bottom: 6px; text-transform: uppercase;">Coach's Corner</div>
+          <p id="coach-commentary-display" style="font-size: 0.9rem; color: var(--text-primary); font-style: italic; margin: 0;"></p>
+        </div>
+        <div id="player-of-game" style="display: none; margin-top: 12px; padding: 12px; background: var(--bg-elevated); border-radius: 8px; text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px;">Player of the Game</div>
+          <div id="potg-name" style="font-size: 1.1rem; font-weight: 700; color: var(--lancers-gold);"></div>
+          <div id="potg-stats" style="font-size: 0.85rem; color: var(--text-primary);"></div>
+        </div>
+        <p style="text-align: right; margin-top: 12px; font-size: 0.7rem; color: var(--text-muted);">Generated <span id="wrapup-generated-time"></span></p>
+
+        <!-- Approval Section (only shown to coaches for pendingApproval status) -->
+        <div id="wrapup-approval-section" style="display: none; margin-top: 16px; padding: 16px; background: rgba(255, 215, 0, 0.1); border-radius: 8px; border: 2px solid var(--lancers-gold);">
+          <p style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 12px; text-align: center;">
+            <strong>Review the wrap-up above.</strong> Edit, regenerate, or approve to publish.
+          </p>
+          <div style="display: flex; gap: 8px;">
+            <button id="edit-wrapup-btn" onclick="toggleEditWrapup()" style="flex: 1; padding: 12px; background: var(--bg-elevated); color: var(--text-primary); font-weight: 600; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; cursor: pointer;">
+              Edit
+            </button>
+            <button id="regenerate-wrapup-btn" onclick="regenerateWrapup()" style="flex: 1; padding: 12px; background: var(--bg-elevated); color: var(--text-primary); font-weight: 600; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; cursor: pointer;">
+              Regenerate
+            </button>
+            <button id="approve-wrapup-btn" onclick="approveWrapup()" style="flex: 1; padding: 12px; background: var(--lancers-gold); color: #000; font-weight: 700; border: none; border-radius: 8px; font-size: 0.9rem; cursor: pointer;">
+              Approve
+            </button>
+          </div>
+          <!-- Save button shown when editing -->
+          <button id="save-wrapup-btn" onclick="saveWrapupEdit()" style="display: none; width: 100%; margin-top: 8px; padding: 12px; background: var(--lancers-gold); color: #000; font-weight: 700; border: none; border-radius: 8px; font-size: 0.9rem; cursor: pointer;">
+            Save Changes
+          </button>
+        </div>
+      </div>
+
+      <!-- Wrap-Up Pending/Generating Card -->
+      <div class="card" id="wrapup-pending-card" style="display: none;">
+        <div style="text-align: center; padding: 20px;">
+          <div class="spinner" style="margin: 0 auto 12px;"></div>
+          <p style="font-weight: 600; color: var(--text-primary);" id="wrapup-pending-title">Game Report Generating...</p>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 6px;" id="wrapup-pending-subtitle">The AI is analyzing the play-by-play and creating your game summary</p>
+        </div>
+      </div>
+
       <!-- Play-by-Play Card (for completed games with events) -->
       <div class="card" id="playbyplay-card" style="display: none;">
         <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
@@ -331,6 +422,9 @@
     let players = [];
     let gameEvents = []; // Play-by-play events
     let playerStats = {}; // Box score stats
+    let wrapupData = null; // Post-game wrap-up data
+    let rosterData = null; // Roster for player lookups
+    let coachWindowTimer = null; // Timer interval
 
     document.addEventListener('DOMContentLoaded', async function() {
       // Require auth - all users can view game details
@@ -368,11 +462,12 @@
       }
 
       try {
-        const [scheduleData, rosterData] = await Promise.all([
+        const [scheduleData, rosterDataResult] = await Promise.all([
           loadSchedule(),
           fetch('data/roster.json?v=' + Date.now()).then(r => r.json())
         ]);
 
+        rosterData = rosterDataResult;
         game = scheduleData.games.find(g => g.id === gameId);
         players = rosterData.players || [];
 
@@ -429,6 +524,17 @@
             }
           } catch (e) {
             console.log('No game stats yet');
+          }
+
+          // Load wrap-up data for completed games
+          try {
+            const wrapupDoc = await db.collection('wrapups').doc(gameId.toString()).get();
+            if (wrapupDoc.exists) {
+              wrapupData = wrapupDoc.data();
+              console.log('Loaded wrap-up data:', wrapupData.status);
+            }
+          } catch (e) {
+            console.log('No wrap-up data yet');
           }
         }
 
@@ -727,6 +833,464 @@
         if (gameEvents.length > 0) {
           renderPlayByPlay();
         }
+
+        // Wrap-up section
+        renderWrapup();
+      }
+    }
+
+    // Render wrap-up section based on status
+    function renderWrapup() {
+      const coachNotesCard = document.getElementById('coach-notes-card');
+      const wrapupCard = document.getElementById('wrapup-card');
+      const pendingCard = document.getElementById('wrapup-pending-card');
+
+      // Hide all wrap-up cards initially
+      coachNotesCard.style.display = 'none';
+      wrapupCard.style.display = 'none';
+      pendingCard.style.display = 'none';
+
+      if (!wrapupData) return;
+
+      const isCoach = userInfo && userInfo.isCoach;
+      const now = new Date();
+      const windowEnds = wrapupData.coachWindowEndsAt?.toDate ? wrapupData.coachWindowEndsAt.toDate() : null;
+      const windowActive = windowEnds && now < windowEnds;
+
+      if (wrapupData.status === 'complete' && wrapupData.report) {
+        // Show completed wrap-up
+        wrapupCard.style.display = 'block';
+
+        // Narrative
+        const narrativeEl = document.getElementById('narrative-text');
+        narrativeEl.textContent = wrapupData.report.narrative || 'No narrative available.';
+
+        // Compiled video
+        if (wrapupData.compiledVideo && wrapupData.compiledVideo.url) {
+          const videoSection = document.getElementById('wrapup-video');
+          const videoEl = document.getElementById('compiled-video');
+          const countEl = document.getElementById('highlight-reel-count');
+
+          videoEl.src = wrapupData.compiledVideo.url;
+          countEl.textContent = `${wrapupData.compiledVideo.highlightCount || 1} highlights compiled`;
+          videoSection.style.display = 'block';
+        }
+
+        // Coach notes summary
+        if (wrapupData.coachNotes && wrapupData.coachNotes.commentary) {
+          const summaryEl = document.getElementById('coach-notes-summary');
+          const commentaryEl = document.getElementById('coach-commentary-display');
+          commentaryEl.textContent = wrapupData.coachNotes.commentary;
+          summaryEl.style.display = 'block';
+        }
+
+        // Player of the game
+        if (wrapupData.report.playerOfTheGame) {
+          const potg = wrapupData.report.playerOfTheGame;
+          const potgSection = document.getElementById('player-of-game');
+          document.getElementById('potg-name').textContent = potg.name;
+          document.getElementById('potg-stats').textContent = `${potg.points} points`;
+          potgSection.style.display = 'block';
+        }
+
+        // Generation time
+        if (wrapupData.report.generatedAt) {
+          const genTime = wrapupData.report.generatedAt.toDate ? wrapupData.report.generatedAt.toDate() : new Date(wrapupData.report.generatedAt);
+          const timeAgo = getTimeAgo(genTime);
+          document.getElementById('wrapup-generated-time').textContent = timeAgo;
+        }
+
+      } else if (wrapupData.status === 'generating') {
+        // Show generating message
+        pendingCard.style.display = 'block';
+        document.getElementById('wrapup-pending-title').textContent = 'Game Report Generating...';
+        document.getElementById('wrapup-pending-subtitle').textContent = 'The AI is analyzing the play-by-play and creating your game summary';
+
+      } else if (wrapupData.status === 'pendingApproval') {
+        if (isCoach) {
+          // Show the wrap-up with approval button for coaches
+          wrapupCard.style.display = 'block';
+
+          // Render narrative
+          const narrativeEl = document.getElementById('narrative-text');
+          narrativeEl.textContent = wrapupData.report?.narrative || 'No narrative available.';
+
+          // Compiled video
+          if (wrapupData.compiledVideo && wrapupData.compiledVideo.url) {
+            const videoSection = document.getElementById('wrapup-video');
+            const videoEl = document.getElementById('compiled-video');
+            const countEl = document.getElementById('highlight-reel-count');
+            videoEl.src = wrapupData.compiledVideo.url;
+            countEl.textContent = `${wrapupData.compiledVideo.highlightCount || 1} highlights compiled`;
+            videoSection.style.display = 'block';
+          }
+
+          // Coach notes summary
+          if (wrapupData.coachNotes && wrapupData.coachNotes.commentary) {
+            const summaryEl = document.getElementById('coach-notes-summary');
+            const commentaryEl = document.getElementById('coach-commentary-display');
+            commentaryEl.textContent = wrapupData.coachNotes.commentary;
+            summaryEl.style.display = 'block';
+          }
+
+          // Player of the game
+          if (wrapupData.report?.playerOfTheGame) {
+            const potg = wrapupData.report.playerOfTheGame;
+            const potgSection = document.getElementById('player-of-game');
+            document.getElementById('potg-name').textContent = potg.name;
+            document.getElementById('potg-stats').textContent = `${potg.points} points`;
+            potgSection.style.display = 'block';
+          }
+
+          // Show approval section
+          document.getElementById('wrapup-approval-section').style.display = 'block';
+
+        } else {
+          // Non-coaches see pending message
+          pendingCard.style.display = 'block';
+          document.getElementById('wrapup-pending-title').textContent = 'Wrap-Up Under Review';
+          document.getElementById('wrapup-pending-subtitle').textContent = 'The coach is reviewing the game report before publishing';
+        }
+
+      } else if (wrapupData.status === 'pending') {
+        if (windowActive && isCoach) {
+          // Show coach notes input form
+          coachNotesCard.style.display = 'block';
+
+          // Pre-fill existing notes if any
+          if (wrapupData.coachNotes) {
+            document.getElementById('coach-commentary').value = wrapupData.coachNotes.commentary || '';
+            document.getElementById('coach-highlight').value = wrapupData.coachNotes.gameHighlight || '';
+            renderShoutouts(wrapupData.coachNotes.playerShoutouts || []);
+          }
+
+          // Start countdown timer
+          startCoachWindowTimer(windowEnds);
+
+        } else if (windowActive) {
+          // Non-coach sees pending message during window
+          pendingCard.style.display = 'block';
+          document.getElementById('wrapup-pending-title').textContent = 'Coach Adding Notes...';
+          const remaining = Math.ceil((windowEnds - now) / (1000 * 60));
+          document.getElementById('wrapup-pending-subtitle').textContent = `Game report will generate in ${formatTimeRemaining(windowEnds - now)}`;
+
+        } else {
+          // Window ended but not yet generating
+          pendingCard.style.display = 'block';
+          document.getElementById('wrapup-pending-title').textContent = 'Report Queued';
+          document.getElementById('wrapup-pending-subtitle').textContent = 'Game report will generate shortly...';
+        }
+
+      } else if (wrapupData.status === 'error') {
+        pendingCard.style.display = 'block';
+        document.getElementById('wrapup-pending-title').textContent = 'Report Generation Failed';
+        document.getElementById('wrapup-pending-subtitle').textContent = 'There was an error generating the report. Please contact the team admin.';
+      }
+    }
+
+    function getTimeAgo(date) {
+      const seconds = Math.floor((new Date() - date) / 1000);
+      if (seconds < 60) return 'just now';
+      if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+      return `${Math.floor(seconds / 86400)} days ago`;
+    }
+
+    function formatTimeRemaining(ms) {
+      const hours = Math.floor(ms / (1000 * 60 * 60));
+      const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+      if (hours > 0) return `${hours}h ${minutes}m`;
+      return `${minutes} minutes`;
+    }
+
+    function startCoachWindowTimer(windowEnds) {
+      if (coachWindowTimer) clearInterval(coachWindowTimer);
+
+      function updateTimer() {
+        const remaining = windowEnds - new Date();
+        if (remaining <= 0) {
+          document.getElementById('coach-window-timer').textContent = 'Window closed';
+          clearInterval(coachWindowTimer);
+          // Reload to show pending status
+          setTimeout(() => location.reload(), 2000);
+          return;
+        }
+        document.getElementById('coach-window-timer').textContent = formatTimeRemaining(remaining) + ' remaining';
+      }
+
+      updateTimer();
+      coachWindowTimer = setInterval(updateTimer, 60000); // Update every minute
+    }
+
+    // Player shoutouts management
+    let shoutouts = [];
+
+    function renderShoutouts(existingShoutouts = []) {
+      shoutouts = existingShoutouts;
+      const container = document.getElementById('player-shoutouts');
+
+      if (shoutouts.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">No shoutouts added yet</p>';
+        return;
+      }
+
+      container.innerHTML = shoutouts.map((s, i) => {
+        const player = players.find(p => p.id === s.playerId);
+        const playerName = player ? player.firstName : 'Unknown';
+        return `
+          <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+            <span style="background: var(--lancers-gold); color: #000; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">${playerName}</span>
+            <span style="flex: 1; font-size: 0.85rem; color: var(--text-primary);">${s.note}</span>
+            <button onclick="removeShoutout(${i})" style="background: none; border: none; color: #EF4444; cursor: pointer; font-size: 1rem;">&times;</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function addShoutout() {
+      // Create modal for adding shoutout
+      const modal = document.createElement('div');
+      modal.id = 'shoutoutModal';
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+
+      modal.innerHTML = `
+        <div style="background: var(--bg-card); border-radius: 12px; padding: 20px; max-width: 400px; width: 100%;">
+          <h3 style="margin: 0 0 15px; color: var(--text-primary);">Add Player Shoutout</h3>
+          <select id="shoutout-player" style="width: 100%; padding: 12px; border-radius: 8px; background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary); margin-bottom: 12px;">
+            <option value="">Select Player</option>
+            ${players.map(p => `<option value="${p.id}">${p.firstName} ${p.lastName}</option>`).join('')}
+          </select>
+          <textarea id="shoutout-note" placeholder="What did they do great?" style="width: 100%; padding: 12px; border-radius: 8px; background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary); min-height: 60px; box-sizing: border-box; margin-bottom: 12px;"></textarea>
+          <div style="display: flex; gap: 10px;">
+            <button onclick="document.getElementById('shoutoutModal').remove()" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+            <button onclick="confirmShoutout()" class="btn btn-primary" style="flex: 1;">Add</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+    }
+
+    function confirmShoutout() {
+      const playerId = parseInt(document.getElementById('shoutout-player').value);
+      const note = document.getElementById('shoutout-note').value.trim();
+
+      if (!playerId || !note) {
+        alert('Please select a player and add a note');
+        return;
+      }
+
+      shoutouts.push({ playerId, note });
+      renderShoutouts(shoutouts);
+      document.getElementById('shoutoutModal').remove();
+    }
+
+    function removeShoutout(index) {
+      shoutouts.splice(index, 1);
+      renderShoutouts(shoutouts);
+    }
+
+    async function approveWrapup() {
+      if (!game) return;
+
+      const btn = document.getElementById('approve-wrapup-btn');
+      btn.disabled = true;
+      btn.textContent = 'Publishing...';
+
+      try {
+        const response = await fetch(`https://us-central1-lancers-bball.cloudfunctions.net/approveWrapup?gameId=${game.id}`);
+        const result = await response.json();
+
+        if (result.success) {
+          // Hide approval section and update UI
+          document.getElementById('wrapup-approval-section').style.display = 'none';
+          alert('Wrap-up published! All parents have been notified.');
+          // Reload to show updated status
+          location.reload();
+        } else {
+          throw new Error(result.error || 'Failed to approve');
+        }
+      } catch (e) {
+        console.error('Error approving wrap-up:', e);
+        alert('Failed to publish wrap-up: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = 'Approve';
+      }
+    }
+
+    let isEditingNarrative = false;
+    let originalNarrative = '';
+
+    function toggleEditWrapup() {
+      const narrativeEl = document.getElementById('narrative-text');
+      const editBtn = document.getElementById('edit-wrapup-btn');
+      const saveBtn = document.getElementById('save-wrapup-btn');
+      const regenBtn = document.getElementById('regenerate-wrapup-btn');
+      const approveBtn = document.getElementById('approve-wrapup-btn');
+
+      if (!isEditingNarrative) {
+        // Enter edit mode
+        originalNarrative = narrativeEl.textContent;
+        narrativeEl.contentEditable = 'true';
+        narrativeEl.style.border = '2px solid var(--lancers-gold)';
+        narrativeEl.style.padding = '12px';
+        narrativeEl.style.outline = 'none';
+        narrativeEl.focus();
+
+        editBtn.textContent = 'Cancel';
+        editBtn.style.background = 'rgba(255, 100, 100, 0.2)';
+        editBtn.style.borderColor = 'rgba(255, 100, 100, 0.5)';
+        saveBtn.style.display = 'block';
+        regenBtn.disabled = true;
+        regenBtn.style.opacity = '0.5';
+        approveBtn.disabled = true;
+        approveBtn.style.opacity = '0.5';
+
+        isEditingNarrative = true;
+      } else {
+        // Cancel edit mode - restore original
+        narrativeEl.textContent = originalNarrative;
+        narrativeEl.contentEditable = 'false';
+        narrativeEl.style.border = 'none';
+        narrativeEl.style.padding = '0';
+
+        editBtn.textContent = 'Edit';
+        editBtn.style.background = 'var(--bg-elevated)';
+        editBtn.style.borderColor = 'var(--border-color)';
+        saveBtn.style.display = 'none';
+        regenBtn.disabled = false;
+        regenBtn.style.opacity = '1';
+        approveBtn.disabled = false;
+        approveBtn.style.opacity = '1';
+
+        isEditingNarrative = false;
+      }
+    }
+
+    async function saveWrapupEdit() {
+      if (!game || !db) return;
+
+      const narrativeEl = document.getElementById('narrative-text');
+      const newNarrative = narrativeEl.textContent.trim();
+
+      if (!newNarrative) {
+        alert('Narrative cannot be empty');
+        return;
+      }
+
+      const saveBtn = document.getElementById('save-wrapup-btn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        await db.collection('wrapups').doc(game.id.toString()).update({
+          'report.narrative': newNarrative,
+          'report.editedAt': firebase.firestore.FieldValue.serverTimestamp(),
+          'report.editedBy': currentUser.email
+        });
+
+        // Exit edit mode
+        narrativeEl.contentEditable = 'false';
+        narrativeEl.style.border = 'none';
+        narrativeEl.style.padding = '0';
+
+        const editBtn = document.getElementById('edit-wrapup-btn');
+        const regenBtn = document.getElementById('regenerate-wrapup-btn');
+        const approveBtn = document.getElementById('approve-wrapup-btn');
+
+        editBtn.textContent = 'Edit';
+        editBtn.style.background = 'var(--bg-elevated)';
+        editBtn.style.borderColor = 'var(--border-color)';
+        saveBtn.style.display = 'none';
+        regenBtn.disabled = false;
+        regenBtn.style.opacity = '1';
+        approveBtn.disabled = false;
+        approveBtn.style.opacity = '1';
+
+        isEditingNarrative = false;
+        originalNarrative = newNarrative;
+
+        alert('Changes saved!');
+      } catch (e) {
+        console.error('Error saving narrative:', e);
+        alert('Failed to save: ' + e.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    }
+
+    async function regenerateWrapup() {
+      if (!game) return;
+
+      if (!confirm('This will generate a new AI narrative and replace the current one. Continue?')) {
+        return;
+      }
+
+      const btn = document.getElementById('regenerate-wrapup-btn');
+      const editBtn = document.getElementById('edit-wrapup-btn');
+      const approveBtn = document.getElementById('approve-wrapup-btn');
+
+      btn.disabled = true;
+      btn.textContent = 'Regenerating...';
+      editBtn.disabled = true;
+      editBtn.style.opacity = '0.5';
+      approveBtn.disabled = true;
+      approveBtn.style.opacity = '0.5';
+
+      try {
+        const response = await fetch(`https://us-central1-lancers-bball.cloudfunctions.net/generateWrapupReport`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gameId: game.id.toString() })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('New wrap-up generated!');
+          location.reload();
+        } else {
+          throw new Error(result.error || 'Failed to regenerate');
+        }
+      } catch (e) {
+        console.error('Error regenerating wrap-up:', e);
+        alert('Failed to regenerate: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = 'Regenerate';
+        editBtn.disabled = false;
+        editBtn.style.opacity = '1';
+        approveBtn.disabled = false;
+        approveBtn.style.opacity = '1';
+      }
+    }
+
+    async function saveCoachNotes() {
+      if (!game || !db) return;
+
+      const commentary = document.getElementById('coach-commentary').value.trim();
+      const gameHighlight = document.getElementById('coach-highlight').value.trim();
+
+      const coachNotes = {
+        commentary: commentary || null,
+        playerShoutouts: shoutouts.length > 0 ? shoutouts : null,
+        gameHighlight: gameHighlight || null,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: currentUser.email
+      };
+
+      try {
+        await db.collection('wrapups').doc(game.id.toString()).update({
+          coachNotes: coachNotes
+        });
+
+        // Update local data
+        wrapupData.coachNotes = coachNotes;
+        alert('Coach notes saved!');
+
+      } catch (e) {
+        console.error('Error saving coach notes:', e);
+        alert('Error saving notes: ' + e.message);
       }
     }
 

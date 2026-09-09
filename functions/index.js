@@ -12,8 +12,12 @@ initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
 
-// Define SendGrid API key as a secret
+// Define secrets
 const sendgridApiKey = defineSecret('SENDGRID_API_KEY');
+const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
+const cloudinaryCloudName = defineSecret('CLOUDINARY_CLOUD_NAME');
+const cloudinaryApiKey = defineSecret('CLOUDINARY_API_KEY');
+const cloudinaryApiSecret = defineSecret('CLOUDINARY_API_SECRET');
 
 // Send notification to all registered devices
 async function sendToAllDevices(title, body, data = {}) {
@@ -37,6 +41,7 @@ async function sendToAllDevices(title, body, data = {}) {
     return;
   }
 
+  // Original format that works
   const message = {
     data: {
       title: title,
@@ -76,6 +81,52 @@ async function sendToAllDevices(title, body, data = {}) {
   }
 }
 
+// Send notification to head coach only (for wrap-up approval)
+async function sendToCoachesOnly(title, body, data = {}) {
+  // Get head coach email from roster config
+  const rosterDoc = await db.collection('config').doc('roster').get();
+  const coaches = rosterDoc.exists ? rosterDoc.data().coaches || [] : [];
+  const headCoach = coaches.find(c => c.role === 'Head Coach');
+
+  if (!headCoach || !headCoach.email) {
+    console.log('No head coach email found in roster');
+    return;
+  }
+
+  const coachEmails = [headCoach.email.toLowerCase()];
+
+  const tokensSnapshot = await db.collection('fcmTokens').get();
+  const tokens = [];
+
+  tokensSnapshot.forEach(doc => {
+    const tokenData = doc.data();
+    if (tokenData.token && tokenData.email && coachEmails.includes(tokenData.email.toLowerCase())) {
+      tokens.push(tokenData.token);
+    }
+  });
+
+  if (tokens.length === 0) {
+    console.log('No coach tokens found');
+    return;
+  }
+
+  const message = {
+    data: {
+      title: title,
+      body: body,
+      ...data
+    },
+    tokens: tokens
+  };
+
+  try {
+    const response = await messaging.sendEachForMulticast(message);
+    console.log(`Sent ${response.successCount} coach notifications, ${response.failureCount} failed`);
+  } catch (error) {
+    console.error('Error sending coach notifications:', error);
+  }
+}
+
 // Trigger on new chat message
 exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) => {
   const message = event.data.data();
@@ -108,7 +159,7 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
       title: title,
       body: body,
       type: 'chat',
-      url: '/chat.html'
+      url: '/messages.html'
     },
     tokens: tokens
   };
@@ -328,7 +379,6 @@ exports.sendAttendanceReminders = onSchedule({
 
       const eventDate = new Date(event.date);
       const dateStr = eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
       const notificationMessage = {
         data: {
           title: 'RSVP Needed',
@@ -457,7 +507,6 @@ exports.triggerAttendanceReminders = onRequest(async (request, response) => {
       if (tokensToNotify.length > 0) {
         const eventDate = new Date(event.date);
         const dateStr = eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
         const notificationMessage = {
           data: {
             title: 'RSVP Needed',
@@ -716,11 +765,594 @@ exports.onGameEnded = onDocumentUpdated('gameStats/{gameId}', async (event) => {
     );
 
     console.log(`Game end notification sent for game ${gameId}`);
+
+    // Create wrap-up document with 3-hour coach window
+    const windowEnds = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    await db.collection('wrapups').doc(gameId).set({
+      gameId: parseInt(gameId),
+      status: 'pending',
+      coachNotes: null,
+      coachWindowEndsAt: Timestamp.fromDate(windowEnds),
+      gameEndedAt: Timestamp.now(),
+      createdAt: Timestamp.now(),
+      opponent: opponentName,
+      finalScore: `${lancersScore}-${oppScore}`,
+      result: result
+    });
+
+    // Schedule wrap-up generation via Cloud Tasks (3 hours from now)
+    await scheduleWrapupGeneration(gameId, windowEnds);
+    console.log(`Wrap-up scheduled for game ${gameId} at ${windowEnds.toISOString()}`);
+
     return null;
   } catch (error) {
-    console.error('Error sending game end notification:', error);
+    console.error('Error in game end handler:', error);
     return null;
   }
+});
+
+// ============================================================
+// POST-GAME WRAP-UP GENERATION
+// ============================================================
+
+// Schedule wrap-up generation using Cloud Tasks
+async function scheduleWrapupGeneration(gameId, executeAt) {
+  const { CloudTasksClient } = require('@google-cloud/tasks');
+  const client = new CloudTasksClient();
+
+  const project = process.env.GCLOUD_PROJECT || 'lancers-bball';
+  const location = 'us-central1';
+  const queue = 'wrapup-generation';
+
+  const functionUrl = `https://${location}-${project}.cloudfunctions.net/generateWrapupReport`;
+
+  const task = {
+    httpRequest: {
+      httpMethod: 'POST',
+      url: functionUrl,
+      headers: { 'Content-Type': 'application/json' },
+      body: Buffer.from(JSON.stringify({ gameId: gameId.toString() })).toString('base64')
+    },
+    scheduleTime: {
+      seconds: Math.floor(executeAt.getTime() / 1000)
+    }
+  };
+
+  const parent = client.queuePath(project, location, queue);
+
+  try {
+    await client.createTask({ parent, task });
+    console.log(`Task scheduled for game ${gameId} at ${executeAt.toISOString()}`);
+  } catch (error) {
+    // If Cloud Tasks queue doesn't exist, fall back to immediate generation
+    if (error.code === 5) { // NOT_FOUND
+      console.log('Cloud Tasks queue not found. Will use scheduled function fallback.');
+      // Mark for scheduled function pickup
+      await db.collection('wrapups').doc(gameId.toString()).update({
+        needsGeneration: true
+      });
+    } else {
+      console.error('Error scheduling task:', error);
+      throw error;
+    }
+  }
+}
+
+// Generate wrap-up report using Claude API and Cloudinary
+exports.generateWrapupReport = onRequest({
+  secrets: [anthropicApiKey, cloudinaryCloudName, cloudinaryApiKey, cloudinaryApiSecret],
+  timeoutSeconds: 300,
+  memory: '1GiB'
+}, async (request, response) => {
+  const gameId = request.body.gameId || request.query.gameId;
+
+  if (!gameId) {
+    response.status(400).json({ error: 'gameId required' });
+    return;
+  }
+
+  console.log(`Generating wrap-up for game ${gameId}...`);
+
+  try {
+    // Fetch all required data
+    const [wrapupDoc, gameStatsDoc, highlightsSnapshot, scheduleDoc] = await Promise.all([
+      db.collection('wrapups').doc(gameId.toString()).get(),
+      db.collection('gameStats').doc(gameId.toString()).get(),
+      db.collection('highlights').where('gameId', '==', parseInt(gameId)).get(),
+      db.collection('config').doc('schedule').get()
+    ]);
+
+    if (!wrapupDoc.exists) {
+      response.status(404).json({ error: 'Wrap-up document not found' });
+      return;
+    }
+
+    if (!gameStatsDoc.exists) {
+      response.status(404).json({ error: 'Game stats not found' });
+      return;
+    }
+
+    const wrapupData = wrapupDoc.data();
+    const gameStats = gameStatsDoc.data();
+
+    // Update status to 'generating'
+    await wrapupDoc.ref.update({
+      status: 'generating',
+      updatedAt: Timestamp.now()
+    });
+
+    // Get opponent name from schedule
+    const games = scheduleDoc.exists ? scheduleDoc.data().games || [] : [];
+    const game = games.find(g => g.id.toString() === gameId.toString());
+    const opponentName = game ? game.opponent : wrapupData.opponent || 'Opponent';
+
+    // Generate AI narrative
+    const narrative = await generateNarrativeWithClaude(gameStats, wrapupData, opponentName);
+
+    // Compile highlights video (if any video highlights exist)
+    const highlights = [];
+    highlightsSnapshot.forEach(doc => highlights.push({ id: doc.id, ...doc.data() }));
+
+    let compiledVideo = null;
+    const videoHighlights = highlights.filter(h =>
+      h.mediaType === 'video' &&
+      (h.downloadUrl || h.url) &&
+      !(h.downloadUrl || h.url).includes('example.com')
+    );
+
+    if (videoHighlights.length > 0 && cloudinaryCloudName.value()) {
+      compiledVideo = await compileHighlightsVideo(gameId, videoHighlights);
+    }
+
+    // Save results - pending coach approval
+    await wrapupDoc.ref.update({
+      status: 'pendingApproval',
+      report: narrative,
+      compiledVideo: compiledVideo,
+      highlightCount: highlights.length,
+      updatedAt: Timestamp.now()
+    });
+
+    // Send notification to coaches only for approval
+    await sendToCoachesOnly(
+      'Wrap-Up Ready for Review',
+      `The ${opponentName} game recap is ready for your approval`,
+      {
+        type: 'wrapupPendingApproval',
+        url: `/game-detail.html?id=${gameId}`,
+        gameId: gameId.toString()
+      }
+    );
+
+    console.log(`Wrap-up pending approval for game ${gameId}`);
+    response.json({ success: true, gameId });
+
+  } catch (error) {
+    console.error('Error generating wrap-up:', error);
+
+    // Update status to error
+    await db.collection('wrapups').doc(gameId.toString()).update({
+      status: 'error',
+      error: error.message,
+      updatedAt: Timestamp.now()
+    });
+
+    response.status(500).json({ error: error.message });
+  }
+});
+
+// Approve wrap-up and send notification to all parents
+exports.approveWrapup = onRequest(async (request, response) => {
+  // Allow CORS for the web app
+  response.set('Access-Control-Allow-Origin', '*');
+  if (request.method === 'OPTIONS') {
+    response.set('Access-Control-Allow-Methods', 'POST');
+    response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    response.status(204).send('');
+    return;
+  }
+
+  const gameId = request.query.gameId || request.body.gameId;
+  if (!gameId) {
+    response.status(400).json({ error: 'gameId is required' });
+    return;
+  }
+
+  try {
+    const wrapupDoc = await db.collection('wrapups').doc(gameId.toString()).get();
+    if (!wrapupDoc.exists) {
+      response.status(404).json({ error: 'Wrap-up not found' });
+      return;
+    }
+
+    const wrapupData = wrapupDoc.data();
+    if (wrapupData.status !== 'pendingApproval') {
+      response.status(400).json({ error: `Wrap-up status is ${wrapupData.status}, not pendingApproval` });
+      return;
+    }
+
+    // Update status to complete
+    await wrapupDoc.ref.update({
+      status: 'complete',
+      approvedAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    });
+
+    const opponentName = wrapupData.opponent || 'Opponent';
+
+    // Send notification to all parents
+    await sendToAllDevices(
+      'Game Wrap-Up Ready!',
+      `Check out the recap from the ${opponentName} game`,
+      {
+        type: 'wrapupReady',
+        url: `/game-detail.html?id=${gameId}`,
+        gameId: gameId.toString()
+      }
+    );
+
+    console.log(`Wrap-up approved and published for game ${gameId}`);
+    response.json({ success: true, gameId });
+
+  } catch (error) {
+    console.error('Error approving wrap-up:', error);
+    response.status(500).json({ error: error.message });
+  }
+});
+
+// Generate narrative using Claude API
+async function generateNarrativeWithClaude(gameStats, wrapupData, opponentName) {
+  const Anthropic = require('@anthropic-ai/sdk');
+
+  const apiKey = anthropicApiKey.value();
+  if (!apiKey) {
+    console.log('Anthropic API key not configured, using fallback narrative');
+    return generateFallbackNarrative(gameStats, wrapupData, opponentName);
+  }
+
+  const client = new Anthropic({ apiKey });
+
+  // Build context from play-by-play events
+  const events = gameStats.events || [];
+  const scoringPlays = events.filter(e => e.type === 'stat' && e.stat === 'points' && e.team === 'lancers');
+  const playerStats = gameStats.playerStats || {};
+
+  // Get top performers
+  const playerStatsList = Object.entries(playerStats)
+    .map(([id, stats]) => ({ id, ...stats }))
+    .sort((a, b) => (b.points || 0) - (a.points || 0));
+
+  const lancersScore = gameStats.lancersScore || 0;
+  const oppScore = gameStats.opponentScore || 0;
+  const result = lancersScore > oppScore ? 'WIN' : (lancersScore < oppScore ? 'LOSS' : 'TIE');
+
+  const prompt = `You are writing a game recap for a 5th grade boys basketball team called the Jr. Lancers.
+
+GAME DATA:
+- Final Score: Lancers ${lancersScore} - ${opponentName} ${oppScore}
+- Result: ${result}
+
+PLAY-BY-PLAY HIGHLIGHTS (scoring plays):
+${scoringPlays.slice(0, 25).map(e => `- ${e.gamePhase}: ${e.description} (Score: ${e.lancersScore}-${e.opponentScore})`).join('\n')}
+
+PLAYER STATISTICS:
+${playerStatsList.map(stats =>
+  `- ${stats.name}: ${stats.points || 0} pts, ${stats.rebounds || 0} reb, ${stats.assists || 0} ast, ${stats.steals || 0} stl`
+).join('\n')}
+
+${wrapupData.coachNotes ? `
+COACH NOTES:
+Commentary: ${wrapupData.coachNotes.commentary || 'None provided'}
+Player Shoutouts: ${(wrapupData.coachNotes.playerShoutouts || []).map(s => `${s.note}`).join(', ') || 'None'}
+Game Highlight: ${wrapupData.coachNotes.gameHighlight || 'None'}
+` : ''}
+
+Write a 2-3 paragraph game recap in an enthusiastic but professional sports journalism style.
+Mention specific players and plays. Include the final score and key moments.
+Keep the tone positive and encouraging - these are 10-11 year old kids.
+Do not make up any statistics or events not mentioned above.
+Do not use the phrase "young Lancers" - just say "Lancers" or "the team".`;
+
+  try {
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    return {
+      narrative: message.content[0].text,
+      playerOfTheGame: playerStatsList[0] ? {
+        playerId: parseInt(playerStatsList[0].id),
+        name: playerStatsList[0].name,
+        points: playerStatsList[0].points || 0
+      } : null,
+      generatedAt: Timestamp.now(),
+      modelUsed: 'claude-sonnet-4-20250514'
+    };
+  } catch (error) {
+    console.error('Claude API error:', error);
+    return generateFallbackNarrative(gameStats, wrapupData, opponentName);
+  }
+}
+
+// Fallback narrative if Claude API fails
+function generateFallbackNarrative(gameStats, wrapupData, opponentName) {
+  const lancersScore = gameStats.lancersScore || 0;
+  const oppScore = gameStats.opponentScore || 0;
+  const result = lancersScore > oppScore ? 'victory' : (lancersScore < oppScore ? 'loss' : 'tie');
+
+  const playerStats = gameStats.playerStats || {};
+  const topScorer = Object.entries(playerStats)
+    .sort((a, b) => (b[1].points || 0) - (a[1].points || 0))[0];
+
+  let narrative = `The Jr. Lancers finished with a ${lancersScore}-${oppScore} ${result} against ${opponentName}. `;
+
+  if (topScorer) {
+    narrative += `${topScorer[1].name} led the team with ${topScorer[1].points || 0} points. `;
+  }
+
+  if (wrapupData.coachNotes?.commentary) {
+    narrative += `\n\nCoach's notes: ${wrapupData.coachNotes.commentary}`;
+  }
+
+  return {
+    narrative,
+    playerOfTheGame: topScorer ? {
+      playerId: parseInt(topScorer[0]),
+      name: topScorer[1].name,
+      points: topScorer[1].points || 0
+    } : null,
+    generatedAt: Timestamp.now(),
+    modelUsed: 'fallback'
+  };
+}
+
+// Compile highlight videos using Cloudinary
+async function compileHighlightsVideo(gameId, videoHighlights) {
+  const cloudinary = require('cloudinary').v2;
+
+  const cloudName = cloudinaryCloudName.value();
+  const apiKey = cloudinaryApiKey.value();
+  const apiSecret = cloudinaryApiSecret.value();
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    console.log('Cloudinary not configured, skipping video compilation');
+    return null;
+  }
+
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret
+  });
+
+  try {
+    // Upload each video to Cloudinary (limit to 6)
+    const uploadedVideos = [];
+    const videosToProcess = videoHighlights.slice(0, 6);
+
+    for (const highlight of videosToProcess) {
+      const videoUrl = highlight.downloadUrl || highlight.url;
+
+      try {
+        const result = await cloudinary.uploader.upload(videoUrl, {
+          resource_type: 'video',
+          folder: `lancers/game${gameId}`,
+          public_id: `highlight_${highlight.playerId || 'team'}_${Date.now()}`
+        });
+        uploadedVideos.push(result.public_id);
+      } catch (uploadError) {
+        console.error(`Failed to upload video: ${uploadError.message}`);
+      }
+    }
+
+    if (uploadedVideos.length === 0) {
+      return null;
+    }
+
+    // For a single video, just return its URL
+    if (uploadedVideos.length === 1) {
+      const url = cloudinary.url(uploadedVideos[0], {
+        resource_type: 'video',
+        format: 'mp4'
+      });
+
+      return {
+        url,
+        cloudinaryPublicId: uploadedVideos[0],
+        highlightCount: 1,
+        createdAt: Timestamp.now()
+      };
+    }
+
+    // For multiple videos, create a concatenated video
+    // Using Cloudinary's video splice transformation
+    const baseVideo = uploadedVideos[0];
+    const overlays = uploadedVideos.slice(1).map(publicId => ({
+      overlay: `video:${publicId.replace(/\//g, ':')}`,
+      flags: 'splice',
+      start_offset: 0
+    }));
+
+    const compiledUrl = cloudinary.url(baseVideo, {
+      resource_type: 'video',
+      transformation: [
+        ...overlays,
+        { quality: 'auto', fetch_format: 'mp4' }
+      ]
+    });
+
+    return {
+      url: compiledUrl,
+      cloudinaryPublicId: `lancers/game${gameId}/compilation`,
+      highlightCount: uploadedVideos.length,
+      createdAt: Timestamp.now()
+    };
+
+  } catch (error) {
+    console.error('Cloudinary compilation error:', error);
+    return null;
+  }
+}
+
+// Manual trigger for wrap-up generation (for testing)
+exports.triggerWrapupGeneration = onRequest(async (request, response) => {
+  const apiKey = request.query.key;
+  if (apiKey !== 'lancers2026') {
+    response.status(403).send('Unauthorized');
+    return;
+  }
+
+  const gameId = request.query.gameId;
+  if (!gameId) {
+    response.status(400).json({ error: 'gameId parameter required' });
+    return;
+  }
+
+  // Check if wrap-up exists
+  const wrapupDoc = await db.collection('wrapups').doc(gameId).get();
+
+  if (!wrapupDoc.exists) {
+    // Create wrap-up doc if it doesn't exist
+    const gameStatsDoc = await db.collection('gameStats').doc(gameId).get();
+    if (!gameStatsDoc.exists) {
+      response.status(404).json({ error: 'Game stats not found' });
+      return;
+    }
+
+    const gameStats = gameStatsDoc.data();
+    const scheduleDoc = await db.collection('config').doc('schedule').get();
+    const games = scheduleDoc.exists ? scheduleDoc.data().games || [] : [];
+    const game = games.find(g => g.id.toString() === gameId);
+
+    await db.collection('wrapups').doc(gameId).set({
+      gameId: parseInt(gameId),
+      status: 'pending',
+      coachNotes: null,
+      coachWindowEndsAt: Timestamp.now(), // Already ended for testing
+      gameEndedAt: Timestamp.now(),
+      createdAt: Timestamp.now(),
+      opponent: game ? game.opponent : 'Opponent',
+      finalScore: `${gameStats.lancersScore || 0}-${gameStats.opponentScore || 0}`,
+      result: gameStats.result || 'W'
+    });
+  }
+
+  // Trigger generation
+  const functionUrl = `https://us-central1-lancers-bball.cloudfunctions.net/generateWrapupReport`;
+
+  const https = require('https');
+  const postData = JSON.stringify({ gameId });
+
+  const req = https.request(functionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(postData)
+    }
+  }, (res) => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => {
+      response.json({ success: true, triggered: true, response: data });
+    });
+  });
+
+  req.on('error', (error) => {
+    response.status(500).json({ error: error.message });
+  });
+
+  req.write(postData);
+  req.end();
+});
+
+// Scheduled fallback: Check for pending wrap-ups that need generation
+exports.checkPendingWrapups = onSchedule({
+  schedule: 'every 30 minutes',
+  timeZone: 'America/Chicago'
+}, async (event) => {
+  console.log('Checking for pending wrap-ups...');
+
+  const now = Timestamp.now();
+
+  // Find wrap-ups where coach window has ended but status is still pending
+  const pendingSnapshot = await db.collection('wrapups')
+    .where('status', '==', 'pending')
+    .where('coachWindowEndsAt', '<=', now)
+    .get();
+
+  if (pendingSnapshot.empty) {
+    console.log('No pending wrap-ups found');
+    return null;
+  }
+
+  console.log(`Found ${pendingSnapshot.size} pending wrap-ups`);
+
+  for (const doc of pendingSnapshot.docs) {
+    const gameId = doc.id;
+    console.log(`Triggering wrap-up generation for game ${gameId}`);
+
+    // Call the generate function directly
+    try {
+      const gameStatsDoc = await db.collection('gameStats').doc(gameId).get();
+      const highlightsSnapshot = await db.collection('highlights')
+        .where('gameId', '==', parseInt(gameId))
+        .get();
+      const scheduleDoc = await db.collection('config').doc('schedule').get();
+
+      if (!gameStatsDoc.exists) {
+        console.log(`Game stats not found for ${gameId}`);
+        continue;
+      }
+
+      const wrapupData = doc.data();
+      const gameStats = gameStatsDoc.data();
+      const games = scheduleDoc.exists ? scheduleDoc.data().games || [] : [];
+      const game = games.find(g => g.id.toString() === gameId);
+      const opponentName = game ? game.opponent : wrapupData.opponent || 'Opponent';
+
+      // Update status
+      await doc.ref.update({ status: 'generating', updatedAt: Timestamp.now() });
+
+      // Generate narrative
+      const narrative = await generateNarrativeWithClaude(gameStats, wrapupData, opponentName);
+
+      // Get highlights
+      const highlights = [];
+      highlightsSnapshot.forEach(hdoc => highlights.push({ id: hdoc.id, ...hdoc.data() }));
+
+      // Save results - pending coach approval
+      await doc.ref.update({
+        status: 'pendingApproval',
+        report: narrative,
+        highlightCount: highlights.length,
+        updatedAt: Timestamp.now()
+      });
+
+      // Send notification to head coach for approval
+      await sendToCoachesOnly(
+        'Wrap-Up Ready for Review',
+        `The ${opponentName} game recap is ready for your approval`,
+        {
+          type: 'wrapupPendingApproval',
+          url: `/game-detail.html?id=${gameId}`,
+          gameId: gameId
+        }
+      );
+
+      console.log(`Wrap-up pending approval for game ${gameId}`);
+    } catch (error) {
+      console.error(`Error generating wrap-up for game ${gameId}:`, error);
+      await doc.ref.update({
+        status: 'error',
+        error: error.message,
+        updatedAt: Timestamp.now()
+      });
+    }
+  }
+
+  return null;
 });
 
 // ============================================================

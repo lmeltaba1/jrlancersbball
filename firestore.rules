@@ -76,6 +76,16 @@ service cloud.firestore {
       // Note: Frontend verifies user is a parent of this player before allowing writes
     }
 
+    // Wrap-ups - post-game AI reports with coach notes
+    match /wrapups/{gameId} {
+      // Anyone authenticated can read wrap-ups
+      allow read: if isAuthenticated();
+      // Only authenticated users can update coach notes (frontend checks coach role)
+      allow update: if isAuthenticated();
+      // Only cloud functions create wrap-ups
+      allow create, delete: if false;
+    }
+
     // Posts - coach announcements with reactions and comments
     match /posts/{postId} {
       allow read: if isAuthenticated();
