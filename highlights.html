@@ -1195,7 +1195,8 @@
               downloadUrl: downloadUrl,
               thumbnailUrl: thumbnailUrl,
               caption: caption,
-              timestamp: firebase.firestore.Timestamp.fromDate(captureTime)
+              capturedAt: firebase.firestore.Timestamp.fromDate(captureTime),
+              uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             closeUploadModal();
@@ -1214,30 +1215,38 @@
       if (!confirm('Delete this highlight?')) return;
 
       try {
-        // Get the highlight doc to check for thumbnail
+        // Get the highlight doc to check for storage path
         const doc = await db.collection('highlights').doc(docId).get();
         const data = doc.data();
 
-        // Delete thumbnail from Storage if it exists
-        if (data && data.thumbnailUrl) {
-          try {
-            // Extract path from thumbnailUrl - it's in the storagePath pattern
-            const thumbPath = storagePath.replace(/\.[^.]+$/, '_thumb.jpg');
-            await storage.ref(thumbPath).delete();
-          } catch (e) {
-            console.log('Thumbnail delete skipped:', e.message);
+        // Try to get storage path from doc if not passed or invalid
+        let actualPath = storagePath;
+        if (!actualPath || actualPath === 'undefined' || actualPath === 'null') {
+          actualPath = data?.storagePath;
+          // If still no path, try to extract from downloadUrl
+          if (!actualPath && data?.downloadUrl) {
+            const match = data.downloadUrl.match(/\/o\/([^?]+)/);
+            if (match) actualPath = decodeURIComponent(match[1]);
           }
         }
 
-        // Delete main file from Storage
-        if (storagePath) {
-          await storage.ref(storagePath).delete();
+        // Delete from Storage if we have a path
+        if (actualPath && actualPath !== 'undefined') {
+          try {
+            await storage.ref(actualPath).delete();
+          } catch (e) {
+            console.log('Storage delete skipped:', e.message);
+          }
         }
+
         // Delete from Firestore
         await db.collection('highlights').doc(docId).delete();
+
+        // Refresh display
+        loadHighlights();
       } catch (error) {
         console.error('Error deleting:', error);
-        alert('Could not delete highlight.');
+        alert('Could not delete highlight: ' + error.message);
       }
     }
 

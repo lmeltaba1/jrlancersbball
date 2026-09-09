@@ -3,7 +3,7 @@ const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
-const { getFirestore, Timestamp } = require('firebase-admin/firestore');
+const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const sgMail = require('@sendgrid/mail');
 
@@ -15,9 +15,7 @@ const messaging = getMessaging();
 // Define secrets
 const sendgridApiKey = defineSecret('SENDGRID_API_KEY');
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
-const cloudinaryCloudName = defineSecret('CLOUDINARY_CLOUD_NAME');
-const cloudinaryApiKey = defineSecret('CLOUDINARY_API_KEY');
-const cloudinaryApiSecret = defineSecret('CLOUDINARY_API_SECRET');
+// Cloudinary secrets removed - now using GCP Transcoder API
 
 // Send notification to all registered devices
 async function sendToAllDevices(title, body, data = {}) {
@@ -88,6 +86,8 @@ async function sendToCoachesOnly(title, body, data = {}) {
   const coaches = rosterDoc.exists ? rosterDoc.data().coaches || [] : [];
   const headCoach = coaches.find(c => c.role === 'Head Coach');
 
+  console.log('Coach notification: Looking for head coach, found:', headCoach?.email || 'none');
+
   if (!headCoach || !headCoach.email) {
     console.log('No head coach email found in roster');
     return;
@@ -97,19 +97,26 @@ async function sendToCoachesOnly(title, body, data = {}) {
 
   const tokensSnapshot = await db.collection('fcmTokens').get();
   const tokens = [];
+  const tokenEmails = [];
 
   tokensSnapshot.forEach(doc => {
     const tokenData = doc.data();
+    console.log(`FCM token doc: email=${tokenData.email}, hasToken=${!!tokenData.token}`);
     if (tokenData.token && tokenData.email && coachEmails.includes(tokenData.email.toLowerCase())) {
       tokens.push(tokenData.token);
+      tokenEmails.push(tokenData.email);
     }
   });
 
   if (tokens.length === 0) {
-    console.log('No coach tokens found');
+    console.log('No coach tokens found matching:', coachEmails);
     return;
   }
 
+  console.log(`Found ${tokens.length} coach tokens for: ${tokenEmails.join(', ')}`);
+  console.log(`Token preview: ${tokens[0]?.substring(0, 20)}...`);
+
+  // Use same data-only format as working chat notifications
   const message = {
     data: {
       title: title,
@@ -122,6 +129,13 @@ async function sendToCoachesOnly(title, body, data = {}) {
   try {
     const response = await messaging.sendEachForMulticast(message);
     console.log(`Sent ${response.successCount} coach notifications, ${response.failureCount} failed`);
+    if (response.failureCount > 0) {
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          console.error(`Failed to send to token ${idx}: ${resp.error?.message}`);
+        }
+      });
+    }
   } catch (error) {
     console.error('Error sending coach notifications:', error);
   }
@@ -840,7 +854,7 @@ async function scheduleWrapupGeneration(gameId, executeAt) {
 
 // Generate wrap-up report using Claude API and Cloudinary
 exports.generateWrapupReport = onRequest({
-  secrets: [anthropicApiKey, cloudinaryCloudName, cloudinaryApiKey, cloudinaryApiSecret],
+  secrets: [anthropicApiKey],
   timeoutSeconds: 300,
   memory: '1GiB'
 }, async (request, response) => {
@@ -871,21 +885,33 @@ exports.generateWrapupReport = onRequest({
       db.collection('config').doc('schedule').get()
     ]);
 
+    // Create wrap-up document if it doesn't exist (for regeneration)
+    let wrapupData;
     if (!wrapupDoc.exists) {
-      response.status(404).json({ error: 'Wrap-up document not found' });
-      return;
+      console.log(`Creating wrap-up document for game ${gameId}`);
+      const windowEnds = new Date(Date.now() + 2 * 60 * 60 * 1000);
+      wrapupData = {
+        gameId: parseInt(gameId),
+        status: 'pending',
+        coachNotes: null,
+        coachWindowEndsAt: Timestamp.fromDate(windowEnds),
+        gameEndedAt: Timestamp.now(),
+        createdAt: Timestamp.now()
+      };
+      await db.collection('wrapups').doc(gameId.toString()).set(wrapupData);
+    } else {
+      wrapupData = wrapupDoc.data();
     }
 
     if (!gameStatsDoc.exists) {
       response.status(404).json({ error: 'Game stats not found' });
       return;
     }
-
-    const wrapupData = wrapupDoc.data();
     const gameStats = gameStatsDoc.data();
 
     // Update status to 'generating'
-    await wrapupDoc.ref.update({
+    const wrapupRef = db.collection('wrapups').doc(gameId.toString());
+    await wrapupRef.update({
       status: 'generating',
       updatedAt: Timestamp.now()
     });
@@ -909,12 +935,12 @@ exports.generateWrapupReport = onRequest({
       !(h.downloadUrl || h.url).includes('example.com')
     );
 
-    if (videoHighlights.length > 0 && cloudinaryCloudName.value()) {
+    if (videoHighlights.length > 0) {
       compiledVideo = await compileHighlightsVideo(gameId, videoHighlights);
     }
 
     // Save results - pending coach approval
-    await wrapupDoc.ref.update({
+    await wrapupRef.update({
       status: 'pendingApproval',
       report: narrative,
       compiledVideo: compiledVideo,
@@ -1117,90 +1143,166 @@ function generateFallbackNarrative(gameStats, wrapupData, opponentName) {
   };
 }
 
-// Compile highlight videos using Cloudinary
+// Compile highlight videos using GCP Transcoder API
 async function compileHighlightsVideo(gameId, videoHighlights) {
-  const cloudinary = require('cloudinary').v2;
+  const { TranscoderServiceClient } = require('@google-cloud/video-transcoder');
+  const { getStorage } = require('firebase-admin/storage');
 
-  const cloudName = cloudinaryCloudName.value();
-  const apiKey = cloudinaryApiKey.value();
-  const apiSecret = cloudinaryApiSecret.value();
-
-  if (!cloudName || !apiKey || !apiSecret) {
-    console.log('Cloudinary not configured, skipping video compilation');
+  if (!videoHighlights || videoHighlights.length === 0) {
+    console.log('No video highlights to compile');
     return null;
   }
 
-  cloudinary.config({
-    cloud_name: cloudName,
-    api_key: apiKey,
-    api_secret: apiSecret
+  // Sort highlights by capture time (when video was recorded), oldest first
+  // Use capturedAt field, fall back to timestamp for older records
+  const sortedHighlights = [...videoHighlights].sort((a, b) => {
+    const getTime = (h) => {
+      const ts = h.capturedAt || h.timestamp;
+      if (!ts) return 0;
+      return ts.toDate ? ts.toDate().getTime() : (ts.seconds || 0) * 1000;
+    };
+    return getTime(a) - getTime(b);
   });
 
-  try {
-    // Upload each video to Cloudinary (limit to 6)
-    const uploadedVideos = [];
-    const videosToProcess = videoHighlights.slice(0, 6);
+  console.log(`Processing ${sortedHighlights.length} video highlights for game ${gameId} (sorted by timestamp)`);
 
-    for (const highlight of videosToProcess) {
-      const videoUrl = highlight.downloadUrl || highlight.url;
+  // Convert Firebase Storage URLs to gs:// URIs
+  const bucket = getStorage().bucket();
+  const bucketName = bucket.name;
 
-      try {
-        const result = await cloudinary.uploader.upload(videoUrl, {
-          resource_type: 'video',
-          folder: `lancers/game${gameId}`,
-          public_id: `highlight_${highlight.playerId || 'team'}_${Date.now()}`
-        });
-        uploadedVideos.push(result.public_id);
-      } catch (uploadError) {
-        console.error(`Failed to upload video: ${uploadError.message}`);
-      }
+  const inputUris = [];
+  for (const highlight of sortedHighlights) {
+    const url = highlight.downloadUrl || highlight.url;
+    if (!url || url.includes('example.com')) continue;
+
+    // Extract path from Firebase Storage URL
+    // URL format: https://firebasestorage.googleapis.com/v0/b/BUCKET/o/PATH?alt=media&token=...
+    const match = url.match(/\/o\/([^?]+)/);
+    if (match) {
+      const path = decodeURIComponent(match[1]);
+      inputUris.push(`gs://${bucketName}/${path}`);
+      console.log(`Added input: gs://${bucketName}/${path}`);
     }
+  }
 
-    if (uploadedVideos.length === 0) {
-      return null;
-    }
+  if (inputUris.length === 0) {
+    console.log('No valid video URIs found');
+    return null;
+  }
 
-    // For a single video, just return its URL
-    if (uploadedVideos.length === 1) {
-      const url = cloudinary.url(uploadedVideos[0], {
-        resource_type: 'video',
-        format: 'mp4'
-      });
-
-      return {
-        url,
-        cloudinaryPublicId: uploadedVideos[0],
-        highlightCount: 1,
-        createdAt: Timestamp.now()
-      };
-    }
-
-    // For multiple videos, create a concatenated video
-    // Using Cloudinary's video splice transformation
-    const baseVideo = uploadedVideos[0];
-    const overlays = uploadedVideos.slice(1).map(publicId => ({
-      overlay: `video:${publicId.replace(/\//g, ':')}`,
-      flags: 'splice',
-      start_offset: 0
-    }));
-
-    const compiledUrl = cloudinary.url(baseVideo, {
-      resource_type: 'video',
-      transformation: [
-        ...overlays,
-        { quality: 'auto', fetch_format: 'mp4' }
-      ]
-    });
-
+  // For a single video, just return the original URL
+  if (inputUris.length === 1) {
+    const originalUrl = sortedHighlights[0].downloadUrl || sortedHighlights[0].url;
     return {
-      url: compiledUrl,
-      cloudinaryPublicId: `lancers/game${gameId}/compilation`,
-      highlightCount: uploadedVideos.length,
+      url: originalUrl,
+      highlightCount: 1,
       createdAt: Timestamp.now()
     };
+  }
+
+  try {
+    const client = new TranscoderServiceClient();
+    const projectId = process.env.GCLOUD_PROJECT || 'lancers-bball';
+    const location = 'us-central1';
+    const outputUri = `gs://${bucketName}/compiled-highlights/game${gameId}/`;
+    const outputFileName = `highlight-reel-${Date.now()}.mp4`;
+
+    // Create inputs array
+    const inputs = inputUris.map((uri, index) => ({
+      key: `input${index}`,
+      uri: uri
+    }));
+
+    // Create edit list for concatenation (references input keys)
+    // Each atom references one input and uses full duration
+    const editList = inputUris.map((uri, index) => ({
+      key: `atom${index}`,
+      inputs: [`input${index}`],
+    }));
+
+    const job = {
+      outputUri: outputUri,
+      config: {
+        inputs: inputs,
+        editList: editList,
+        elementaryStreams: [
+          {
+            key: 'video-stream0',
+            videoStream: {
+              h264: {
+                heightPixels: 720,
+                widthPixels: 1280,
+                bitrateBps: 2500000,
+                frameRate: 30,
+              },
+            },
+          },
+        ],
+        muxStreams: [
+          {
+            key: 'sd',
+            container: 'mp4',
+            elementaryStreams: ['video-stream0'],
+            fileName: outputFileName,
+          },
+        ],
+      },
+    };
+
+    console.log(`Creating transcoder job with ${inputUris.length} inputs...`);
+
+    const [response] = await client.createJob({
+      parent: `projects/${projectId}/locations/${location}`,
+      job: job,
+    });
+
+    console.log(`Transcoder job created: ${response.name}`);
+
+    // Poll for job completion (with timeout)
+    const maxWaitTime = 240000; // 4 minutes
+    const pollInterval = 5000; // 5 seconds
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWaitTime) {
+      const [jobStatus] = await client.getJob({ name: response.name });
+
+      if (jobStatus.state === 'SUCCEEDED') {
+        console.log('Transcoder job completed successfully');
+
+        // Make the file publicly readable and use public URL
+        const outputFile = bucket.file(`compiled-highlights/game${gameId}/${outputFileName}`);
+        try {
+          await outputFile.makePublic();
+          console.log('Made compiled video public');
+        } catch (pubError) {
+          console.log('Could not make public (may already be):', pubError.message);
+        }
+
+        // Use public URL format
+        const publicUrl = `https://storage.googleapis.com/${bucketName}/compiled-highlights/game${gameId}/${outputFileName}`;
+        console.log('Compiled video URL:', publicUrl);
+
+        return {
+          url: publicUrl,
+          gcsPath: `${outputUri}${outputFileName}`,
+          highlightCount: inputUris.length,
+          createdAt: Timestamp.now()
+        };
+      } else if (jobStatus.state === 'FAILED') {
+        console.error('Transcoder job failed:', jobStatus.error);
+        return null;
+      }
+
+      console.log(`Job state: ${jobStatus.state}, waiting...`);
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
+
+    console.error('Transcoder job timed out');
+    return null;
 
   } catch (error) {
-    console.error('Cloudinary compilation error:', error);
+    console.error('Transcoder error:', error.message);
+    console.error('Transcoder error details:', JSON.stringify(error.details || error));
     return null;
   }
 }
@@ -1214,9 +1316,17 @@ exports.triggerWrapupGeneration = onRequest(async (request, response) => {
   }
 
   const gameId = request.query.gameId;
+  const reset = request.query.reset === 'true';
+
   if (!gameId) {
     response.status(400).json({ error: 'gameId parameter required' });
     return;
+  }
+
+  // Delete existing wrap-up if reset=true
+  if (reset) {
+    console.log(`Resetting wrap-up for game ${gameId}`);
+    await db.collection('wrapups').doc(gameId).delete();
   }
 
   // Check if wrap-up exists

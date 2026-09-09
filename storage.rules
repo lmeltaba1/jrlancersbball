@@ -13,5 +13,12 @@ service firebase.storage {
                    && request.resource.size < 100 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*|video/.*');
     }
+
+    // Compiled highlight reels - created by Cloud Functions
+    match /compiled-highlights/{gameId}/{fileName} {
+      // Anyone can read (view) compiled videos
+      allow read: if true;
+      // No client writes - only Cloud Functions write these
+    }
   }
 }

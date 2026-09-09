@@ -143,23 +143,24 @@
           </svg>
           Game Wrap-Up
         </div>
-        <div id="wrapup-video" style="display: none; margin-bottom: 16px;">
+        <div id="wrapup-narrative" style="padding: 16px; background: var(--bg-elevated); border-radius: 8px; margin-bottom: 16px;">
+          <p style="font-size: 0.95rem; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap;" id="narrative-text"></p>
+        </div>
+        <div id="coach-notes-summary" style="display: none; padding: 12px; background: rgba(255, 215, 0, 0.1); border-radius: 8px; border: 1px solid var(--lancers-gold); margin-bottom: 16px;">
+          <div style="font-size: 0.75rem; color: var(--lancers-gold); font-weight: 600; margin-bottom: 6px; text-transform: uppercase;">Coach's Corner</div>
+          <p id="coach-commentary-display" style="font-size: 0.9rem; color: var(--text-primary); font-style: italic; margin: 0;"></p>
+        </div>
+        <div id="player-of-game" style="display: none; margin-top: 12px; padding: 12px; background: var(--bg-elevated); border-radius: 8px; text-align: center; margin-bottom: 16px;">
+          <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px;">Player of the Game</div>
+          <div id="potg-name" style="font-size: 1.1rem; font-weight: 700; color: var(--lancers-gold);"></div>
+          <div id="potg-stats" style="font-size: 0.85rem; color: var(--text-primary);"></div>
+        </div>
+        <div id="wrapup-video" style="display: none; margin-bottom: 12px;">
+          <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; text-align: center;">Highlight Reel</div>
           <div style="position: relative; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 16/9;">
             <video id="compiled-video" controls style="width: 100%; height: 100%;"></video>
           </div>
           <p id="highlight-reel-count" style="text-align: center; margin-top: 6px; font-size: 0.75rem; color: var(--text-secondary);"></p>
-        </div>
-        <div id="wrapup-narrative" style="padding: 16px; background: var(--bg-elevated); border-radius: 8px; margin-bottom: 16px;">
-          <p style="font-size: 0.95rem; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap;" id="narrative-text"></p>
-        </div>
-        <div id="coach-notes-summary" style="display: none; padding: 12px; background: rgba(255, 215, 0, 0.1); border-radius: 8px; border: 1px solid var(--lancers-gold);">
-          <div style="font-size: 0.75rem; color: var(--lancers-gold); font-weight: 600; margin-bottom: 6px; text-transform: uppercase;">Coach's Corner</div>
-          <p id="coach-commentary-display" style="font-size: 0.9rem; color: var(--text-primary); font-style: italic; margin: 0;"></p>
-        </div>
-        <div id="player-of-game" style="display: none; margin-top: 12px; padding: 12px; background: var(--bg-elevated); border-radius: 8px; text-align: center;">
-          <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px;">Player of the Game</div>
-          <div id="potg-name" style="font-size: 1.1rem; font-weight: 700; color: var(--lancers-gold);"></div>
-          <div id="potg-stats" style="font-size: 0.85rem; color: var(--text-primary);"></div>
         </div>
         <p style="text-align: right; margin-top: 12px; font-size: 0.7rem; color: var(--text-muted);">Generated <span id="wrapup-generated-time"></span></p>
 
@@ -427,8 +428,11 @@
     let coachWindowTimer = null; // Timer interval
 
     document.addEventListener('DOMContentLoaded', async function() {
+      console.log('DOM loaded, starting auth...');
+      const pageStartTime = Date.now();
       // Require auth - all users can view game details
       requireAuth().then(async function(info) {
+        console.log(`Auth completed in ${Date.now() - pageStartTime}ms`);
         currentUser = auth.currentUser;
         userInfo = info;
         if (info.isViewer) hideViewerRestrictedNav();
@@ -485,56 +489,67 @@
         // Load highlights for this game
         loadHighlights(gameId);
 
-        // Load volunteer data and game stats
+        // Load volunteer data, game stats, and wrap-up in parallel
         if (db) {
-          try {
-            const doc = await db.collection('volunteers').doc(gameId.toString()).get();
-            if (doc.exists) {
-              volunteers = doc.data();
-            }
-          } catch (e) {
-            console.log('No volunteer data yet');
+          const gameIdStr = gameId.toString();
+          console.log('Starting Firestore queries...');
+          const startTime = Date.now();
+
+          // Run all queries in parallel with 10s timeout
+          const timeout = (ms) => new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), ms)
+          );
+
+          const [volunteersResult, statsResult, wrapupResult] = await Promise.all([
+            Promise.race([
+              db.collection('volunteers').doc(gameIdStr).get(),
+              timeout(10000)
+            ]).catch(e => { console.log('Volunteers query failed:', e.message); return null; }),
+
+            Promise.race([
+              db.collection('gameStats').doc(gameIdStr).get(),
+              timeout(10000)
+            ]).catch(e => { console.log('GameStats query failed:', e.message); return null; }),
+
+            Promise.race([
+              db.collection('wrapups').doc(gameIdStr).get(),
+              timeout(10000)
+            ]).catch(e => { console.log('Wrapups query failed:', e.message); return null; })
+          ]);
+
+          console.log(`Firestore queries completed in ${Date.now() - startTime}ms`);
+
+          // Process volunteers
+          if (volunteersResult && volunteersResult.exists) {
+            volunteers = volunteersResult.data();
           }
 
-          // Load game stats to get result and events
-          try {
-            const statsDoc = await db.collection('gameStats').doc(gameId.toString()).get();
-            if (statsDoc.exists) {
-              const statsData = statsDoc.data();
-              if (statsData.isComplete && statsData.ourScore !== undefined && statsData.opponentScore !== undefined) {
-                game.result = statsData.ourScore > statsData.opponentScore ? 'W' : 'L';
-                game.finalScore = {
-                  lancers: statsData.ourScore,
-                  opponent: statsData.opponentScore
-                };
-              }
-              // Also check for result/finalScore if set by endGame
-              if (statsData.result && statsData.lancersScore !== undefined) {
-                game.result = statsData.result;
-                game.finalScore = {
-                  lancers: statsData.lancersScore,
-                  opponent: statsData.opponentScore
-                };
-              }
-              // Load play-by-play events and player stats
-              gameEvents = statsData.events || [];
-              playerStats = statsData.playerStats || {};
-              console.log('Loaded events from Firestore:', gameEvents.length, 'events');
-              console.log('Sample event:', gameEvents[0]);
+          // Process game stats
+          if (statsResult && statsResult.exists) {
+            const statsData = statsResult.data();
+            if (statsData.isComplete && statsData.ourScore !== undefined && statsData.opponentScore !== undefined) {
+              game.result = statsData.ourScore > statsData.opponentScore ? 'W' : 'L';
+              game.finalScore = {
+                lancers: statsData.ourScore,
+                opponent: statsData.opponentScore
+              };
             }
-          } catch (e) {
-            console.log('No game stats yet');
+            if (statsData.result && statsData.lancersScore !== undefined) {
+              game.result = statsData.result;
+              game.finalScore = {
+                lancers: statsData.lancersScore,
+                opponent: statsData.opponentScore
+              };
+            }
+            gameEvents = statsData.events || [];
+            playerStats = statsData.playerStats || {};
+            console.log('Loaded events:', gameEvents.length);
           }
 
-          // Load wrap-up data for completed games
-          try {
-            const wrapupDoc = await db.collection('wrapups').doc(gameId.toString()).get();
-            if (wrapupDoc.exists) {
-              wrapupData = wrapupDoc.data();
-              console.log('Loaded wrap-up data:', wrapupData.status);
-            }
-          } catch (e) {
-            console.log('No wrap-up data yet');
+          // Process wrap-up
+          if (wrapupResult && wrapupResult.exists) {
+            wrapupData = wrapupResult.data();
+            console.log('Loaded wrap-up data:', wrapupData.status);
           }
         }
 
@@ -1102,11 +1117,13 @@
         const result = await response.json();
 
         if (result.success) {
-          // Hide approval section and update UI
+          // Hide approval section - no reload needed
           document.getElementById('wrapup-approval-section').style.display = 'none';
+
+          // Update local state
+          wrapupData.status = 'complete';
+
           alert('Wrap-up published! All parents have been notified.');
-          // Reload to show updated status
-          location.reload();
         } else {
           throw new Error(result.error || 'Failed to approve');
         }
@@ -1572,7 +1589,7 @@
             return `
               <div id="highlight-${h.id}" style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; background: #000;" onclick="openHighlight('${h.downloadUrl}', ${isVideo})">
                 ${isVideo ? `
-                  <video src="${h.downloadUrl}" style="width: 100%; height: 100%; object-fit: cover;"></video>
+                  <video src="${h.downloadUrl}#t=0.1" preload="metadata" style="width: 100%; height: 100%; object-fit: cover;"></video>
                   <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30px; height: 30px; background: rgba(0,0,0,0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                     <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: white; margin-left: 2px;"><path d="M8 5v14l11-7z"/></svg>
                   </div>
@@ -1602,6 +1619,7 @@
     let selectedFile = null;
     let matchedPlayerId = null;
     let matchedEvent = null;
+    let capturedAt = null;  // Actual capture time from video/photo metadata
 
     function addHighlight() {
       // Reset modal state
@@ -1703,6 +1721,9 @@
           return;
         }
 
+        // Store for saving to Firestore
+        capturedAt = captureTime;
+
       // Try to match to play-by-play events for this game
       if (gameEvents && gameEvents.length > 0) {
         const captureMs = captureTime.getTime();
@@ -1795,15 +1816,19 @@
             const downloadUrl = await uploadTask.snapshot.ref.getDownloadURL();
 
             // Save to Firestore
+            const isVideo = selectedFile.type.startsWith('video/');
+            const storagePath = `highlights/${game.id}/${fileName}`;
             await db.collection('highlights').add({
               gameId: game.id,
               playerId: parseInt(playerId),
               playerName: `${player.firstName} ${player.lastName}`,
-              type: selectedFile.type.startsWith('video/') ? 'video' : 'image',
+              mediaType: isVideo ? 'video' : 'photo',
               downloadUrl: downloadUrl,
+              storagePath: storagePath,
               description: matchedEvent ? matchedEvent.description : '',
-              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-              uploadedBy: firebase.auth().currentUser.email,
+              capturedAt: capturedAt ? firebase.firestore.Timestamp.fromDate(capturedAt) : null,
+              uploadedBy: firebase.auth().currentUser.uid,
+              uploaderName: userInfo ? userInfo.name : firebase.auth().currentUser.email,
               uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
