@@ -68,6 +68,23 @@
 
     /* Chat */
     .chat-messages { display: flex; flex-direction: column; gap: 8px; }
+    .unread-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--lancers-gold);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin: 16px 0;
+    }
+    .unread-divider::before,
+    .unread-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--lancers-gold);
+    }
     .chat-message { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 0.9rem; }
     .chat-message.sent { align-self: flex-end; background: white; color: black; }
     .chat-message.received { align-self: flex-start; background: var(--bg-elevated); color: var(--text-primary); }
@@ -581,14 +598,75 @@
       });
     }
 
-    function loadChat() {
+    var chatInitialLoadComplete = false;
+    var lastReadMessageId = null;
+    var unreadDividerAdded = false;
+
+    async function getLastReadMessageId() {
+      if (!currentUser || !db) return null;
+      try {
+        var doc = await db.collection('chatReadStatus').doc(currentUser.uid).get();
+        if (doc.exists) {
+          return doc.data().lastReadMessageId;
+        }
+      } catch (e) {
+        console.error('Error getting last read:', e);
+      }
+      return null;
+    }
+
+    async function saveLastReadMessageId(messageId) {
+      if (!currentUser || !db || !messageId) return;
+      try {
+        await db.collection('chatReadStatus').doc(currentUser.uid).set({
+          lastReadMessageId: messageId,
+          lastReadAt: getFirestoreTimestamp()
+        }, { merge: true });
+      } catch (e) {
+        console.error('Error saving last read:', e);
+      }
+    }
+
+    function addUnreadDivider(container, hasNewMessages) {
+      if (unreadDividerAdded) return;
+      var div = document.createElement('div');
+      div.className = 'unread-divider';
+      div.id = 'unreadDivider';
+      div.textContent = hasNewMessages ? 'New Messages' : 'Last Read';
+      container.appendChild(div);
+      unreadDividerAdded = true;
+    }
+
+    async function loadChat() {
       if (!db) return;
+
+      // Get last read message ID before loading messages
+      lastReadMessageId = await getLastReadMessageId();
+      var isFirstSnapshot = true;
+      var foundLastRead = false;
+      var latestMessageId = null;
+
       db.collection('messages').orderBy('timestamp', 'asc').onSnapshot(function(snap) {
         var container = document.getElementById('chatMessages');
+
         snap.docChanges().forEach(function(change) {
           if (change.type === 'added') {
             var m = change.doc.data();
+            var messageId = change.doc.id;
+            latestMessageId = messageId;
+
+            // On initial load, add divider after last read message
+            if (isFirstSnapshot && lastReadMessageId && foundLastRead && !unreadDividerAdded) {
+              addUnreadDivider(container, true); // true = has new messages
+            }
+
+            // Mark when we've found the last read message
+            if (messageId === lastReadMessageId) {
+              foundLastRead = true;
+            }
+
             var div = document.createElement('div');
+            div.setAttribute('data-message-id', messageId);
             // Compare by effective email (emulated or real)
             var isMine = (m.senderEmail && effectiveEmail &&
                           m.senderEmail.toLowerCase() === effectiveEmail.toLowerCase()) ||
@@ -602,7 +680,48 @@
             container.appendChild(div);
           }
         });
-        container.scrollTop = container.scrollHeight;
+
+        // After initial load, scroll to divider
+        if (isFirstSnapshot) {
+          isFirstSnapshot = false;
+          chatInitialLoadComplete = true;
+
+          // If we found last read but no new messages after, add "Last Read" divider at end
+          if (lastReadMessageId && foundLastRead && !unreadDividerAdded) {
+            addUnreadDivider(container, false); // false = no new messages, just "Last Read"
+          }
+
+          // First time user - add divider at TOP (all messages are new to them)
+          if (!lastReadMessageId && !unreadDividerAdded && container.children.length > 0) {
+            var div = document.createElement('div');
+            div.className = 'unread-divider';
+            div.id = 'unreadDivider';
+            div.textContent = 'New Messages';
+            container.insertBefore(div, container.firstChild);
+            unreadDividerAdded = true;
+          }
+
+          setTimeout(function() {
+            var divider = document.getElementById('unreadDivider');
+            if (divider) {
+              // Scroll so divider is visible
+              divider.scrollIntoView({ behavior: 'auto', block: 'start' });
+            } else {
+              // No messages at all - just scroll to top
+              window.scrollTo(0, 0);
+            }
+          }, 100);
+        } else {
+          // New message after initial load - scroll to bottom
+          setTimeout(function() {
+            window.scrollTo(0, document.body.scrollHeight);
+          }, 50);
+        }
+
+        // Save the latest message as read
+        if (latestMessageId) {
+          saveLastReadMessageId(latestMessageId);
+        }
       });
     }
 
