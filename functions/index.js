@@ -701,6 +701,212 @@ Use this email address (${viewerEmail}) when registering.
   }
 });
 
+// Send scorekeeper reminder 10 minutes before game - runs every 5 minutes
+exports.sendScorekeeperReminders = onSchedule({
+  schedule: 'every 5 minutes',
+  timeZone: 'America/Chicago'
+}, async (event) => {
+  console.log('Checking for games starting soon...');
+
+  try {
+    const scheduleDoc = await db.collection('config').doc('schedule').get();
+    if (!scheduleDoc.exists) {
+      console.log('Schedule config not found');
+      return null;
+    }
+
+    const schedule = scheduleDoc.data();
+    const games = schedule.games || [];
+
+    const now = new Date();
+    // Check for games starting in 8-15 minutes (gives buffer for 5-min schedule)
+    const windowStart = new Date(now.getTime() + 8 * 60 * 1000);
+    const windowEnd = new Date(now.getTime() + 15 * 60 * 1000);
+
+    for (const game of games) {
+      if (game.result) continue; // Skip completed games
+
+      // Parse game date/time
+      const [year, month, day] = game.date.split('-').map(Number);
+      const [hour, minutePart] = game.time.split(':');
+      const [minutes, ampm] = minutePart.split(' ');
+      let h = parseInt(hour);
+      if (ampm === 'PM' && h !== 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+
+      const gameStart = new Date(year, month - 1, day, h, parseInt(minutes));
+
+      // Check if game is in the reminder window
+      if (gameStart >= windowStart && gameStart <= windowEnd) {
+        console.log(`Game ${game.id} vs ${game.opponent} starts at ${gameStart.toISOString()}`);
+
+        // Get volunteer data to find scorekeeper
+        const volunteerDoc = await db.collection('volunteers').doc(game.id.toString()).get();
+        if (!volunteerDoc.exists || !volunteerDoc.data().scorekeeper) {
+          console.log(`No scorekeeper assigned for game ${game.id}`);
+          continue;
+        }
+
+        const scorekeeper = volunteerDoc.data().scorekeeper;
+        const scorekeeperEmail = scorekeeper.email?.toLowerCase();
+
+        if (!scorekeeperEmail) {
+          console.log(`No scorekeeper email for game ${game.id}`);
+          continue;
+        }
+
+        // Check if we already sent a reminder for this game
+        const reminderKey = `scorekeeperReminder_${game.id}`;
+        const reminderDoc = await db.collection('notificationsSent').doc(reminderKey).get();
+        if (reminderDoc.exists) {
+          console.log(`Already sent scorekeeper reminder for game ${game.id}`);
+          continue;
+        }
+
+        // Find FCM token for scorekeeper
+        const tokensSnapshot = await db.collection('fcmTokens')
+          .where('email', '==', scorekeeperEmail)
+          .get();
+
+        if (tokensSnapshot.empty) {
+          console.log(`No FCM token for scorekeeper ${scorekeeperEmail}`);
+          continue;
+        }
+
+        const tokens = [];
+        tokensSnapshot.forEach(doc => {
+          if (doc.data().token) tokens.push(doc.data().token);
+        });
+
+        if (tokens.length === 0) continue;
+
+        // Send notification
+        const message = {
+          data: {
+            title: 'Game Starting Soon!',
+            body: `You're scorekeeping vs ${game.opponent} in 10 minutes`,
+            type: 'scorekeeperReminder',
+            url: `/game-stats.html?game=${game.id}`
+          },
+          tokens: tokens
+        };
+
+        try {
+          const response = await messaging.sendEachForMulticast(message);
+          console.log(`Scorekeeper reminder sent for game ${game.id}: ${response.successCount} success, ${response.failureCount} failed`);
+
+          // Mark reminder as sent
+          await db.collection('notificationsSent').doc(reminderKey).set({
+            gameId: game.id,
+            sentAt: Timestamp.now(),
+            sentTo: scorekeeperEmail
+          });
+        } catch (err) {
+          console.error(`Error sending scorekeeper reminder for game ${game.id}:`, err);
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error in sendScorekeeperReminders:', error);
+    return null;
+  }
+});
+
+// Manual trigger for scorekeeper reminder (for testing)
+exports.triggerScorekeeperReminder = onRequest(async (request, response) => {
+  const apiKey = request.query.key;
+  if (apiKey !== 'lancers2026') {
+    response.status(403).send('Unauthorized');
+    return;
+  }
+
+  const gameId = request.query.gameId;
+  if (!gameId) {
+    response.status(400).json({ error: 'gameId parameter required' });
+    return;
+  }
+
+  try {
+    // Get game info from schedule
+    const scheduleDoc = await db.collection('config').doc('schedule').get();
+    if (!scheduleDoc.exists) {
+      response.status(404).json({ error: 'Schedule not found' });
+      return;
+    }
+
+    const games = scheduleDoc.data().games || [];
+    const game = games.find(g => g.id.toString() === gameId);
+    if (!game) {
+      response.status(404).json({ error: `Game ${gameId} not found in schedule` });
+      return;
+    }
+
+    // Get volunteer data to find scorekeeper
+    const volunteerDoc = await db.collection('volunteers').doc(gameId).get();
+    if (!volunteerDoc.exists || !volunteerDoc.data().scorekeeper) {
+      response.status(404).json({ error: `No scorekeeper assigned for game ${gameId}` });
+      return;
+    }
+
+    const scorekeeper = volunteerDoc.data().scorekeeper;
+    const scorekeeperEmail = scorekeeper.email?.toLowerCase();
+
+    if (!scorekeeperEmail) {
+      response.status(404).json({ error: 'Scorekeeper has no email' });
+      return;
+    }
+
+    // Find FCM token for scorekeeper
+    const tokensSnapshot = await db.collection('fcmTokens')
+      .where('email', '==', scorekeeperEmail)
+      .get();
+
+    if (tokensSnapshot.empty) {
+      response.json({
+        success: false,
+        error: `No FCM token for ${scorekeeperEmail}`,
+        scorekeeper: scorekeeper.name
+      });
+      return;
+    }
+
+    const tokens = [];
+    tokensSnapshot.forEach(doc => {
+      if (doc.data().token) tokens.push(doc.data().token);
+    });
+
+    // Send notification
+    const message = {
+      data: {
+        title: 'Game Starting Soon!',
+        body: `You're scorekeeping vs ${game.opponent} in 10 minutes`,
+        type: 'scorekeeperReminder',
+        url: `/game-stats.html?game=${gameId}`
+      },
+      tokens: tokens
+    };
+
+    const result = await messaging.sendEachForMulticast(message);
+
+    response.json({
+      success: true,
+      gameId: gameId,
+      opponent: game.opponent,
+      scorekeeper: scorekeeper.name,
+      scorekeeperEmail: scorekeeperEmail,
+      tokenCount: tokens.length,
+      sent: result.successCount,
+      failed: result.failureCount
+    });
+
+  } catch (error) {
+    console.error('Error triggering scorekeeper reminder:', error);
+    response.status(500).json({ error: error.message });
+  }
+});
+
 // Trigger notification when game starts (phase changes from 'pre' to 'Q1')
 exports.onGameStarted = onDocumentUpdated('gameStats/{gameId}', async (event) => {
   const before = event.data.before.data();
@@ -954,7 +1160,7 @@ exports.generateWrapupReport = onRequest({
       `The ${opponentName} game recap is ready for your approval`,
       {
         type: 'wrapupPendingApproval',
-        url: `/game-detail.html?id=${gameId}`,
+        url: `/game-detail.html?id=${gameId}#wrapup-card`,
         gameId: gameId.toString()
       }
     );
@@ -1021,7 +1227,7 @@ exports.approveWrapup = onRequest(async (request, response) => {
       `Check out the recap from the ${opponentName} game`,
       {
         type: 'wrapupReady',
-        url: `/game-detail.html?id=${gameId}`,
+        url: `/game-detail.html?id=${gameId}#wrapup-card`,
         gameId: gameId.toString()
       }
     );
@@ -1453,7 +1659,7 @@ exports.checkPendingWrapups = onSchedule({
         `The ${opponentName} game recap is ready for your approval`,
         {
           type: 'wrapupPendingApproval',
-          url: `/game-detail.html?id=${gameId}`,
+          url: `/game-detail.html?id=${gameId}#wrapup-card`,
           gameId: gameId
         }
       );

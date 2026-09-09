@@ -119,6 +119,24 @@
       <div id="notificationError" style="display: none; text-align: center; color: #DC2626; font-size: 0.85rem; padding: 8px;"></div>
     </div>
 
+    <!-- PWA Install Prompt (shown when logged in, in browser, not already installed) -->
+    <div id="pwaInstallSection" class="card" style="display: none;">
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <div style="flex: 1;">
+          <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Install the App</div>
+          <div id="pwaInstallInstructions" style="font-size: 0.85rem; color: var(--text-secondary);"></div>
+        </div>
+        <button onclick="dismissPwaPrompt()" style="background: none; border: none; padding: 4px; cursor: pointer; color: var(--text-muted);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <button id="pwaInstallBtn" style="display: none; width: 100%; margin-top: 12px; padding: 12px; background: var(--lancers-gold); color: #000; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer;" onclick="installPwa()">
+        Add to Home Screen
+      </button>
+    </div>
+
     <!-- Hero Banner (hidden by default, shown only when needed) -->
     <div id="hero-banner" class="hero-banner" style="display: none;">
       <h2>Go Lancers!</h2>
@@ -345,6 +363,80 @@
       } else {
         section.style.display = 'none';
       }
+    }
+
+    // PWA Install Prompt
+    let deferredInstallPrompt = null;
+
+    // Capture the beforeinstallprompt event (Chrome/Android)
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+    });
+
+    function isStandalone() {
+      // Check if running as installed PWA
+      return window.matchMedia('(display-mode: standalone)').matches ||
+             window.navigator.standalone === true ||
+             document.referrer.includes('android-app://');
+    }
+
+    function isIOS() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+
+    function checkPwaInstallStatus() {
+      const section = document.getElementById('pwaInstallSection');
+      const instructions = document.getElementById('pwaInstallInstructions');
+      const installBtn = document.getElementById('pwaInstallBtn');
+      if (!section || !instructions) return;
+
+      // Don't show if already installed as PWA
+      if (isStandalone()) {
+        section.style.display = 'none';
+        return;
+      }
+
+      // Don't show if user dismissed the prompt
+      try {
+        if (localStorage.getItem('pwaPromptDismissed')) {
+          section.style.display = 'none';
+          return;
+        }
+      } catch (e) {}
+
+      // Show appropriate instructions based on platform
+      if (isIOS()) {
+        instructions.innerHTML = 'Tap <span style="display: inline-flex; align-items: center; background: var(--bg-elevated); padding: 2px 6px; border-radius: 4px; margin: 0 2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lancers-gold)" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 3v12M12 3l4 4M12 3L8 7"></path></svg></span> Share, then "Add to Home Screen" for the best experience.';
+        section.style.display = 'block';
+      } else if (deferredInstallPrompt) {
+        instructions.textContent = 'Install for quick access and push notifications.';
+        installBtn.style.display = 'block';
+        section.style.display = 'block';
+      } else {
+        // Android without prompt event or desktop - show generic instructions
+        instructions.textContent = 'Use your browser menu to "Add to Home Screen" for the best experience.';
+        section.style.display = 'block';
+      }
+    }
+
+    function dismissPwaPrompt() {
+      const section = document.getElementById('pwaInstallSection');
+      if (section) section.style.display = 'none';
+      try {
+        localStorage.setItem('pwaPromptDismissed', 'true');
+      } catch (e) {}
+    }
+
+    async function installPwa() {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const result = await deferredInstallPrompt.userChoice;
+      if (result.outcome === 'accepted') {
+        const section = document.getElementById('pwaInstallSection');
+        if (section) section.style.display = 'none';
+      }
+      deferredInstallPrompt = null;
     }
 
     // Profile Menu Functions
@@ -1095,6 +1187,9 @@
 
         // Check if notifications need to be enabled
         checkNotificationStatus();
+
+        // Check if PWA install prompt should be shown
+        checkPwaInstallStatus();
 
         // Update live stats button(s) for scorekeeper or coach
         if (upcomingGameForLiveStats && db) {
