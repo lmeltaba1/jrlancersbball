@@ -555,10 +555,57 @@
 
         renderGame();
 
+        // Set up real-time listeners for live updates
+        setupRealtimeListeners(gameIdStr);
+
       } catch (e) {
         console.error('Error loading game:', e);
         showError();
       }
+    }
+
+    // Real-time listeners for auto-updating the page
+    let wrapupUnsubscribe = null;
+    let highlightsUnsubscribe = null;
+
+    function setupRealtimeListeners(gameIdStr) {
+      // Listen for wrap-up changes
+      wrapupUnsubscribe = db.collection('wrapups').doc(gameIdStr)
+        .onSnapshot((doc) => {
+          if (doc.exists) {
+            const newData = doc.data();
+            // Only update if status actually changed
+            if (!wrapupData || newData.status !== wrapupData.status ||
+                newData.updatedAt?.seconds !== wrapupData.updatedAt?.seconds) {
+              console.log('Wrap-up updated:', newData.status);
+              wrapupData = newData;
+              renderWrapup();
+            }
+          }
+        }, (error) => {
+          console.error('Wrapup listener error:', error);
+        });
+
+      // Listen for new highlights
+      highlightsUnsubscribe = db.collection('highlights')
+        .where('gameId', '==', parseInt(gameIdStr))
+        .onSnapshot((snapshot) => {
+          if (!snapshot.empty) {
+            const count = snapshot.size;
+            const highlightCountEl = document.getElementById('highlight-count');
+            if (highlightCountEl) {
+              highlightCountEl.textContent = count;
+            }
+          }
+        }, (error) => {
+          console.error('Highlights listener error:', error);
+        });
+
+      // Cleanup on page unload
+      window.addEventListener('beforeunload', () => {
+        if (wrapupUnsubscribe) wrapupUnsubscribe();
+        if (highlightsUnsubscribe) highlightsUnsubscribe();
+      });
     }
 
     function showError() {
@@ -891,13 +938,7 @@
           videoSection.style.display = 'block';
         }
 
-        // Coach notes summary
-        if (wrapupData.coachNotes && wrapupData.coachNotes.commentary) {
-          const summaryEl = document.getElementById('coach-notes-summary');
-          const commentaryEl = document.getElementById('coach-commentary-display');
-          commentaryEl.textContent = wrapupData.coachNotes.commentary;
-          summaryEl.style.display = 'block';
-        }
+        // Coach notes are private input for AI only - not displayed
 
         // Player of the game
         if (wrapupData.report.playerOfTheGame) {
@@ -940,13 +981,7 @@
             videoSection.style.display = 'block';
           }
 
-          // Coach notes summary
-          if (wrapupData.coachNotes && wrapupData.coachNotes.commentary) {
-            const summaryEl = document.getElementById('coach-notes-summary');
-            const commentaryEl = document.getElementById('coach-commentary-display');
-            commentaryEl.textContent = wrapupData.coachNotes.commentary;
-            summaryEl.style.display = 'block';
-          }
+          // Coach notes are private input for AI only - not displayed
 
           // Player of the game
           if (wrapupData.report?.playerOfTheGame) {
@@ -1000,6 +1035,17 @@
         pendingCard.style.display = 'block';
         document.getElementById('wrapup-pending-title').textContent = 'Report Generation Failed';
         document.getElementById('wrapup-pending-subtitle').textContent = 'There was an error generating the report. Please contact the team admin.';
+      }
+
+      // Scroll to hash target after cards are rendered (browser couldn't scroll to hidden elements)
+      if (window.location.hash) {
+        const targetId = window.location.hash.substring(1);
+        const targetEl = document.getElementById(targetId);
+        if (targetEl && targetEl.style.display !== 'none') {
+          setTimeout(() => {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+        }
       }
     }
 

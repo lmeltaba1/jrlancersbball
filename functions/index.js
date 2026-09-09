@@ -17,173 +17,67 @@ const sendgridApiKey = defineSecret('SENDGRID_API_KEY');
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 // Cloudinary secrets removed - now using GCP Transcoder API
 
-// Send notification to all registered devices
-async function sendToAllDevices(title, body, data = {}) {
+// Single notification function for all use cases
+// options.emails - array of emails to send to (null = everyone)
+// options.excludeUid - uid to exclude (for chat - don't notify sender)
+async function sendNotification(title, body, data = {}, options = {}) {
   const tokensSnapshot = await db.collection('fcmTokens').get();
-
-  if (tokensSnapshot.empty) {
-    console.log('No FCM tokens found');
-    return;
-  }
-
   const tokens = [];
+
+  const targetEmails = options.emails?.map(e => e.toLowerCase());
+
   tokensSnapshot.forEach(doc => {
     const tokenData = doc.data();
-    if (tokenData.token) {
-      tokens.push(tokenData.token);
-    }
+    if (!tokenData.token) return;
+
+    // Exclude sender for chat
+    if (options.excludeUid && tokenData.uid === options.excludeUid) return;
+
+    // Filter by email list if provided
+    if (targetEmails && !targetEmails.includes(tokenData.email?.toLowerCase())) return;
+
+    tokens.push(tokenData.token);
   });
 
   if (tokens.length === 0) {
-    console.log('No valid tokens');
+    console.log(`Notification "${title}": No tokens to send to`);
     return;
   }
 
-  // Original format that works
-  const message = {
-    data: {
-      title: title,
-      body: body,
-      ...data
-    },
-    tokens: tokens
-  };
+  console.log(`Notification "${title}": Sending to ${tokens.length} devices`);
 
   try {
-    const response = await messaging.sendEachForMulticast(message);
-    console.log(`Sent ${response.successCount} notifications, ${response.failureCount} failed`);
-
-    if (response.failureCount > 0) {
-      const failedTokens = [];
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          failedTokens.push(tokens[idx]);
-        }
-      });
-
-      if (failedTokens.length > 0) {
-        const batch = db.batch();
-        const invalidDocs = await db.collection('fcmTokens')
-          .where('token', 'in', failedTokens.slice(0, 10))
-          .get();
-
-        invalidDocs.forEach(doc => {
-          batch.delete(doc.ref);
-        });
-
-        await batch.commit();
-      }
-    }
+    const response = await messaging.sendEachForMulticast({
+      data: { title, body, ...data },
+      tokens
+    });
+    console.log(`Notification "${title}": ${response.successCount} sent, ${response.failureCount} failed`);
   } catch (error) {
-    console.error('Error sending notifications:', error);
+    console.error(`Notification "${title}": Error -`, error.message);
   }
 }
 
-// Send notification to head coach only (for wrap-up approval)
-async function sendToCoachesOnly(title, body, data = {}) {
-  // Get head coach email from roster config
+// Helper to get head coach email
+async function getHeadCoachEmail() {
   const rosterDoc = await db.collection('config').doc('roster').get();
   const coaches = rosterDoc.exists ? rosterDoc.data().coaches || [] : [];
   const headCoach = coaches.find(c => c.role === 'Head Coach');
-
-  console.log('Coach notification: Looking for head coach, found:', headCoach?.email || 'none');
-
-  if (!headCoach || !headCoach.email) {
-    console.log('No head coach email found in roster');
-    return;
-  }
-
-  const coachEmails = [headCoach.email.toLowerCase()];
-
-  const tokensSnapshot = await db.collection('fcmTokens').get();
-  const tokens = [];
-  const tokenEmails = [];
-
-  tokensSnapshot.forEach(doc => {
-    const tokenData = doc.data();
-    console.log(`FCM token doc: email=${tokenData.email}, hasToken=${!!tokenData.token}`);
-    if (tokenData.token && tokenData.email && coachEmails.includes(tokenData.email.toLowerCase())) {
-      tokens.push(tokenData.token);
-      tokenEmails.push(tokenData.email);
-    }
-  });
-
-  if (tokens.length === 0) {
-    console.log('No coach tokens found matching:', coachEmails);
-    return;
-  }
-
-  console.log(`Found ${tokens.length} coach tokens for: ${tokenEmails.join(', ')}`);
-  console.log(`Token preview: ${tokens[0]?.substring(0, 20)}...`);
-
-  // Use same data-only format as working chat notifications
-  const message = {
-    data: {
-      title: title,
-      body: body,
-      ...data
-    },
-    tokens: tokens
-  };
-
-  try {
-    const response = await messaging.sendEachForMulticast(message);
-    console.log(`Sent ${response.successCount} coach notifications, ${response.failureCount} failed`);
-    if (response.failureCount > 0) {
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          console.error(`Failed to send to token ${idx}: ${resp.error?.message}`);
-        }
-      });
-    }
-  } catch (error) {
-    console.error('Error sending coach notifications:', error);
-  }
+  return headCoach?.email ? [headCoach.email] : [];
 }
 
 // Trigger on new chat message
 exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) => {
   const message = event.data.data();
-  const senderUid = message.uid;
-
   if (!message.senderName) return null;
 
-  const title = `${message.senderName}`;
-  const body = message.text.length > 100
-    ? message.text.substring(0, 100) + '...'
-    : message.text;
+  const body = message.text.length > 100 ? message.text.substring(0, 100) + '...' : message.text;
 
-  const tokensSnapshot = await db.collection('fcmTokens').get();
-  const tokens = [];
-
-  tokensSnapshot.forEach(doc => {
-    const tokenData = doc.data();
-    if (tokenData.token && tokenData.uid !== senderUid) {
-      tokens.push(tokenData.token);
-    }
-  });
-
-  if (tokens.length === 0) {
-    console.log('No tokens to notify (excluding sender)');
-    return null;
-  }
-
-  const notificationMessage = {
-    data: {
-      title: title,
-      body: body,
-      type: 'chat',
-      url: '/messages.html'
-    },
-    tokens: tokens
-  };
-
-  try {
-    const response = await messaging.sendEachForMulticast(notificationMessage);
-    console.log(`Chat: Sent ${response.successCount} notifications, ${response.failureCount} failed`);
-  } catch (error) {
-    console.error('Error sending chat notifications:', error);
-  }
+  await sendNotification(
+    message.senderName,
+    body,
+    { type: 'chat', url: '/messages.html' },
+    { excludeUid: message.uid }
+  );
 
   return null;
 });
@@ -200,10 +94,7 @@ exports.sendAnnouncement = onCall(async (request) => {
     throw new HttpsError('invalid-argument', 'Title and body required');
   }
 
-  await sendToAllDevices(title, body, {
-    type: 'announcement',
-    url: '/index.html'
-  });
+  await sendNotification(title, body, { type: 'announcement', url: '/index.html' });
 
   return { success: true };
 });
@@ -211,6 +102,39 @@ exports.sendAnnouncement = onCall(async (request) => {
 // Simple test endpoint
 exports.helloWorld = onRequest((request, response) => {
   response.send("Hello from Jr. Lancers Basketball!");
+});
+
+// Debug endpoint to inspect FCM tokens
+exports.debugTokens = onRequest(async (request, response) => {
+  const apiKey = request.query.key;
+  if (apiKey !== 'lancers2026') {
+    response.status(403).send('Unauthorized');
+    return;
+  }
+
+  const rosterDoc = await db.collection('config').doc('roster').get();
+  const coaches = rosterDoc.exists ? rosterDoc.data().coaches || [] : [];
+  const headCoach = coaches.find(c => c.role === 'Head Coach');
+
+  const tokensSnapshot = await db.collection('fcmTokens').get();
+  const tokens = [];
+
+  tokensSnapshot.forEach(doc => {
+    const data = doc.data();
+    tokens.push({
+      docId: doc.id,
+      email: data.email,
+      hasToken: !!data.token,
+      tokenPreview: data.token ? data.token.substring(0, 30) + '...' : 'none',
+      isCoach: headCoach && data.email?.toLowerCase() === headCoach.email?.toLowerCase()
+    });
+  });
+
+  response.json({
+    headCoachEmail: headCoach?.email || 'not found',
+    tokenCount: tokens.length,
+    tokens: tokens
+  });
 });
 
 // Send test RSVP reminder to a specific email
@@ -930,14 +854,10 @@ exports.onGameStarted = onDocumentUpdated('gameStats/{gameId}', async (event) =>
     const gameUrl = `/game-stats.html?game=${gameId}&view=1`;
 
     // Send notification to all devices
-    await sendToAllDevices(
+    await sendNotification(
       'Game Started!',
       `Lancers vs ${opponentName} is now LIVE!`,
-      {
-        type: 'gameStarted',
-        url: gameUrl,
-        gameId: gameId
-      }
+      { type: 'gameStarted', url: gameUrl, gameId: gameId }
     );
 
     console.log(`Game start notification sent for game ${gameId}`);
@@ -973,18 +893,20 @@ exports.onGameEnded = onDocumentUpdated('gameStats/{gameId}', async (event) => {
     const result = lancersScore > oppScore ? 'WIN' : (lancersScore < oppScore ? 'LOSS' : 'TIE');
     const gameUrl = `/game-detail.html?id=${gameId}`;
 
-    // Send notification to all devices
-    await sendToAllDevices(
+    // Send notification to everyone - upload highlights
+    await sendNotification(
       `Game Over - ${result}!`,
       `Lancers ${lancersScore} - ${opponentName} ${oppScore}. Now is the time to upload highlights!`,
-      {
-        type: 'gameEnded',
-        url: gameUrl,
-        gameId: gameId
-      }
+      { type: 'gameEnded', url: gameUrl, gameId: gameId }
     );
 
-    console.log(`Game end notification sent for game ${gameId}`);
+    // Send notification to head coach - add commentary
+    await sendNotification(
+      'Add Your Game Commentary',
+      `Share your thoughts on the ${opponentName} game before the wrap-up is generated.`,
+      { type: 'coachCommentary', url: `${gameUrl}#coach-notes-card`, gameId: gameId },
+      { emails: await getHeadCoachEmail() }
+    );
 
     // Create wrap-up document with 2-hour coach window
     const windowEnds = new Date(Date.now() + 2 * 60 * 60 * 1000);
@@ -1001,8 +923,14 @@ exports.onGameEnded = onDocumentUpdated('gameStats/{gameId}', async (event) => {
     });
 
     // Schedule wrap-up generation via Cloud Tasks (2 hours from now)
-    await scheduleWrapupGeneration(gameId, windowEnds);
-    console.log(`Wrap-up scheduled for game ${gameId} at ${windowEnds.toISOString()}`);
+    // Wrapped in try-catch so Cloud Tasks failures don't break notifications
+    try {
+      await scheduleWrapupGeneration(gameId, windowEnds);
+      console.log(`Wrap-up scheduled for game ${gameId} at ${windowEnds.toISOString()}`);
+    } catch (taskError) {
+      console.error('Cloud Tasks scheduling failed (non-fatal):', taskError.message);
+      console.log('Wrap-up will need to be triggered manually');
+    }
 
     return null;
   } catch (error) {
@@ -1109,6 +1037,9 @@ exports.generateWrapupReport = onRequest({
       wrapupData = wrapupDoc.data();
     }
 
+    // Coach window check removed - coaches can regenerate anytime
+    // The window only controls auto-scheduling, not manual triggers
+
     if (!gameStatsDoc.exists) {
       response.status(404).json({ error: 'Game stats not found' });
       return;
@@ -1142,8 +1073,16 @@ exports.generateWrapupReport = onRequest({
     );
 
     if (videoHighlights.length > 0) {
+      // Debug: log each video highlight's URL
+      console.log(`Video highlights to compile (${videoHighlights.length}):`);
+      videoHighlights.forEach((h, i) => {
+        console.log(`  [${i}] id=${h.id} url=${(h.downloadUrl || h.url).substring(0, 100)}...`);
+      });
       compiledVideo = await compileHighlightsVideo(gameId, videoHighlights);
     }
+
+    // Check if already pending approval (avoid duplicate notifications on regenerate)
+    const wasAlreadyPending = wrapupData.status === 'pendingApproval';
 
     // Save results - pending coach approval
     await wrapupRef.update({
@@ -1154,18 +1093,18 @@ exports.generateWrapupReport = onRequest({
       updatedAt: Timestamp.now()
     });
 
-    // Send notification to coaches only for approval
-    await sendToCoachesOnly(
-      'Wrap-Up Ready for Review',
-      `The ${opponentName} game recap is ready for your approval`,
-      {
-        type: 'wrapupPendingApproval',
-        url: `/game-detail.html?id=${gameId}#wrapup-card`,
-        gameId: gameId.toString()
-      }
-    );
+    // Send notification to head coach for approval
+    const title = wasAlreadyPending ? 'Wrap-Up Updated' : 'Wrap-Up Ready for Review';
+    const body = wasAlreadyPending
+      ? `The ${opponentName} game recap has been regenerated`
+      : `The ${opponentName} game recap is ready for your approval`;
 
-    console.log(`Wrap-up pending approval for game ${gameId}`);
+    await sendNotification(
+      title,
+      body,
+      { type: 'wrapupPendingApproval', url: `/game-detail.html?id=${gameId}#wrapup-card`, gameId: gameId.toString() },
+      { emails: await getHeadCoachEmail() }
+    );
     response.json({ success: true, gameId });
 
   } catch (error) {
@@ -1221,15 +1160,11 @@ exports.approveWrapup = onRequest(async (request, response) => {
 
     const opponentName = wrapupData.opponent || 'Opponent';
 
-    // Send notification to all parents
-    await sendToAllDevices(
+    // Send notification to everyone
+    await sendNotification(
       'Game Wrap-Up Ready!',
       `Check out the recap from the ${opponentName} game`,
-      {
-        type: 'wrapupReady',
-        url: `/game-detail.html?id=${gameId}#wrapup-card`,
-        gameId: gameId.toString()
-      }
+      { type: 'wrapupReady', url: `/game-detail.html?id=${gameId}#wrapup-card`, gameId: gameId.toString() }
     );
 
     console.log(`Wrap-up approved and published for game ${gameId}`);
@@ -1333,9 +1268,7 @@ function generateFallbackNarrative(gameStats, wrapupData, opponentName) {
     narrative += `${topScorer[1].name} led the team with ${topScorer[1].points || 0} points. `;
   }
 
-  if (wrapupData.coachNotes?.commentary) {
-    narrative += `\n\nCoach's notes: ${wrapupData.coachNotes.commentary}`;
-  }
+  // Coach notes are private input for AI prompt only - not appended to output
 
   return {
     narrative,
@@ -1375,6 +1308,8 @@ async function compileHighlightsVideo(gameId, videoHighlights) {
   const bucketName = bucket.name;
 
   const inputUris = [];
+  const seenPaths = new Set(); // Track unique paths to avoid duplicates
+
   for (const highlight of sortedHighlights) {
     const url = highlight.downloadUrl || highlight.url;
     if (!url || url.includes('example.com')) continue;
@@ -1384,6 +1319,12 @@ async function compileHighlightsVideo(gameId, videoHighlights) {
     const match = url.match(/\/o\/([^?]+)/);
     if (match) {
       const path = decodeURIComponent(match[1]);
+      // Skip duplicates
+      if (seenPaths.has(path)) {
+        console.log(`Skipping duplicate: ${path}`);
+        continue;
+      }
+      seenPaths.add(path);
       inputUris.push(`gs://${bucketName}/${path}`);
       console.log(`Added input: gs://${bucketName}/${path}`);
     }
@@ -1654,14 +1595,11 @@ exports.checkPendingWrapups = onSchedule({
       });
 
       // Send notification to head coach for approval
-      await sendToCoachesOnly(
+      await sendNotification(
         'Wrap-Up Ready for Review',
         `The ${opponentName} game recap is ready for your approval`,
-        {
-          type: 'wrapupPendingApproval',
-          url: `/game-detail.html?id=${gameId}#wrapup-card`,
-          gameId: gameId
-        }
+        { type: 'wrapupPendingApproval', url: `/game-detail.html?id=${gameId}#wrapup-card`, gameId: gameId },
+        { emails: await getHeadCoachEmail() }
       );
 
       console.log(`Wrap-up pending approval for game ${gameId}`);
@@ -2004,6 +1942,162 @@ function generateSimGamePlayByPlay(game, gameStartTime) {
 
   return { events, playerStats, lancersScore, opponentScore, result, timeouts, onCourt, gameStartTime, gameEndTime: currentTime };
 }
+
+// Cleanup duplicate highlights for a game
+exports.cleanupDuplicateHighlights = onRequest({ timeoutSeconds: 60 }, async (request, response) => {
+  const apiKey = request.query.key;
+  if (apiKey !== 'lancers2026') {
+    response.status(403).send('Unauthorized');
+    return;
+  }
+
+  const gameId = request.query.gameId;
+  if (!gameId) {
+    response.status(400).json({ error: 'gameId required' });
+    return;
+  }
+
+  try {
+    const highlightsSnapshot = await db.collection('highlights')
+      .where('gameId', '==', parseInt(gameId))
+      .get();
+
+    const highlights = [];
+    highlightsSnapshot.forEach(doc => highlights.push({ id: doc.id, ...doc.data() }));
+
+    // Group by downloadUrl to find duplicates
+    const urlGroups = {};
+    for (const h of highlights) {
+      const url = h.downloadUrl || h.url || '';
+      if (!url || url.includes('example.com')) continue;
+
+      // Extract just the path from the URL for comparison
+      const match = url.match(/\/o\/([^?]+)/);
+      const key = match ? decodeURIComponent(match[1]) : url;
+
+      if (!urlGroups[key]) {
+        urlGroups[key] = [];
+      }
+      urlGroups[key].push(h);
+    }
+
+    const results = {
+      totalHighlights: highlights.length,
+      uniquePaths: Object.keys(urlGroups).length,
+      duplicatesDeleted: [],
+      kept: []
+    };
+
+    // For each group, keep the first one and delete the rest
+    for (const [path, docs] of Object.entries(urlGroups)) {
+      results.kept.push({ id: docs[0].id, path: path.substring(0, 50), mediaType: docs[0].mediaType });
+
+      for (let i = 1; i < docs.length; i++) {
+        await db.collection('highlights').doc(docs[i].id).delete();
+        results.duplicatesDeleted.push({ id: docs[i].id, path: path.substring(0, 50) });
+      }
+    }
+
+    response.json(results);
+  } catch (error) {
+    console.error('Error cleaning up highlights:', error);
+    response.status(500).json({ error: error.message });
+  }
+});
+
+// Delete specific highlights by ID
+exports.deleteHighlights = onRequest({ timeoutSeconds: 60 }, async (request, response) => {
+  const apiKey = request.query.key;
+  if (apiKey !== 'lancers2026') {
+    response.status(403).send('Unauthorized');
+    return;
+  }
+
+  const ids = request.query.ids?.split(',') || [];
+  if (ids.length === 0) {
+    response.status(400).json({ error: 'ids required (comma-separated)' });
+    return;
+  }
+
+  const results = { deleted: [], errors: [] };
+  for (const id of ids) {
+    try {
+      await db.collection('highlights').doc(id.trim()).delete();
+      results.deleted.push(id.trim());
+    } catch (e) {
+      results.errors.push({ id: id.trim(), error: e.message });
+    }
+  }
+  response.json(results);
+});
+
+// Test endpoint: Reset game and trigger end-game flow
+exports.resetAndEndGame = onRequest({ timeoutSeconds: 60 }, async (request, response) => {
+  const apiKey = request.query.key;
+  if (apiKey !== 'lancers2026') {
+    response.status(403).send('Unauthorized');
+    return;
+  }
+
+  const gameId = request.query.gameId;
+  if (!gameId) {
+    response.status(400).json({ error: 'gameId required' });
+    return;
+  }
+
+  const results = { steps: [] };
+
+  try {
+    // 1. Delete wrap-up document
+    results.steps.push('Deleting wrap-up...');
+    try {
+      await db.collection('wrapups').doc(gameId).delete();
+      results.steps.push('Wrap-up deleted');
+    } catch (e) {
+      results.steps.push('No wrap-up to delete');
+    }
+
+    // 2. Delete compiled video from storage
+    results.steps.push('Deleting compiled video...');
+    const { getStorage } = require('firebase-admin/storage');
+    const bucket = getStorage().bucket();
+    try {
+      const [files] = await bucket.getFiles({ prefix: `compiled-highlights/game${gameId}/` });
+      for (const file of files) {
+        await file.delete();
+        results.steps.push(`Deleted: ${file.name}`);
+      }
+      if (files.length === 0) results.steps.push('No compiled videos found');
+    } catch (e) {
+      results.steps.push(`Storage error: ${e.message}`);
+    }
+
+    // 3. Reset gamePhase to Q4
+    results.steps.push('Setting gamePhase to Q4...');
+    await db.collection('gameStats').doc(gameId).update({ gamePhase: 'Q4' });
+
+    // 4. Wait 2 seconds
+    results.steps.push('Waiting 2 seconds...');
+    await new Promise(r => setTimeout(r, 2000));
+
+    // 5. Set to final to trigger onGameEnded
+    results.steps.push('Setting gamePhase to final (triggers onGameEnded)...');
+    await db.collection('gameStats').doc(gameId).update({ gamePhase: 'final' });
+
+    results.steps.push('Done! onGameEnded should fire now.');
+    results.expectedNotifications = [
+      'All users: "Game Over - WIN/LOSS!"',
+      'Coach only: "Add Your Game Commentary"'
+    ];
+
+    response.json(results);
+
+  } catch (error) {
+    console.error('Error in resetAndEndGame:', error);
+    results.error = error.message;
+    response.status(500).json(results);
+  }
+});
 
 // Simulate season data endpoint
 exports.simulateSeasonData = onRequest({ timeoutSeconds: 300 }, async (request, response) => {
