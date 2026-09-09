@@ -1612,6 +1612,9 @@
       document.getElementById('uploadStep1').style.display = 'block';
       document.getElementById('uploadStep2').style.display = 'none';
       document.getElementById('uploadStep3').style.display = 'none';
+      document.getElementById('uploadProgress').style.display = 'none';
+      document.getElementById('uploadBtn').disabled = false;
+      document.getElementById('playerSelectContainer').style.display = 'none';
       document.getElementById('uploadModal').style.display = 'block';
       document.body.style.overflow = 'hidden';
     }
@@ -1691,20 +1694,21 @@
       const matchStatus = document.getElementById('matchStatus');
       matchStatus.innerHTML = '<p style="color: var(--text-secondary);">Analyzing timestamp...</p>';
 
-      // Get capture timestamp
-      const captureTime = await getCaptureTimestamp(selectedFile);
+      try {
+        // Get capture timestamp
+        const captureTime = await getCaptureTimestamp(selectedFile);
 
-      if (!captureTime) {
-        showNoMatch('Could not read file timestamp');
-        return;
-      }
+        if (!captureTime) {
+          showNoMatch('Could not read file timestamp');
+          return;
+        }
 
       // Try to match to play-by-play events for this game
-      if (gameStats && gameStats.events && gameStats.events.length > 0) {
+      if (gameEvents && gameEvents.length > 0) {
         const captureMs = captureTime.getTime();
 
         // Find scoring events for Lancers
-        const scoringEvents = gameStats.events.filter(e =>
+        const scoringEvents = gameEvents.filter(e =>
           e.type === 'stat' && e.stat === 'points' && e.team === 'lancers' && e.playerId
         );
 
@@ -1732,6 +1736,10 @@
 
       // No match found
       showNoMatch('No matching play found - select player manually');
+      } catch (e) {
+        console.error('Error analyzing file:', e);
+        showNoMatch('Error analyzing file - select player manually');
+      }
     }
 
     function showNoMatch(message) {

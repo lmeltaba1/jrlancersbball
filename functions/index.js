@@ -766,8 +766,8 @@ exports.onGameEnded = onDocumentUpdated('gameStats/{gameId}', async (event) => {
 
     console.log(`Game end notification sent for game ${gameId}`);
 
-    // Create wrap-up document with 3-hour coach window
-    const windowEnds = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    // Create wrap-up document with 2-hour coach window
+    const windowEnds = new Date(Date.now() + 2 * 60 * 60 * 1000);
     await db.collection('wrapups').doc(gameId).set({
       gameId: parseInt(gameId),
       status: 'pending',
@@ -780,7 +780,7 @@ exports.onGameEnded = onDocumentUpdated('gameStats/{gameId}', async (event) => {
       result: result
     });
 
-    // Schedule wrap-up generation via Cloud Tasks (3 hours from now)
+    // Schedule wrap-up generation via Cloud Tasks (2 hours from now)
     await scheduleWrapupGeneration(gameId, windowEnds);
     console.log(`Wrap-up scheduled for game ${gameId} at ${windowEnds.toISOString()}`);
 
@@ -844,6 +844,15 @@ exports.generateWrapupReport = onRequest({
   timeoutSeconds: 300,
   memory: '1GiB'
 }, async (request, response) => {
+  // Allow CORS for browser requests (regenerate button)
+  response.set('Access-Control-Allow-Origin', '*');
+  if (request.method === 'OPTIONS') {
+    response.set('Access-Control-Allow-Methods', 'POST');
+    response.set('Access-Control-Allow-Headers', 'Content-Type');
+    response.status(204).send('');
+    return;
+  }
+
   const gameId = request.body.gameId || request.query.gameId;
 
   if (!gameId) {
