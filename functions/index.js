@@ -1037,8 +1037,19 @@ exports.generateWrapupReport = onRequest({
       wrapupData = wrapupDoc.data();
     }
 
-    // Coach window check removed - coaches can regenerate anytime
-    // The window only controls auto-scheduling, not manual triggers
+    // Skip if already complete (approved and sent to everyone) - never regenerate
+    if (wrapupData.status === 'complete') {
+      console.log(`Wrap-up for game ${gameId} already complete, skipping`);
+      response.json({ success: true, skipped: true, message: 'Already complete' });
+      return;
+    }
+
+    // Skip if pending approval (already generated, waiting for coach) unless regenerate requested
+    if (wrapupData.status === 'pendingApproval' && !regenerate) {
+      console.log(`Wrap-up for game ${gameId} pending approval, skipping (use regenerate=true to force)`);
+      response.json({ success: true, skipped: true, message: 'Pending approval - use regenerate=true to force' });
+      return;
+    }
 
     if (!gameStatsDoc.exists) {
       response.status(404).json({ error: 'Game stats not found' });
@@ -1586,11 +1597,12 @@ exports.checkPendingWrapups = onSchedule({
       const highlights = [];
       highlightsSnapshot.forEach(hdoc => highlights.push({ id: hdoc.id, ...hdoc.data() }));
 
-      // Save results - pending coach approval
+      // Save results - pending coach approval (and mark notification sent)
       await doc.ref.update({
         status: 'pendingApproval',
         report: narrative,
         highlightCount: highlights.length,
+        approvalNotificationSentAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });
 

@@ -44,6 +44,7 @@ The app is fully functional with all core features implemented. **Season simulat
 - `chatReadStatus` - Per-user chat read timestamps
 - `fcmTokens` - Push notification tokens
 - `userProfiles` - User profile data
+- `wrapups` - Post-game wrap-up reports (AI-generated narratives, coach notes)
 
 ### Key Files
 
@@ -151,11 +152,12 @@ Every stat action during live tracking logs an event to `gameStats/{gameId}.even
 
 ## Home Page Features
 
-- Player/Coach banner when logged in
+- Player/Coach banner when logged in (with player switcher for multi-child families)
 - Next game card with live stats button (during game window)
 - RSVP reminder if attendance not submitted
 - Volunteer needs for next 7 days
-- **My Volunteering card**: Shows completed/upcoming counts by role
+- **Family Volunteering card**: Shows completed/upcoming counts for entire family (both parents)
+- **Team Spirit Leaderboard**: Gamification with points for volunteering (10 pts) and highlights (1 pt)
 - Season record
 
 ## Playbook System
@@ -240,13 +242,77 @@ lancers/
 
 ## Push Notifications (Cloud Functions)
 
-| Function | Trigger | Message |
-|----------|---------|---------|
-| `onNewMessage` | New chat message | "{sender}: {message}" |
-| `onGameStarted` | gamePhase changes to 'Q1' | "Game Started! Lancers vs {opponent} is now LIVE!" |
-| `onGameEnded` | gamePhase changes to 'final' | "Game Over - {result}! Lancers {score} - {opponent} {score}. Now is the time to upload highlights!" |
-| `sendAttendanceReminders` | Daily 9 AM | Reminds parents who haven't RSVP'd for games/practices in next 4 days |
-| `sendAnnouncement` | Manual (coach) | Custom announcement to all users |
+### Unified Notification System
+
+All notifications use a single `sendNotification(title, body, data, options)` function:
+- `options.emails` - Array of emails to send to (null = everyone)
+- `options.excludeUid` - UID to exclude (for chat - don't notify sender)
+
+Helper: `getHeadCoachEmail()` - Returns head coach email for coach-only notifications
+
+### Notification Triggers
+
+| Function | Trigger | Recipients | Message |
+|----------|---------|------------|---------|
+| `onNewMessage` | New chat message | Everyone except sender | "{sender}: {message}" |
+| `onGameStarted` | gamePhase → 'Q1' | Everyone | "Game Started! Lancers vs {opponent} is now LIVE!" |
+| `onGameEnded` | gamePhase → 'final' | Everyone + Head coach only | "Game Over!" + "Add Your Game Commentary" |
+| `sendAttendanceReminders` | Daily 9 AM | Parents missing RSVP | Reminder for games in next 4 days |
+| `sendScorekeeperReminders` | Daily 9 AM | Assigned scorekeepers | Reminder 1-2 days before game |
+| `checkPendingWrapups` | Every 30 min | Head coach | "Wrap-Up Ready for Review" |
+| `approveWrapup` | Manual (coach) | Everyone | "Game Wrap-Up Ready!" |
+
+### Service Worker (firebase-messaging-sw.js)
+
+- Handles background push messages (data-only payloads)
+- Notification click opens URL via `clients.openWindow(url)`
+- No caching - lets browser handle requests normally
+
+## Post-Game Wrap-Up System
+
+AI-generated game recaps with coach commentary, triggered after games end.
+
+### Wrap-Up Flow
+
+1. **Game Ends** → `onGameEnded` creates wrap-up doc with 2-hour coach window
+2. **Coach Window** → Coach can add notes via game-detail.html
+3. **Window Ends** → `checkPendingWrapups` (every 30 min) triggers generation
+4. **Generation** → `generateWrapupReport` calls Claude API for narrative
+5. **Approval** → Head coach reviews, clicks approve
+6. **Published** → `approveWrapup` sends notification to everyone
+
+### Wrap-Up Statuses
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | Waiting for coach window to end |
+| `generating` | AI is generating narrative |
+| `pendingApproval` | Generated, waiting for coach approval |
+| `complete` | Approved and published to everyone |
+| `error` | Generation failed |
+
+### Firestore: `wrapups/{gameId}`
+
+```javascript
+{
+  gameId: 4,
+  status: 'complete',
+  opponent: 'Celtics',
+  finalScore: '45-38',
+  result: 'W',
+  coachNotes: { commentary: '...', playerShoutouts: [...] },
+  coachWindowEndsAt: Timestamp,
+  report: { narrative: '...', generatedAt: Timestamp },
+  approvedAt: Timestamp
+}
+```
+
+### Cloud Functions
+
+- `generateWrapupReport` - HTTP endpoint, calls Claude API (claude-sonnet-4-20250514)
+- `checkPendingWrapups` - Scheduled every 30 min, auto-triggers pending wrap-ups
+- `approveWrapup` - HTTP endpoint, marks complete and notifies everyone
+- `triggerWrapupGeneration` - Manual trigger for testing
 
 ## Development & Testing Tools
 
