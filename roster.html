@@ -115,6 +115,8 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
       margin-top: 12px;
+      max-height: 200px;
+      overflow: hidden;
     }
     .highlight-thumb {
       position: relative;
@@ -985,9 +987,12 @@
 
       const playIconSvg = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 
+      // Show max 6 highlights in modal (2 rows)
+      const displayHighlights = playerHighlights.slice(0, 6);
+
       let html = '<div class="highlights-grid">';
 
-      playerHighlights.forEach(h => {
+      displayHighlights.forEach(h => {
         const gameLabel = getGameLabel(h.gameId);
         if (h.mediaType === 'video') {
           html += `
@@ -1008,7 +1013,8 @@
       });
 
       html += '</div>';
-      html += `<a href="highlights.html?player=${playerId}" class="view-all-link">View All Highlights →</a>`;
+      const moreCount = playerHighlights.length > 6 ? ` (${playerHighlights.length} total)` : '';
+      html += `<a href="highlights.html?player=${playerId}" class="view-all-link">View All Highlights${moreCount} →</a>`;
 
       container.innerHTML = html;
     }
