@@ -212,6 +212,8 @@
           </span>
           <span id="pbp-event-count" style="background: var(--lancers-gold); color: #000; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 700;"></span>
         </div>
+        <!-- Game Timeline -->
+        <div id="game-timeline-container"></div>
         <div id="playbyplay-content" style="max-height: 600px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: 8px;"></div>
       </div>
 
@@ -1161,7 +1163,7 @@
       const note = document.getElementById('shoutout-note').value.trim();
 
       if (!playerId || !note) {
-        alert('Please select a player and add a note');
+        showToast('Please select a player and add a note', 'warning');
         return;
       }
 
@@ -1206,13 +1208,13 @@
           // Update local state
           wrapupData.status = 'complete';
 
-          alert('Wrap-up published! All parents have been notified.');
+          showToast('Wrap-up published! All parents have been notified.', 'success');
         } else {
           throw new Error(result.error || 'Failed to approve');
         }
       } catch (e) {
         console.error('Error approving wrap-up:', e);
-        alert('Failed to publish wrap-up: ' + e.message);
+        showToast('Failed to publish wrap-up: ' + e.message, 'error');
         btn.disabled = false;
         btn.textContent = 'Approve';
       }
@@ -1274,7 +1276,7 @@
       const newNarrative = narrativeEl.textContent.trim();
 
       if (!newNarrative) {
-        alert('Narrative cannot be empty');
+        showToast('Narrative cannot be empty', 'warning');
         return;
       }
 
@@ -1310,10 +1312,10 @@
         isEditingNarrative = false;
         originalNarrative = newNarrative;
 
-        alert('Changes saved!');
+        showToast('Changes saved!', 'success');
       } catch (e) {
         console.error('Error saving narrative:', e);
-        alert('Failed to save: ' + e.message);
+        showToast('Failed to save: ' + e.message, 'error');
       } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Save Changes';
@@ -1358,14 +1360,14 @@
         const result = await response.json();
 
         if (result.success) {
-          alert('New wrap-up generated!');
+          showToast('New wrap-up generated!', 'success');
           location.reload();
         } else {
           throw new Error(result.error || 'Failed to regenerate');
         }
       } catch (e) {
         console.error('Error regenerating wrap-up:', e);
-        alert('Failed to regenerate: ' + e.message);
+        showToast('Failed to regenerate: ' + e.message, 'error');
         btn.disabled = false;
         btn.textContent = 'Regenerate';
         editBtn.disabled = false;
@@ -1396,11 +1398,11 @@
 
         // Update local data
         wrapupData.coachNotes = coachNotes;
-        alert('Coach notes saved!');
+        showToast('Coach notes saved!', 'success');
 
       } catch (e) {
         console.error('Error saving coach notes:', e);
-        alert('Error saving notes: ' + e.message);
+        showToast('Error saving notes: ' + e.message, 'error');
       }
     }
 
@@ -1409,9 +1411,15 @@
       const pbpCard = document.getElementById('playbyplay-card');
       const pbpContent = document.getElementById('playbyplay-content');
       const eventCount = document.getElementById('pbp-event-count');
+      const timelineContainer = document.getElementById('game-timeline-container');
 
       pbpCard.style.display = 'block';
       eventCount.textContent = gameEvents.length;
+
+      // Render game timeline
+      if (timelineContainer && typeof createGameTimeline === 'function') {
+        timelineContainer.innerHTML = createGameTimeline(gameEvents, 'final');
+      }
       console.log('Total events loaded:', gameEvents.length);
       console.log('Events by phase:', gameEvents.reduce((acc, e) => { acc[e.gamePhase] = (acc[e.gamePhase] || 0) + 1; return acc; }, {}));
 
@@ -1508,7 +1516,7 @@
 
     function playHighlight(url, mediaType) {
       if (!url) {
-        alert('Highlight not available');
+        showToast('Highlight not available', 'warning');
         return;
       }
 
@@ -1553,15 +1561,15 @@
 
     function copyAddress(address) {
       navigator.clipboard.writeText(address).then(function() {
-        alert('Address copied to clipboard!');
+        showToast('Address copied to clipboard!', 'success');
       }).catch(function() {
-        alert('Could not copy address');
+        showToast('Could not copy address', 'error');
       });
     }
 
     async function signUp(role) {
       if (!currentUser || !userInfo) {
-        alert('You must be logged in to sign up.');
+        showToast('You must be logged in to sign up.', 'warning');
         return;
       }
 
@@ -1589,11 +1597,11 @@
         };
 
         renderGame();
-        alert('You are signed up!');
+        showToast('You are signed up!', 'success');
 
       } catch (e) {
         console.error('Error signing up:', e);
-        alert('Error signing up. Please try again.');
+        showToast('Error signing up. Please try again.', 'error');
       }
     }
 
@@ -1610,7 +1618,7 @@
 
       } catch (e) {
         console.error('Error canceling signup:', e);
-        alert('Error canceling. Please try again.');
+        showToast('Error canceling. Please try again.', 'error');
       }
     }
 
@@ -1876,7 +1884,7 @@
 
       const playerId = matchedPlayerId || document.getElementById('playerSelect').value;
       if (!playerId) {
-        alert('Please select a player');
+        showToast('Please select a player', 'warning');
         return;
       }
 
@@ -1902,7 +1910,7 @@
           },
           (error) => {
             console.error('Upload error:', error);
-            alert('Upload failed: ' + error.message);
+            showToast('Upload failed: ' + error.message, 'error');
             document.getElementById('uploadBtn').disabled = false;
             document.getElementById('uploadProgress').style.display = 'none';
           },
@@ -1933,7 +1941,7 @@
         );
       } catch (e) {
         console.error('Upload error:', e);
-        alert('Upload failed: ' + e.message);
+        showToast('Upload failed: ' + e.message, 'error');
         document.getElementById('uploadBtn').disabled = false;
         document.getElementById('uploadProgress').style.display = 'none';
       }
