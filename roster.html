@@ -259,6 +259,7 @@
   <link rel="icon" type="image/png" href="images/lancers-logo-192.png">
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <!-- Header -->
   <header class="header">
     <div class="header-content">
@@ -325,7 +326,7 @@
   </div>
 
   <!-- Main Content -->
-  <main class="main-content" aria-live="polite">
+  <main class="main-content" aria-live="polite" id="main-content">
     <!-- Section Tabs -->
     <div class="section-tabs">
       <button class="section-tab active" data-section="players">Players</button>
@@ -909,15 +910,47 @@
       document.getElementById('player-highlights').innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">Loading...</p>';
       loadPlayerHighlights(playerId);
 
-      // Show modal
+      // Save focus and show modal
+      previousActiveElement = document.activeElement;
       document.getElementById('player-modal').classList.add('active');
       document.body.style.overflow = 'hidden';
+      // Focus the modal close button
+      const closeBtn = document.querySelector('#player-modal .modal-close');
+      if (closeBtn) closeBtn.focus();
     }
+
+    let previousActiveElement = null;
 
     function closeModal() {
       document.getElementById('player-modal').classList.remove('active');
       document.body.style.overflow = '';
+      // Restore focus to the element that opened the modal
+      if (previousActiveElement) {
+        previousActiveElement.focus();
+        previousActiveElement = null;
+      }
     }
+
+    // Focus trap for modal accessibility
+    function trapFocus(e) {
+      const modal = document.getElementById('player-modal');
+      if (!modal.classList.contains('active')) return;
+
+      const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.key === 'Tab') {
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener('keydown', trapFocus);
 
     // Close modal on backdrop click
     document.getElementById('player-modal').addEventListener('click', function(e) {

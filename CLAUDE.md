@@ -378,6 +378,8 @@ All admin endpoints use Firebase Auth token verification via `verifyAdminAuth()`
 - **Image dimensions**: Header logo has width/height to prevent CLS
 - **Lazy loading**: Highlight images use `loading="lazy"`
 - **Touch targets**: Profile button is 44x44px minimum
+- **Touch optimization**: `touch-action: manipulation` on buttons prevents 300ms delay
+- **Auth-first loading**: Index.html waits for auth before fetching Firestore data
 
 ## Accessibility (Sept 2026 Update)
 
@@ -385,6 +387,15 @@ All admin endpoints use Firebase Auth token verification via `verifyAdminAuth()`
 - **Live regions**: `aria-live="polite"` on main content areas
 - **Keyboard support**: Back buttons have `tabindex`, `onkeydown` handlers
 - **Button labels**: Profile button has `aria-label="User menu"`
+- **Skip links**: All pages have "Skip to main content" link (visible on focus)
+- **Focus trapping**: Modals trap focus and restore on close (roster, highlights, game-detail)
+- **Modal accessibility**: Modals have `role="dialog"`, `aria-modal="true"`, escape key closes
+
+## Timezone Handling
+
+- Game times use `America/Chicago` timezone
+- DST handled via `Intl.DateTimeFormat` API (not hardcoded offset)
+- `parseSimGameTime()` in functions/index.js converts local time to UTC correctly
 
 ## Known Issues / Future Work
 

@@ -322,6 +322,7 @@
   <link rel="icon" type="image/png" href="images/lancers-logo-192.png">
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <!-- Header -->
   <header class="header">
     <div class="header-content">
@@ -404,7 +405,7 @@
   </div>
 
   <!-- Main Content -->
-  <main class="main-content" aria-live="polite" style="padding-top: 0;">
+  <main class="main-content" aria-live="polite" style="padding-top: 0;" id="main-content">
     <div class="highlights-grid" id="highlightsGrid">
       <div style="text-align: center; padding: 40px;">
         <div class="spinner" style="margin: 0 auto;"></div>
@@ -920,14 +921,45 @@
     }
 
     // Upload Modal Functions
+    let modalPreviousActiveElement = null;
+
     function openUploadModal() {
+      modalPreviousActiveElement = document.activeElement;
       document.getElementById('uploadModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      const closeBtn = document.querySelector('#uploadModal .modal-close');
+      if (closeBtn) closeBtn.focus();
     }
 
     function closeUploadModal() {
       document.getElementById('uploadModal').classList.remove('active');
+      document.body.style.overflow = '';
       resetUploadForm();
+      if (modalPreviousActiveElement) {
+        modalPreviousActiveElement.focus();
+        modalPreviousActiveElement = null;
+      }
     }
+
+    // Focus trap for modals
+    document.addEventListener('keydown', function(e) {
+      const uploadModal = document.getElementById('uploadModal');
+      if (!uploadModal.classList.contains('active')) return;
+      if (e.key === 'Escape') { closeUploadModal(); return; }
+      if (e.key !== 'Tab') return;
+
+      const focusable = uploadModal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    });
 
     function resetUploadForm() {
       // Revoke preview URL to prevent memory leak

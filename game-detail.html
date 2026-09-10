@@ -12,6 +12,7 @@
   <link rel="icon" type="image/png" href="images/lancers-logo-192.png">
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <!-- Header -->
   <header class="header">
     <div class="header-content">
@@ -75,7 +76,7 @@
   </div>
 
   <!-- Main Content -->
-  <main class="main-content" aria-live="polite">
+  <main class="main-content" aria-live="polite" id="main-content">
     <div id="loading" style="text-align: center; padding: 40px;">
       <div class="spinner" style="margin: 0 auto;"></div>
     </div>
@@ -1093,11 +1094,17 @@
       }).join('');
     }
 
+    let shoutoutPreviousFocus = null;
+
     function addShoutout() {
+      shoutoutPreviousFocus = document.activeElement;
+
       // Create modal for adding shoutout
       const modal = document.createElement('div');
       modal.id = 'shoutoutModal';
       modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
 
       modal.innerHTML = `
         <div style="background: var(--bg-card); border-radius: 12px; padding: 20px; max-width: 400px; width: 100%;">
@@ -1108,13 +1115,36 @@
           </select>
           <textarea id="shoutout-note" placeholder="What did they do great?" style="width: 100%; padding: 12px; border-radius: 8px; background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary); min-height: 60px; box-sizing: border-box; margin-bottom: 12px;"></textarea>
           <div style="display: flex; gap: 10px;">
-            <button onclick="document.getElementById('shoutoutModal').remove()" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+            <button onclick="closeShoutoutModal()" class="btn btn-secondary" style="flex: 1;">Cancel</button>
             <button onclick="confirmShoutout()" class="btn btn-primary" style="flex: 1;">Add</button>
           </div>
         </div>
       `;
 
+      // Focus trap and escape handler
+      modal.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') { closeShoutoutModal(); return; }
+        if (e.key !== 'Tab') return;
+        const focusable = modal.querySelectorAll('button, select, textarea');
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      });
+
       document.body.appendChild(modal);
+      document.body.style.overflow = 'hidden';
+      document.getElementById('shoutout-player').focus();
+    }
+
+    function closeShoutoutModal() {
+      const modal = document.getElementById('shoutoutModal');
+      if (modal) modal.remove();
+      document.body.style.overflow = '';
+      if (shoutoutPreviousFocus) shoutoutPreviousFocus.focus();
     }
 
     function confirmShoutout() {
@@ -1128,7 +1158,7 @@
 
       shoutouts.push({ playerId, note });
       renderShoutouts(shoutouts);
-      document.getElementById('shoutoutModal').remove();
+      closeShoutoutModal();
     }
 
     function removeShoutout(index) {

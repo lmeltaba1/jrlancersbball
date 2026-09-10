@@ -1893,10 +1893,29 @@ function parseSimGameTime(dateStr, timeStr) {
   if (ampm === 'PM' && h !== 12) h += 12;
   if (ampm === 'AM' && h === 12) h = 0;
 
-  // Create date with explicit local time components (Central Time approximation)
-  // Cloud Functions run in UTC, so we need to offset for Central Time (-6 hours)
-  const date = new Date(Date.UTC(year, month - 1, day, h + 6, parseInt(minutes), 0, 0));
-  return date;
+  // Create a date string in ISO format and let the timezone offset be calculated properly
+  // This handles DST correctly for America/Chicago
+  const dateTimeStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(h).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+
+  // Use Intl to get the correct UTC offset for America/Chicago on this specific date
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false
+  });
+
+  // Create a local date first, then adjust for timezone
+  const localDate = new Date(year, month - 1, day, h, parseInt(minutes), 0, 0);
+
+  // Get the timezone offset for this specific date in America/Chicago
+  // This properly handles DST transitions
+  const chicagoDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+  const utcDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const offsetMs = utcDate - chicagoDate;
+
+  // Apply the offset to get the correct UTC time
+  return new Date(localDate.getTime() + offsetMs);
 }
 
 function simRandomInt(min, max) {

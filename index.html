@@ -13,6 +13,7 @@
   <link rel="icon" type="image/png" href="images/lancers-logo-192.png">
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <!-- Header -->
   <header class="header">
     <div class="header-content">
@@ -949,20 +950,30 @@
     let currentNextEvent = null; // Store for RSVP update after auth
 
     document.addEventListener('DOMContentLoaded', async function() {
-      // Load all sections in parallel for faster page load
-      const loadNextEventPromise = loadNextEventSection();
-      const loadSeasonRecordPromise = loadSeasonRecordSection();
-      const loadVolunteerStatusPromise = loadVolunteerStatusSection();
+      // Wait for auth first since Firestore requires authentication
+      try {
+        const userInfo = await requireAuth();
 
-      // Wait for critical sections (don't block on failures)
-      await Promise.allSettled([loadNextEventPromise, loadSeasonRecordPromise, loadVolunteerStatusPromise]);
+        // Now load all sections in parallel (auth is ready)
+        const loadNextEventPromise = loadNextEventSection();
+        const loadSeasonRecordPromise = loadSeasonRecordSection();
+        const loadVolunteerStatusPromise = loadVolunteerStatusSection();
 
-      // Hide skeleton loading
-      const skeleton = document.getElementById('loading-skeleton');
-      if (skeleton) skeleton.style.display = 'none';
+        // Wait for critical sections (don't block on failures)
+        await Promise.allSettled([loadNextEventPromise, loadSeasonRecordPromise, loadVolunteerStatusPromise]);
 
-      // Then handle auth-dependent sections
-      requireAuth().then(handleAuthenticatedUser).catch(e => console.error('Auth error:', e));
+        // Hide skeleton loading
+        const skeleton = document.getElementById('loading-skeleton');
+        if (skeleton) skeleton.style.display = 'none';
+
+        // Handle auth-dependent UI
+        await handleAuthenticatedUser(userInfo);
+      } catch (e) {
+        console.error('Auth error:', e);
+        // Hide skeleton on auth failure too
+        const skeleton = document.getElementById('loading-skeleton');
+        if (skeleton) skeleton.style.display = 'none';
+      }
     });
 
     async function loadSeasonRecordSection() {
