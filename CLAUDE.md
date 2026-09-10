@@ -106,8 +106,8 @@ The app is fully functional with all core features implemented. **Season simulat
 
 ### View Mode vs Track Mode
 
-- **View Mode**: All players shown with large stats, no buttons, sticky scoreboard
-- **Track Mode**: On-court players only, full button controls, SUB/END GAME
+- **View Mode**: All players shown with compact stat cards, no buttons, sticky scoreboard, play-by-play feed
+- **Track Mode**: On-court players only, full button controls, SUB/END GAME, timeout tracking
 
 ### URL Parameters
 
@@ -119,6 +119,26 @@ The app is fully functional with all core features implemented. **Season simulat
 - Shows "View Live Stats" or "Track Live Stats" button during game window
 - Button links directly to game (no selection needed)
 - Green button for scorekeeper/coach, blue for viewers
+
+### Shot Tracking (Long-Press for Misses)
+
+- **Short tap** on +1/+2/+3: Records made shot (green flash, short haptic)
+- **Long press** (700ms) on +1/+2/+3: Records missed shot (red flash, long haptic)
+- Floating "MISS?" indicator appears at top center while holding
+- Changes to "MISSED!" when threshold reached
+- Haptic feedback via `navigator.vibrate()` for tactile confirmation
+
+### Responsive Design
+
+The scorekeeper page (`game-stats.html`) has responsive breakpoints:
+
+| Screen | Buttons | Features |
+|--------|---------|----------|
+| Mobile (<600px) | 34px tall | Compact layout, all buttons equal width |
+| Tablet (600px+) | 42px tall | Larger text, more padding |
+| Desktop (1024px+) | 48px tall | Full-size UI, comfortable spacing |
+
+View-only mode scales similarly but with compact player cards to fit all 5 on-court players on screen.
 
 ### Play-by-Play Event Logging
 

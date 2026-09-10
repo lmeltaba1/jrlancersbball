@@ -436,6 +436,48 @@
       padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
     }
 
+    /* Responsive: scale up on tablets */
+    @media (min-width: 600px) {
+      body.tracking-mode .main-content { padding: 8px 16px !important; max-width: none !important; }
+      .scoreboard { padding: 10px 24px; margin-bottom: 8px; }
+      .score-num { font-size: 2.2rem; }
+      .player-card { margin-bottom: 8px; }
+      .player-row-1 { padding: 8px 12px; }
+      .player-num { font-size: 1.2rem; }
+      .player-name { font-size: 1.1rem; }
+      .player-row-2 { padding: 8px 12px; gap: 8px; }
+      .stat-btn { height: 42px; font-size: 0.95rem; }
+      .edit-btn { width: 38px; height: 42px; }
+      .opponent-row { padding: 10px 12px; margin-top: 8px; }
+      .opp-btns .stat-btn { height: 42px; }
+      .timeout-row button { padding: 12px !important; }
+      .bottom-actions { margin-top: 8px; }
+      .action-btn { padding: 14px; font-size: 1rem; }
+    }
+
+    /* Responsive: desktops - fit everything on screen */
+    @media (min-width: 1024px) {
+      body.tracking-mode .main-content { padding: 10px 24px !important; }
+      .scoreboard { padding: 12px 32px; margin-bottom: 10px; }
+      .score-num { font-size: 2.5rem; }
+      .score-label { font-size: 0.8rem; }
+      .player-card { margin-bottom: 10px; }
+      .player-row-1 { padding: 10px 16px; gap: 10px; }
+      .player-num { font-size: 1.3rem; min-width: 45px; }
+      .player-name { font-size: 1.15rem; }
+      .player-stats-row { font-size: 0.9rem; gap: 10px; }
+      .player-row-2 { padding: 10px 16px; gap: 10px; }
+      .stat-btn { height: 48px; font-size: 1rem; }
+      .edit-btn { width: 42px; height: 48px; font-size: 1rem; }
+      .opponent-row { padding: 12px 16px; margin-top: 10px; }
+      .opp-btns { gap: 10px; }
+      .opp-btns .stat-btn { height: 48px; font-size: 1rem; }
+      .opp-label { font-size: 1rem; }
+      .timeout-row button { font-size: 0.95rem !important; padding: 14px !important; }
+      .bottom-actions { gap: 10px; margin-top: 10px; }
+      .action-btn { padding: 16px; font-size: 1.1rem; }
+    }
+
     /* Edit confirm button */
     .edit-btn.edit-confirm { background: #fff; color: #000; }
 
@@ -449,53 +491,68 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      margin: 0 -8px 6px -8px;
+      margin: 0 -6px 4px -6px;
       border-radius: 0;
       border-left: none;
       border-right: none;
       border-top: none;
+      padding: 6px 12px;
     }
+    body.view-only-mode .score-num { font-size: 1.8rem; }
     body.view-only-mode .main-content {
-      padding-top: 0 !important;
+      padding: 0 6px !important;
+      padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
     }
-    /* View-only mode: compact player cards */
-    body.view-only-mode .player-card {
-      margin-bottom: 2px;
+    /* View-only cards - compact */
+    .view-card { margin-bottom: 3px !important; }
+    .view-header {
+      display: flex;
+      align-items: center;
+      padding: 4px 8px;
+      gap: 6px;
+      background: var(--bg-elevated);
     }
-    body.view-only-mode .player-row-1 {
-      padding: 3px 6px;
+    .view-num { font-weight: 800; font-size: 0.9rem; color: var(--lancers-gold); min-width: 32px; }
+    .view-name { font-weight: 600; font-size: 0.85rem; color: var(--text-primary); flex: 1; }
+    .view-pos { color: var(--text-secondary); font-size: 0.7rem; }
+    .view-status { font-size: 0.6rem; color: var(--text-muted); font-weight: 600; }
+    .view-status.on { color: #22C55E; background: rgba(34,197,94,0.15); padding: 1px 6px; border-radius: 3px; }
+    .view-stats {
+      display: flex;
+      justify-content: space-around;
+      padding: 6px 4px;
+      text-align: center;
     }
-    body.view-only-mode .player-num {
-      font-size: 0.75rem;
-      min-width: 20px;
-    }
-    body.view-only-mode .player-name {
-      font-size: 0.7rem;
-    }
-    body.view-only-mode .player-stats-row {
-      font-size: 0.6rem;
-      gap: 2px;
-    }
-    body.view-only-mode .stat-item.pts .val {
-      font-size: 0.65rem;
-    }
+    .view-stats > div { flex: 1; }
+    .view-stats .stat-val { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+    .view-stats .stat-val.pts { color: var(--lancers-gold); }
+    .view-stats .stat-val.foul-warn { color: #F59E0B; }
+    .view-stats .stat-val.foul-out { color: #EF4444; }
+    .view-stats .stat-lbl { font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase; }
+
     /* Hide row 2 buttons in view mode */
-    body.view-only-mode .player-row-2 {
-      display: none;
+    body.view-only-mode .player-row-2 { display: none; }
+
+    /* View-only responsive */
+    @media (min-width: 600px) {
+      .view-card { margin-bottom: 6px !important; }
+      .view-header { padding: 6px 12px; }
+      .view-num { font-size: 1.1rem; min-width: 40px; }
+      .view-name { font-size: 1rem; }
+      .view-stats { padding: 10px 8px; }
+      .view-stats .stat-val { font-size: 1.4rem; }
+      .view-stats .stat-lbl { font-size: 0.65rem; }
+      body.view-only-mode .score-num { font-size: 2.2rem; }
     }
-    /* Compact view-only stat grid */
-    body.view-only-mode .view-stats-grid {
-      padding: 4px 6px;
-      gap: 4px;
-    }
-    body.view-only-mode .view-stat-item {
-      padding: 2px 0;
-    }
-    body.view-only-mode .view-stat-item .stat-value {
-      font-size: 0.9rem;
-    }
-    body.view-only-mode .view-stat-item .stat-label {
-      font-size: 0.55rem;
+    @media (min-width: 1024px) {
+      .view-card { margin-bottom: 8px !important; }
+      .view-header { padding: 8px 16px; }
+      .view-num { font-size: 1.3rem; min-width: 50px; }
+      .view-name { font-size: 1.15rem; }
+      .view-stats { padding: 12px 12px; }
+      .view-stats .stat-val { font-size: 1.6rem; }
+      .view-stats .stat-lbl { font-size: 0.7rem; }
+      body.view-only-mode .score-num { font-size: 2.5rem; }
     }
     /* Hide play-by-play for scorekeepers (non-view-only) */
     body:not(.view-only-mode) #playByPlay {
@@ -1495,37 +1552,19 @@
           const isOnCourt = onCourt.includes(playerId);
 
           return `
-            <div class="player-card ${foulClass}" data-player-id="${playerId}" style="${!isOnCourt ? 'opacity: 0.6;' : ''}">
-              <div style="display: flex; align-items: center; padding: 8px 12px; background: var(--bg-elevated);">
-                <div style="font-weight: 800; font-size: 1.1rem; color: var(--lancers-gold); min-width: 45px;">#${p.number}</div>
-                <div style="font-weight: 600; font-size: 1rem; color: var(--text-primary); flex: 1;">${p.firstName} <span style="color: var(--text-secondary); font-size: 0.8rem;">${p.position}</span></div>
-                ${isOnCourt ? '<span style="font-size: 0.7rem; color: #22C55E; font-weight: 700; background: rgba(34,197,94,0.15); padding: 2px 8px; border-radius: 4px;">ON COURT</span>' : '<span style="font-size: 0.7rem; color: var(--text-muted);">BENCH</span>'}
+            <div class="player-card view-card ${foulClass}" data-player-id="${playerId}" style="${!isOnCourt ? 'opacity: 0.6;' : ''}">
+              <div class="view-header">
+                <div class="view-num">#${p.number}</div>
+                <div class="view-name">${p.firstName} <span class="view-pos">${p.position}</span></div>
+                ${isOnCourt ? '<span class="view-status on">ON COURT</span>' : '<span class="view-status">BENCH</span>'}
               </div>
-              <div style="display: flex; justify-content: space-around; padding: 12px 8px; text-align: center;">
-                <div style="flex: 1;" data-stat="points">
-                  <div class="stat-val" style="font-size: 1.5rem; font-weight: 800; color: var(--lancers-gold);">${s.points || 0}</div>
-                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">PTS</div>
-                </div>
-                <div style="flex: 1;" data-stat="rebounds">
-                  <div class="stat-val" style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">${s.rebounds || 0}</div>
-                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">REB</div>
-                </div>
-                <div style="flex: 1;" data-stat="assists">
-                  <div class="stat-val" style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">${s.assists || 0}</div>
-                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">AST</div>
-                </div>
-                <div style="flex: 1;" data-stat="steals">
-                  <div class="stat-val" style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">${s.steals || 0}</div>
-                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">STL</div>
-                </div>
-                <div style="flex: 1;" data-stat="turnovers">
-                  <div class="stat-val" style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">${s.turnovers || 0}</div>
-                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">TO</div>
-                </div>
-                <div style="flex: 1;" data-stat="fouls">
-                  <div class="stat-val" style="font-size: 1.5rem; font-weight: 800; color: ${fouls >= 5 ? '#EF4444' : (fouls >= 4 ? '#F59E0B' : 'var(--text-primary)')};">${fouls}</div>
-                  <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">FLS</div>
-                </div>
+              <div class="view-stats">
+                <div data-stat="points"><div class="stat-val pts">${s.points || 0}</div><div class="stat-lbl">PTS</div></div>
+                <div data-stat="rebounds"><div class="stat-val">${s.rebounds || 0}</div><div class="stat-lbl">REB</div></div>
+                <div data-stat="assists"><div class="stat-val">${s.assists || 0}</div><div class="stat-lbl">AST</div></div>
+                <div data-stat="steals"><div class="stat-val">${s.steals || 0}</div><div class="stat-lbl">STL</div></div>
+                <div data-stat="turnovers"><div class="stat-val">${s.turnovers || 0}</div><div class="stat-lbl">TO</div></div>
+                <div data-stat="fouls"><div class="stat-val ${fouls >= 5 ? 'foul-out' : (fouls >= 4 ? 'foul-warn' : '')}">${fouls}</div><div class="stat-lbl">FLS</div></div>
               </div>
             </div>
           `;
