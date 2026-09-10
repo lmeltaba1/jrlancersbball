@@ -144,8 +144,37 @@ if (typeof firebase !== 'undefined') {
   }
 }
 
-// Listen for navigation messages from service worker (notification clicks)
+// Register main service worker for offline caching
 if ('serviceWorker' in navigator) {
+  // Register sw.js for caching (separate from firebase-messaging-sw.js)
+  navigator.serviceWorker.register('/sw.js')
+    .then(registration => {
+      console.log('SW: Registered with scope', registration.scope);
+
+      // Check for updates periodically (every hour)
+      setInterval(() => {
+        registration.update();
+      }, 60 * 60 * 1000);
+
+      // Listen for new service worker waiting
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available - show update prompt
+              console.log('SW: New version available');
+              // Optionally show a toast: showToast('App update available. Refresh to update.', 'info', 10000);
+            }
+          });
+        }
+      });
+    })
+    .catch(err => {
+      console.log('SW: Registration failed:', err.message);
+    });
+
+  // Listen for navigation messages from service worker (notification clicks)
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'NAVIGATE') {
       window.location.href = event.data.url;
