@@ -8,9 +8,16 @@ async function loadAdminEmails() {
   if (_cachedAdminEmails !== null) return _cachedAdminEmails;
   if (typeof db === 'undefined' || !db) return {};
   try {
+    // Try to load adminEmails document
     const doc = await db.collection('config').doc('adminEmails').get();
     if (doc.exists) {
       _cachedAdminEmails = doc.data();
+      return _cachedAdminEmails;
+    }
+    // Fallback: if adminEmails doesn't exist, use head coach as admin
+    const headCoachDoc = await db.collection('config').doc('headCoach').get();
+    if (headCoachDoc.exists && headCoachDoc.data().email) {
+      _cachedAdminEmails = { [headCoachDoc.data().email.toLowerCase()]: true };
       return _cachedAdminEmails;
     }
   } catch (e) {
