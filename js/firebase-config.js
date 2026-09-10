@@ -347,8 +347,11 @@ var currentUserInfo = null;
 
 // Require authentication - call on page load for protected pages
 // Options: { requireParent: true } to block viewers
+// Options: { timeout: 10000 } to set custom timeout (default 10s)
 // Returns promise that resolves with user info or redirects to login
 function requireAuth(options = {}) {
+  const timeoutMs = options.timeout || 10000;
+
   return new Promise((resolve, reject) => {
     if (!auth) {
       window.location.href = 'login.html';
@@ -356,44 +359,73 @@ function requireAuth(options = {}) {
       return;
     }
 
+    // Timeout protection - prevents infinite hang on slow networks
+    let resolved = false;
+    const timeoutId = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        console.error('Auth timeout after ' + timeoutMs + 'ms');
+        reject(new Error('Auth timeout - please check your connection and reload'));
+      }
+    }, timeoutMs);
+
     auth.onAuthStateChanged(async function(user) {
+      if (resolved) return; // Already timed out
+
       if (!user) {
+        resolved = true;
+        clearTimeout(timeoutId);
         window.location.href = 'login.html';
         reject('Not authenticated');
         return;
       }
 
-      // Check for emulation (admin only)
-      const effectiveEmail = getEffectiveEmail(user.email);
-      const isEmulating = effectiveEmail !== user.email;
+      try {
+        // Check for emulation (admin only)
+        const effectiveEmail = getEffectiveEmail(user.email);
+        const isEmulating = effectiveEmail !== user.email;
 
-      // Check if user is in roster (use effective email for emulation)
-      const userInfo = await getPlayerFromRoster(effectiveEmail);
-      if (!userInfo) {
-        // User not in roster - sign them out and redirect
-        await auth.signOut();
-        alert('Your account is not authorized for this app. Please contact Coach Logan.');
-        window.location.href = 'login.html';
-        reject('Not in roster');
-        return;
+        // Check if user is in roster (use effective email for emulation)
+        const userInfo = await getPlayerFromRoster(effectiveEmail);
+        if (!userInfo) {
+          // User not in roster - sign them out and redirect
+          resolved = true;
+          clearTimeout(timeoutId);
+          await auth.signOut();
+          alert('Your account is not authorized for this app. Please contact Coach Logan.');
+          window.location.href = 'login.html';
+          reject('Not in roster');
+          return;
+        }
+
+        // Check if page requires parent/coach (not viewer)
+        if (options.requireParent && userInfo.isViewer) {
+          resolved = true;
+          clearTimeout(timeoutId);
+          window.location.href = 'index.html';
+          reject('Viewer not allowed');
+          return;
+        }
+
+        // Add emulation info
+        userInfo.isEmulating = isEmulating;
+        userInfo.emulatedEmail = isEmulating ? effectiveEmail : null;
+        userInfo.realEmail = user.email;
+        userInfo.isRealAdmin = isAdmin(user.email);
+
+        // Store user info globally
+        currentUserInfo = userInfo;
+        resolved = true;
+        clearTimeout(timeoutId);
+        resolve(userInfo);
+      } catch (error) {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeoutId);
+          console.error('Auth error:', error);
+          reject(error);
+        }
       }
-
-      // Check if page requires parent/coach (not viewer)
-      if (options.requireParent && userInfo.isViewer) {
-        window.location.href = 'index.html';
-        reject('Viewer not allowed');
-        return;
-      }
-
-      // Add emulation info
-      userInfo.isEmulating = isEmulating;
-      userInfo.emulatedEmail = isEmulating ? effectiveEmail : null;
-      userInfo.realEmail = user.email;
-      userInfo.isRealAdmin = isAdmin(user.email);
-
-      // Store user info globally
-      currentUserInfo = userInfo;
-      resolve(userInfo);
     });
   });
 }

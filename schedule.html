@@ -267,8 +267,17 @@
         stickySection.style.top = headerHeight + 'px';
       }
 
+      // Loading timeout - show error if loading takes too long
+      const loadingTimeout = setTimeout(function() {
+        const skeleton = document.getElementById('schedule-skeleton');
+        if (skeleton) {
+          skeleton.innerHTML = '<div class="card" style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading is taking longer than expected.<br><a href="javascript:location.reload()" style="color: var(--gold);">Tap to reload</a></div>';
+        }
+      }, 8000);
+
       // Require auth - all users can view schedule
       requireAuth().then(async function(userInfo) {
+        clearTimeout(loadingTimeout);
         currentUserInfo = userInfo; // Store for use in renderSchedule
         if (userInfo.isViewer) hideViewerRestrictedNav();
         // Show profile button
@@ -287,7 +296,12 @@
         if (userInfo.isEmulating) { showEmulationBanner(userInfo.emulatedEmail); }
         loadPageContent();
       }).catch(function(err) {
-        console.log('Auth required:', err);
+        clearTimeout(loadingTimeout);
+        console.error('Auth error:', err);
+        const skeleton = document.getElementById('schedule-skeleton');
+        if (skeleton) {
+          skeleton.innerHTML = '<div class="card" style="text-align: center; padding: 20px; color: var(--text-secondary);">Failed to load. <a href="javascript:location.reload()" style="color: var(--gold);">Tap to reload</a></div>';
+        }
       });
     });
 
@@ -307,16 +321,20 @@
         }
         allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        // Load game results and attendance from Firestore
+        // Load game results, attendance, and volunteers from Firestore IN PARALLEL
         if (db) {
           try {
-            // Load game stats (results) - check for data from endGame()
-            const gameStatsSnapshot = await db.collection('gameStats').get();
+            // Parallel fetch - much faster than sequential
+            const [gameStatsSnapshot, attendanceSnapshot, volunteersSnapshot] = await Promise.all([
+              db.collection('gameStats').get(),
+              db.collection('attendance').get(),
+              db.collection('volunteers').get()
+            ]);
+
+            // Process game stats
             gameStatsSnapshot.forEach(doc => {
               const data = doc.data();
-              // Check for completed games - use result/finalScore from endGame() or calculate from scores
               if (data.result && data.finalScore) {
-                // Game ended properly with endGame()
                 gameResults[doc.id] = {
                   result: data.result,
                   finalScore: data.finalScore,
@@ -324,7 +342,6 @@
                   opponentScore: data.opponentScore
                 };
               } else if (data.isComplete && data.ourScore !== undefined && data.opponentScore !== undefined) {
-                // Fallback: calculate from scores
                 const result = data.ourScore > data.opponentScore ? 'W' : (data.ourScore < data.opponentScore ? 'L' : 'T');
                 gameResults[doc.id] = {
                   result: result,
@@ -343,8 +360,7 @@
               return event;
             });
 
-            // Load attendance data
-            const attendanceSnapshot = await db.collection('attendance').get();
+            // Process attendance data
             const attendanceByGame = {};
             attendanceSnapshot.forEach(doc => {
               const data = doc.data();
@@ -360,7 +376,6 @@
               attendanceByGame[gameId].respondedIds.add(data.playerId);
             });
 
-            // Calculate no response for each game
             for (const gameId in attendanceByGame) {
               const responded = attendanceByGame[gameId].respondedIds.size;
               attendanceByGame[gameId].noResponse = totalPlayers - responded;
@@ -368,8 +383,7 @@
             }
             attendance = attendanceByGame;
 
-            // Load volunteer data
-            const volunteersSnapshot = await db.collection('volunteers').get();
+            // Process volunteer data
             volunteersSnapshot.forEach(doc => {
               volunteers[doc.id] = doc.data();
             });

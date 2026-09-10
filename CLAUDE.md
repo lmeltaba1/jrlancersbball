@@ -374,12 +374,17 @@ All admin endpoints use Firebase Auth token verification via `verifyAdminAuth()`
 ## Performance (Sept 2026 Update)
 
 - **Deferred scripts**: Analytics, messaging, gamification load with `defer`
-- **Skeleton loading**: Shows placeholder cards while Firebase initializes
+- **Skeleton loading**: Shows placeholder cards while Firebase initializes (all pages use skeletons, no spinners)
 - **Image dimensions**: Header logo has width/height to prevent CLS
 - **Lazy loading**: Highlight images use `loading="lazy"`
 - **Touch targets**: Profile button is 44x44px minimum
 - **Touch optimization**: `touch-action: manipulation` on buttons prevents 300ms delay
 - **Auth-first loading**: Index.html waits for auth before fetching Firestore data
+- **Auth timeout**: `requireAuth()` has 10-second timeout to prevent infinite hangs on slow networks
+- **Parallel Firestore reads**: schedule.html loads gameStats, attendance, volunteers in parallel via `Promise.all()`
+- **Listener error handling**: All `onSnapshot` listeners have error callbacks showing user-friendly messages
+- **Listener cleanup**: `pagehide` event handler added alongside `beforeunload` for mobile navigation cleanup
+- **Loading timeout feedback**: After 8 seconds, skeleton loading shows "Tap to reload" link
 
 ## Accessibility (Sept 2026 Update)
 

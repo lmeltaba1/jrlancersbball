@@ -430,6 +430,14 @@
     var unsubscribePosts = null;
     var unsubscribeMessages = null;
 
+    // Loading timeout - show reload link if loading takes too long
+    var loadingTimeout = setTimeout(function() {
+      var loadingState = document.getElementById('loadingState');
+      if (loadingState && loadingState.style.display !== 'none') {
+        loadingState.innerHTML = '<div class="card" style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading is taking longer than expected.<br><a href="javascript:location.reload()" style="color: var(--gold);">Tap to reload</a></div>';
+      }
+    }, 8000);
+
     function loadPosts() {
       if (!db) return;
       // Order by pinned first, then by timestamp
@@ -476,6 +484,11 @@
           div.innerHTML = html;
           list.appendChild(div);
         });
+      }, function(error) {
+        // Error callback - show user feedback instead of silent failure
+        console.error('Posts listener error:', error);
+        var list = document.getElementById('postsList');
+        list.innerHTML = '<div class="card" style="text-align: center; color: var(--text-secondary);">Failed to load posts. Please reload the page.</div>';
       });
     }
 
@@ -740,6 +753,11 @@
         if (latestMessageId) {
           saveLastReadMessageId(latestMessageId);
         }
+      }, function(error) {
+        // Error callback - show user feedback instead of silent failure
+        console.error('Chat listener error:', error);
+        var container = document.getElementById('chatMessages');
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">Failed to load chat. Please reload the page.</div>';
       });
     }
 
@@ -837,6 +855,7 @@
       }
 
       document.getElementById('chatUserName').textContent = displayName;
+      clearTimeout(loadingTimeout);
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('tabBar').style.display = 'flex';
       document.getElementById('chatTab').classList.add('active');
@@ -856,15 +875,18 @@
 
     }).catch(function(err) {
       console.log('Auth error:', err);
+      clearTimeout(loadingTimeout);
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('authRequired').style.display = 'block';
     });
 
-    // Cleanup listeners on page unload to prevent memory leaks
-    window.addEventListener('beforeunload', function() {
-      if (unsubscribePosts) unsubscribePosts();
-      if (unsubscribeMessages) unsubscribeMessages();
-    });
+    // Cleanup listeners to prevent memory leaks
+    function cleanupListeners() {
+      if (unsubscribePosts) { unsubscribePosts(); unsubscribePosts = null; }
+      if (unsubscribeMessages) { unsubscribeMessages(); unsubscribeMessages = null; }
+    }
+    window.addEventListener('beforeunload', cleanupListeners);
+    window.addEventListener('pagehide', cleanupListeners);
   </script>
 </body>
 </html>

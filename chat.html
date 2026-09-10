@@ -190,8 +190,11 @@
   <!-- Main Content -->
   <main class="main-content chat-main">
     <!-- Loading state -->
-    <div id="loadingState" class="card" style="text-align: center; padding: 40px;">
-      <div class="spinner" style="margin: 0 auto;"></div>
+    <div id="loadingState">
+      <div class="skeleton skeleton-card" style="height: 60px;"></div>
+      <div class="skeleton skeleton-card" style="height: 60px;"></div>
+      <div class="skeleton skeleton-card" style="height: 60px;"></div>
+      <div class="skeleton skeleton-card" style="height: 60px;"></div>
     </div>
 
     <!-- Auth required prompt -->
@@ -337,6 +340,13 @@
     var lastDateShown = null;
     var unsubscribeMessages = null;
 
+    // Loading timeout - show reload link if loading takes too long
+    var loadingTimeout = setTimeout(function() {
+      var loadingState = document.getElementById('loadingState');
+      if (loadingState && loadingState.style.display !== 'none') {
+        loadingState.innerHTML = '<div class="card" style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading is taking longer than expected.<br><a href="javascript:location.reload()" style="color: var(--gold);">Tap to reload</a></div>';
+      }
+    }, 8000);
 
     function formatTime(timestamp) {
       if (!timestamp) return '';
@@ -487,6 +497,7 @@
         : currentUserInfo.name || currentUserInfo.parent?.name || currentUser.email.split('@')[0];
 
       document.getElementById('chatUserName').textContent = displayName;
+      clearTimeout(loadingTimeout);
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('chatContainer').style.display = 'block';
       document.getElementById('chatInputContainer').style.display = 'flex';
@@ -543,10 +554,18 @@
           if (latestMessageId) {
             saveLastReadMessageId(latestMessageId);
           }
+        }, function(error) {
+          // Error callback - show user feedback instead of silent failure
+          console.error('Chat listener error:', error);
+          var chatMessages = document.getElementById('chatMessages');
+          chatMessages.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">Failed to load chat. Please reload the page.</div>';
         });
       }
     }).catch(function(err) {
       console.log('Auth required:', err);
+      clearTimeout(loadingTimeout);
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('authRequired').style.display = 'block';
     });
 
     document.getElementById('sendBtn').addEventListener('click', sendMessage);
@@ -561,10 +580,12 @@
       }, 300);
     });
 
-    // Cleanup listener on page unload to prevent memory leaks
-    window.addEventListener('beforeunload', function() {
-      if (unsubscribeMessages) unsubscribeMessages();
-    });
+    // Cleanup listener to prevent memory leaks
+    function cleanupListener() {
+      if (unsubscribeMessages) { unsubscribeMessages(); unsubscribeMessages = null; }
+    }
+    window.addEventListener('beforeunload', cleanupListener);
+    window.addEventListener('pagehide', cleanupListener);
   </script>
 </body>
 </html>
