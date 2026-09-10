@@ -155,11 +155,16 @@ if ('serviceWorker' in navigator) {
 
 // Helper to load roster data from Firestore
 async function loadRosterData() {
-  if (!db) return null;
+  if (!db) {
+    console.error('loadRosterData: db is undefined');
+    return null;
+  }
   try {
     const doc = await db.collection('config').doc('roster').get();
     if (doc.exists) {
       return doc.data();
+    } else {
+      console.error('loadRosterData: roster document does not exist');
     }
   } catch (e) {
     console.error('Error loading roster from Firestore:', e);
@@ -391,6 +396,9 @@ function requireAuth(options = {}) {
       }
 
       try {
+        // Load admin emails first so isAdmin() works for emulation check
+        await loadAdminEmails();
+
         // Check for emulation (admin only)
         const effectiveEmail = getEffectiveEmail(user.email);
         const isEmulating = effectiveEmail !== user.email;
