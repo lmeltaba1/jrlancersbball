@@ -976,7 +976,7 @@
       const used = timeouts[team][half] || 0;
 
       if (used >= maxTOs) {
-        alert(`${team === 'lancers' ? 'Lancers' : 'Opponent'} has no timeouts remaining!`);
+        showToast(`${team === 'lancers' ? 'Lancers' : 'Opponent'} has no timeouts remaining!`, 'warning');
         return;
       }
 
@@ -1530,7 +1530,7 @@
           team: 'lancers',
           description: `${playerName} FOULED OUT!`
         });
-        alert(s.name + ' fouled out!');
+        showToast(s.name + ' fouled out!', 'warning');
       }
       await saveStats();
       renderCourtPlayers();
@@ -1784,8 +1784,8 @@
       }
 
       if (unsubscribe) unsubscribe();
-      alert('Game ended! Lancers ' + (result === 'W' ? 'WIN' : 'lose') + ' ' + total + '-' + opponentScore);
-      window.location.href = 'schedule.html';
+      showToast('Game ended! Lancers ' + (result === 'W' ? 'WIN' : 'lose') + ' ' + total + '-' + opponentScore, result === 'W' ? 'success' : 'info');
+      setTimeout(() => { window.location.href = 'schedule.html'; }, 2000);
     }
 
     async function saveStats() {

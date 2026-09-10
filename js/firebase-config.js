@@ -392,8 +392,13 @@ function requireAuth(options = {}) {
           resolved = true;
           clearTimeout(timeoutId);
           await auth.signOut();
-          alert('Your account is not authorized for this app. Please contact Coach Logan.');
-          window.location.href = 'login.html';
+          if (typeof showToast === 'function') {
+            showToast('Your account is not authorized for this app. Please contact Coach Logan.', 'error');
+            setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+          } else {
+            alert('Your account is not authorized for this app. Please contact Coach Logan.');
+            window.location.href = 'login.html';
+          }
           reject('Not in roster');
           return;
         }

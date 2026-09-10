@@ -510,17 +510,17 @@
       var pinned = document.getElementById('postPinned').checked;
 
       if (!content) {
-        alert('Please enter a message');
+        showToast('Please enter a message', 'warning');
         return;
       }
 
       // Input length limits
       if (title.length > 200) {
-        alert('Title is too long (max 200 characters)');
+        showToast('Title is too long (max 200 characters)', 'warning');
         return;
       }
       if (content.length > 5000) {
-        alert('Post is too long (max 5000 characters)');
+        showToast('Post is too long (max 5000 characters)', 'warning');
         return;
       }
 
@@ -540,7 +540,7 @@
         btn.disabled = false;
         btn.textContent = 'Post';
       }).catch(function(err) {
-        alert('Error creating post: ' + err.message);
+        showToast('Error creating post: ' + err.message, 'error');
         btn.disabled = false;
         btn.textContent = 'Post';
       });
@@ -609,7 +609,7 @@
 
       // Comment length limit
       if (text.length > 500) {
-        alert('Comment is too long (max 500 characters)');
+        showToast('Comment is too long (max 500 characters)', 'warning');
         return;
       }
 
@@ -624,7 +624,7 @@
         input.disabled = false;
         loadComments(currentPostId);
       }).catch(function(err) {
-        alert('Error adding comment: ' + err.message);
+        showToast('Error adding comment: ' + err.message, 'error');
         input.disabled = false;
       });
     }
@@ -770,7 +770,7 @@
       }
       // Message length limit
       if (text.length > 500) {
-        alert('Message is too long (max 500 characters)');
+        showToast('Message is too long (max 500 characters)', 'warning');
         return;
       }
       console.log('Sending message:', { text, senderName: displayName, senderEmail: effectiveEmail, isEmulating: currentUserInfo.isEmulating });
@@ -784,7 +784,7 @@
         console.log('Message saved:', docRef.id);
       }).catch(function(error) {
         console.error('Message save failed:', error);
-        alert('Failed to send message: ' + error.message);
+        showToast('Failed to send message: ' + error.message, 'error');
       });
       input.value = '';
     }

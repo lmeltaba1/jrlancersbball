@@ -455,7 +455,7 @@
 
       // Message length limit
       if (text.length > 500) {
-        alert('Message is too long (max 500 characters)');
+        showToast('Message is too long (max 500 characters)', 'warning');
         return;
       }
 
@@ -468,7 +468,7 @@
       }).then(function() {
         document.getElementById('messageInput').value = '';
       }).catch(function(e) {
-        alert('Error sending: ' + e.message);
+        showToast('Error sending: ' + e.message, 'error');
       });
     }
 

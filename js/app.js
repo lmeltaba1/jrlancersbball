@@ -516,3 +516,381 @@ function getBottomSheetBody() {
   return currentBottomSheet.overlay.querySelector('.bottom-sheet-body');
 }
 
+// ========== PAGE TRANSITIONS ==========
+// Smooth page exit animation before navigation
+
+function navigateWithTransition(url) {
+  // Use View Transitions API if available
+  if (document.startViewTransition) {
+    document.startViewTransition(() => {
+      window.location.href = url;
+    });
+    return;
+  }
+
+  // Fallback: CSS animation
+  const main = document.querySelector('.main-content');
+  if (main) {
+    main.classList.add('page-exit');
+    setTimeout(() => {
+      window.location.href = url;
+    }, 200);
+  } else {
+    window.location.href = url;
+  }
+}
+
+// Intercept navigation links for smooth transitions
+document.addEventListener('DOMContentLoaded', function() {
+  // Add transition to internal links (same-origin)
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+
+    const href = link.getAttribute('href');
+    if (!href) return;
+
+    // Skip external links, anchors, javascript:, mailto:, tel:
+    if (href.startsWith('http') || href.startsWith('#') ||
+        href.startsWith('javascript:') || href.startsWith('mailto:') ||
+        href.startsWith('tel:') || href.startsWith('sms:')) {
+      return;
+    }
+
+    // Skip links that open in new tab
+    if (link.target === '_blank') return;
+
+    // Skip links with download attribute
+    if (link.hasAttribute('download')) return;
+
+    e.preventDefault();
+    navigateWithTransition(href);
+  });
+});
+
+// ========== PULL TO REFRESH ==========
+// Usage: initPullToRefresh(refreshCallback)
+
+let ptrEnabled = false;
+let ptrStartY = 0;
+let ptrCurrentY = 0;
+let ptrRefreshing = false;
+
+// ========== SWIPE GESTURES ==========
+// Swipe right from edge to go back
+
+let swipeEnabled = false;
+
+function initSwipeNavigation() {
+  if (swipeEnabled) return;
+  swipeEnabled = true;
+
+  let startX = 0;
+  let startY = 0;
+  let isEdgeSwipe = false;
+  const edgeThreshold = 30; // px from left edge
+  const swipeThreshold = 100; // px to trigger back
+
+  // Create swipe indicator
+  const indicator = document.createElement('div');
+  indicator.style.cssText = `
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) translateX(-100%);
+    width: 40px;
+    height: 80px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+    border-radius: 0 40px 40px 0;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 9999;
+    pointer-events: none;
+  `;
+  document.body.appendChild(indicator);
+
+  document.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+    isEdgeSwipe = startX <= edgeThreshold;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!isEdgeSwipe) return;
+
+    const touch = e.touches[0];
+    const diffX = touch.clientX - startX;
+    const diffY = Math.abs(touch.clientY - startY);
+
+    // Only horizontal swipe
+    if (diffY > 50) {
+      isEdgeSwipe = false;
+      indicator.style.opacity = '0';
+      indicator.style.transform = 'translateY(-50%) translateX(-100%)';
+      return;
+    }
+
+    if (diffX > 20) {
+      const progress = Math.min(diffX / swipeThreshold, 1);
+      indicator.style.opacity = String(progress * 0.8);
+      indicator.style.transform = `translateY(-50%) translateX(${diffX - 40}px)`;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    if (!isEdgeSwipe) return;
+
+    const touch = e.changedTouches[0];
+    const diffX = touch.clientX - startX;
+
+    if (diffX >= swipeThreshold) {
+      history.back();
+    }
+
+    indicator.style.opacity = '0';
+    indicator.style.transform = 'translateY(-50%) translateX(-100%)';
+    isEdgeSwipe = false;
+  });
+}
+
+// Auto-init swipe navigation
+document.addEventListener('DOMContentLoaded', initSwipeNavigation);
+
+function initPullToRefresh(onRefresh) {
+  if (ptrEnabled) return;
+  ptrEnabled = true;
+
+  // Create PTR element
+  const ptr = document.createElement('div');
+  ptr.className = 'ptr-container';
+  ptr.innerHTML = '<div class="ptr-spinner"></div>';
+  document.body.appendChild(ptr);
+
+  const threshold = 80;
+  let pulling = false;
+
+  document.addEventListener('touchstart', (e) => {
+    if (ptrRefreshing) return;
+    if (window.scrollY > 10) return;
+    ptrStartY = e.touches[0].clientY;
+    pulling = false;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (ptrRefreshing) return;
+    if (window.scrollY > 10) return;
+
+    ptrCurrentY = e.touches[0].clientY;
+    const diff = ptrCurrentY - ptrStartY;
+
+    if (diff > 0 && window.scrollY === 0) {
+      pulling = true;
+      const progress = Math.min(diff / threshold, 1);
+      ptr.classList.add('pulling');
+      ptr.querySelector('.ptr-spinner').style.transform = `rotate(${progress * 180}deg)`;
+
+      if (diff > threshold) {
+        ptr.style.transform = `translateY(${Math.min(diff - threshold, 30)}px)`;
+      }
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', async () => {
+    if (!pulling || ptrRefreshing) {
+      ptr.classList.remove('pulling');
+      return;
+    }
+
+    const diff = ptrCurrentY - ptrStartY;
+    if (diff >= threshold) {
+      ptrRefreshing = true;
+      ptr.classList.add('refreshing');
+
+      try {
+        await onRefresh();
+      } catch (e) {
+        console.error('Refresh error:', e);
+      }
+
+      ptrRefreshing = false;
+      ptr.classList.remove('refreshing');
+    }
+
+    ptr.classList.remove('pulling');
+    ptr.style.transform = '';
+    ptrStartY = 0;
+    ptrCurrentY = 0;
+  });
+}
+
+// ========== LIVE SCORE TICKER ==========
+// Shows animated score updates during live games
+
+let tickerElement = null;
+let tickerLancersScore = 0;
+let tickerOpponentScore = 0;
+
+function showScoreTicker(opponent, lancersScore, opponentScore, quarter) {
+  if (!tickerElement) {
+    tickerElement = document.createElement('div');
+    tickerElement.className = 'score-ticker';
+    tickerElement.innerHTML = `
+      <span class="score-ticker-live">LIVE</span>
+      <div class="score-ticker-teams">
+        <span class="score-ticker-team lancers">Lancers</span>
+        <span class="score-ticker-score" id="ticker-lancers">0</span>
+        <span style="color: var(--text-muted);">-</span>
+        <span class="score-ticker-score" id="ticker-opponent">0</span>
+        <span class="score-ticker-team" id="ticker-opponent-name">OPP</span>
+      </div>
+      <span class="score-ticker-quarter" id="ticker-quarter">Q1</span>
+      <button class="score-ticker-close" onclick="hideScoreTicker()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    `;
+    document.body.appendChild(tickerElement);
+  }
+
+  document.getElementById('ticker-opponent-name').textContent = opponent;
+  document.getElementById('ticker-quarter').textContent = quarter;
+
+  // Animate score changes
+  updateTickerScore('ticker-lancers', lancersScore, tickerLancersScore);
+  updateTickerScore('ticker-opponent', opponentScore, tickerOpponentScore);
+
+  tickerLancersScore = lancersScore;
+  tickerOpponentScore = opponentScore;
+
+  document.body.classList.add('has-ticker');
+  requestAnimationFrame(() => {
+    tickerElement.classList.add('visible');
+  });
+}
+
+function updateTickerScore(elementId, newScore, oldScore) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  el.textContent = newScore;
+  if (newScore !== oldScore) {
+    el.classList.add('updated');
+    setTimeout(() => el.classList.remove('updated'), 500);
+  }
+}
+
+function hideScoreTicker() {
+  if (tickerElement) {
+    tickerElement.classList.remove('visible');
+    document.body.classList.remove('has-ticker');
+  }
+}
+
+// ========== MINI SPARKLINES ==========
+// Creates small bar charts for showing stat trends
+// Usage: createSparkline([5, 3, 8, 2, 6]) returns HTML string
+
+function createSparkline(values, maxHeight = 16) {
+  if (!values || values.length === 0) return '';
+
+  const max = Math.max(...values, 1);
+
+  const bars = values.map(v => {
+    const height = Math.max(2, (v / max) * maxHeight);
+    const isZero = v === 0;
+    const isHigh = v === max && v > 0;
+    const classes = ['sparkline-bar'];
+    if (isZero) classes.push('zero');
+    if (isHigh) classes.push('high');
+    return `<div class="${classes.join(' ')}" style="height: ${height}px;"></div>`;
+  }).join('');
+
+  return `<span class="sparkline">${bars}</span>`;
+}
+
+// ========== ANIMATED LEADERBOARD ==========
+// Track leaderboard changes and animate position shifts
+
+let previousLeaderboard = [];
+
+function animateLeaderboardChanges(newLeaderboard, containerSelector) {
+  const container = document.querySelector(containerSelector);
+  if (!container) return;
+
+  // Compare with previous state
+  newLeaderboard.forEach((item, newIndex) => {
+    const prevIndex = previousLeaderboard.findIndex(p => p.name === item.name);
+    const row = container.children[newIndex];
+    if (!row) return;
+
+    if (prevIndex !== -1 && prevIndex !== newIndex) {
+      // Position changed
+      if (prevIndex > newIndex) {
+        // Moved up
+        row.classList.add('rank-up');
+        setTimeout(() => row.classList.remove('rank-up'), 1000);
+      } else {
+        // Moved down
+        row.classList.add('rank-down');
+        setTimeout(() => row.classList.remove('rank-down'), 1000);
+      }
+    }
+  });
+
+  previousLeaderboard = [...newLeaderboard];
+}
+
+// ========== GAME TIMELINE ==========
+// Visual timeline of game events with scoring plays
+// Usage: createGameTimeline(events, currentQuarter) returns HTML string
+
+function createGameTimeline(events, currentQuarter = 'final') {
+  if (!events || events.length === 0) {
+    return '<div class="game-timeline"><div class="timeline-track"></div></div>';
+  }
+
+  // Quarter positions (0-100%)
+  const quarterPositions = { 'Q1': 0, 'Q2': 25, 'halftime': 50, 'Q3': 50, 'Q4': 75, 'OT': 100, 'final': 100 };
+  const progress = quarterPositions[currentQuarter] || 100;
+
+  // Filter scoring events
+  const scoringEvents = events.filter(e => e.stat === 'points' && e.value > 0);
+
+  // Create event dots
+  let eventDots = '';
+  scoringEvents.forEach((event, i) => {
+    const quarter = event.gamePhase || 'Q1';
+    const quarterBase = quarterPositions[quarter] || 0;
+    // Spread events within their quarter
+    const offset = (i % 10) * 2;
+    const position = Math.min(quarterBase + offset, 98);
+    const isLancers = event.team === 'lancers';
+    const isBigPlay = event.value >= 3;
+
+    eventDots += `
+      <div class="timeline-event ${isLancers ? 'lancers' : 'opponent'} ${isBigPlay ? 'big-play' : ''}"
+           style="left: ${position}%;">
+        <div class="timeline-tooltip">${escapeHtml(event.description || '')}</div>
+      </div>
+    `;
+  });
+
+  return `
+    <div class="game-timeline">
+      <div class="timeline-track">
+        <div class="timeline-progress" style="width: ${progress}%;"></div>
+        <div class="timeline-events">${eventDots}</div>
+      </div>
+      <div class="timeline-quarters">
+        <span class="timeline-quarter ${currentQuarter === 'Q1' ? 'active' : ''}">Q1</span>
+        <span class="timeline-quarter ${currentQuarter === 'Q2' ? 'active' : ''}">Q2</span>
+        <span class="timeline-quarter ${currentQuarter === 'Q3' ? 'active' : ''}">Q3</span>
+        <span class="timeline-quarter ${currentQuarter === 'Q4' ? 'active' : ''}">Q4</span>
+        <span class="timeline-quarter ${currentQuarter === 'final' ? 'active' : ''}">END</span>
+      </div>
+    </div>
+  `;
+}
+

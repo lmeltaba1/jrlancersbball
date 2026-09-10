@@ -1156,7 +1156,7 @@
     async function saveViewer() {
       // Double-check permission (UI already hides this for unauthorized users)
       if (!canManageViewers) {
-        alert('You do not have permission to add viewers for this player.');
+        showToast('You do not have permission to add viewers for this player.', 'error');
         return;
       }
 
@@ -1165,13 +1165,13 @@
       const relationship = document.getElementById('viewer-relationship').value.trim();
 
       if (!email || !name) {
-        alert('Please enter both email and name');
+        showToast('Please enter both email and name', 'warning');
         return;
       }
 
       // Check if already exists
       if (currentPlayerViewers.some(v => v.email.toLowerCase() === email)) {
-        alert('This email is already invited');
+        showToast('This email is already invited', 'warning');
         return;
       }
 
@@ -1219,20 +1219,20 @@
         }
 
         if (emailSent) {
-          alert(`Invite sent! ${name} will receive an email at ${email} with instructions to create their account.`);
+          showToast(`Invite sent! ${name} will receive an email with instructions.`, 'success');
         } else {
-          alert(`${name} has been added! Please tell them to register at:\n\n${window.location.origin}/register.html\n\nThey must use this email: ${email}`);
+          showToast(`${name} added! Tell them to register at register.html with email: ${email}`, 'success', 5000);
         }
       } catch (e) {
         console.error('Error saving viewer:', e);
-        alert('Error saving viewer. Please try again.');
+        showToast('Error saving viewer. Please try again.', 'error');
       }
     }
 
     async function removeViewer(index) {
       // Double-check permission (UI already hides this for unauthorized users)
       if (!canManageViewers) {
-        alert('You do not have permission to remove viewers for this player.');
+        showToast('You do not have permission to remove viewers for this player.', 'error');
         return;
       }
 
@@ -1261,7 +1261,7 @@
         await loadViewers(currentPlayerId);
       } catch (e) {
         console.error('Error removing viewer:', e);
-        alert('Error removing viewer. Please try again.');
+        showToast('Error removing viewer. Please try again.', 'error');
       }
     }
 

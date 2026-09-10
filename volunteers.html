@@ -529,13 +529,13 @@
 
     async function signUp(gameId, role) {
       if (!currentUser || !userInfo) {
-        alert('You must be logged in to sign up.');
+        showToast('You must be logged in to sign up.', 'warning');
         return;
       }
 
       // Coaches cannot volunteer
       if (userInfo.isCoach) {
-        alert('Coaches cannot sign up as volunteers.');
+        showToast('Coaches cannot sign up as volunteers.', 'info');
         return;
       }
 
@@ -564,11 +564,11 @@
         };
 
         renderGames();
-        alert('You are signed up!');
+        showToast('You are signed up!', 'success');
 
       } catch (e) {
         console.error('Error signing up:', e);
-        alert('Error signing up. Please try again.');
+        showToast('Error signing up. Please try again.', 'error');
       }
     }
 
@@ -589,7 +589,7 @@
 
       } catch (e) {
         console.error('Error canceling signup:', e);
-        alert('Error canceling. Please try again.');
+        showToast('Error canceling. Please try again.', 'error');
       }
     }
   </script>

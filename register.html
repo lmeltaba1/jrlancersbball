@@ -91,8 +91,8 @@
 
         const result = await auth.createUserWithEmailAndPassword(email, password);
 
-        alert('Account created! You can now log in.');
-        window.location.href = 'login.html';
+        showToast('Account created! You can now log in.', 'success');
+        setTimeout(() => { window.location.href = 'login.html'; }, 1500);
 
       } catch (error) {
         errorDiv.style.display = 'block';

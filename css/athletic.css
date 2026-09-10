@@ -213,6 +213,71 @@ body::before {
   z-index: 1;
 }
 
+/* ========== PAGE TRANSITIONS ========== */
+/* Page load animation */
+.main-content {
+  animation: pageSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Page exit animation (applied via JS) */
+.page-exit {
+  animation: pageSlideOut 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes pageSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* Staggered card animations */
+.card, .game-card, .player-card {
+  animation: cardFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.card:nth-child(1), .game-card:nth-child(1), .player-card:nth-child(1) { animation-delay: 0.05s; }
+.card:nth-child(2), .game-card:nth-child(2), .player-card:nth-child(2) { animation-delay: 0.1s; }
+.card:nth-child(3), .game-card:nth-child(3), .player-card:nth-child(3) { animation-delay: 0.15s; }
+.card:nth-child(4), .game-card:nth-child(4), .player-card:nth-child(4) { animation-delay: 0.2s; }
+.card:nth-child(5), .game-card:nth-child(5), .player-card:nth-child(5) { animation-delay: 0.25s; }
+.card:nth-child(n+6), .game-card:nth-child(n+6), .player-card:nth-child(n+6) { animation-delay: 0.3s; }
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* View transitions API support (modern browsers) */
+@supports (view-transition-name: root) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.3s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
 /* ========== HEADER ========== */
 .header {
   background: rgba(0, 0, 0, 0.8);
@@ -1634,6 +1699,356 @@ a:hover {
 .bottom-sheet.medium { max-height: 60vh; }
 .bottom-sheet.large { max-height: 85vh; }
 .bottom-sheet.full { max-height: 95vh; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+
+/* ========== PULL TO REFRESH ========== */
+.ptr-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  pointer-events: none;
+  transform: translateY(-100%);
+  transition: transform 0.2s ease;
+}
+
+.ptr-container.pulling {
+  transform: translateY(0);
+}
+
+.ptr-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.ptr-container.refreshing .ptr-spinner {
+  animation: ptrSpin 0.8s linear infinite;
+}
+
+@keyframes ptrSpin {
+  to { transform: rotate(360deg); }
+}
+
+.ptr-hint {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.ptr-container.pulling .ptr-hint {
+  opacity: 1;
+}
+
+/* ========== LIVE SCORE TICKER ========== */
+.score-ticker {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(20, 20, 20, 0.95) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 1001;
+  transform: translateY(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.score-ticker.visible {
+  transform: translateY(0);
+}
+
+.score-ticker-live {
+  background: #EF4444;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: tickerPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes tickerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.score-ticker-teams {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.score-ticker-team {
+  color: var(--text-secondary);
+}
+
+.score-ticker-team.lancers {
+  color: var(--gold);
+}
+
+.score-ticker-score {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  min-width: 24px;
+  text-align: center;
+}
+
+.score-ticker-score.updated {
+  animation: scoreFlash 0.5s ease-out;
+}
+
+@keyframes scoreFlash {
+  0% { transform: scale(1.3); color: var(--gold); }
+  100% { transform: scale(1); color: var(--text-primary); }
+}
+
+.score-ticker-quarter {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.score-ticker-close {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 4px;
+  cursor: pointer;
+}
+
+/* Adjust header when ticker is visible */
+body.has-ticker .header {
+  top: 44px;
+}
+
+/* ========== MINI SPARKLINES ========== */
+.sparkline {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 16px;
+  vertical-align: middle;
+}
+
+.sparkline-bar {
+  width: 3px;
+  background: var(--gold);
+  border-radius: 1px;
+  transition: height 0.3s ease;
+  opacity: 0.6;
+}
+
+.sparkline-bar:last-child {
+  opacity: 1;
+}
+
+.sparkline-bar.zero {
+  background: var(--border-color);
+  min-height: 2px;
+}
+
+.sparkline-bar.high {
+  background: var(--gold);
+}
+
+.sparkline-bar.low {
+  background: var(--text-muted);
+}
+
+/* Inline sparkline with label */
+.stat-with-sparkline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-with-sparkline .sparkline {
+  flex-shrink: 0;
+}
+
+/* ========== ANIMATED LEADERBOARD ========== */
+.rank-up {
+  animation: rankUp 0.6s ease-out;
+  position: relative;
+}
+
+.rank-up::after {
+  content: '▲';
+  position: absolute;
+  right: -20px;
+  color: #22C55E;
+  font-size: 0.7rem;
+  animation: fadeSlideUp 0.6s ease-out forwards;
+}
+
+.rank-down {
+  animation: rankDown 0.6s ease-out;
+  position: relative;
+}
+
+.rank-down::after {
+  content: '▼';
+  position: absolute;
+  right: -20px;
+  color: #EF4444;
+  font-size: 0.7rem;
+  animation: fadeSlideDown 0.6s ease-out forwards;
+}
+
+@keyframes rankUp {
+  0% { background: rgba(34, 197, 94, 0.3); }
+  100% { background: transparent; }
+}
+
+@keyframes rankDown {
+  0% { background: rgba(239, 68, 68, 0.2); }
+  100% { background: transparent; }
+}
+
+@keyframes fadeSlideUp {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+@keyframes fadeSlideDown {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+
+/* ========== GAME TIMELINE ========== */
+.game-timeline {
+  position: relative;
+  padding: 16px 0;
+  margin: 16px 0;
+}
+
+.timeline-track {
+  position: relative;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+  margin: 0 8px;
+}
+
+.timeline-progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: var(--gold-gradient);
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.timeline-quarters {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 0 8px;
+}
+
+.timeline-quarter {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.timeline-quarter.active {
+  color: var(--gold);
+}
+
+.timeline-events {
+  position: absolute;
+  top: -6px;
+  left: 8px;
+  right: 8px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.timeline-event {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.2s;
+}
+
+.timeline-event:hover {
+  transform: translateX(-50%) scale(1.5);
+}
+
+.timeline-event.lancers {
+  background: var(--gold);
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+}
+
+.timeline-event.opponent {
+  background: var(--text-muted);
+}
+
+.timeline-event.big-play {
+  width: 12px;
+  height: 12px;
+  top: -2px;
+  animation: bigPlayPulse 2s ease-in-out infinite;
+}
+
+@keyframes bigPlayPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(255, 215, 0, 0.5); }
+  50% { box-shadow: 0 0 12px rgba(255, 215, 0, 0.8); }
+}
+
+.timeline-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+
+.timeline-event:hover .timeline-tooltip {
+  opacity: 1;
+}
 
 /* ========== TOAST NOTIFICATIONS ========== */
 .toast-container {

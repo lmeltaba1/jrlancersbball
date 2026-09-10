@@ -675,7 +675,7 @@
     // Submit response
     async function respond(attending) {
       if (!db || !currentPlayerId || !currentPlayerName || !currentUserEmail) {
-        alert('Unable to save response. Please try again.');
+        showToast('Unable to save response. Please try again.', 'error');
         return;
       }
 
@@ -697,7 +697,7 @@
         // Response will be updated via the real-time listener
       } catch (error) {
         console.error('Error saving response:', error);
-        alert('Error saving response. Please try again.');
+        showToast('Error saving response. Please try again.', 'error');
         buttons.forEach(btn => btn.disabled = false);
       }
     }
