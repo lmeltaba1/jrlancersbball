@@ -407,8 +407,12 @@
   <!-- Main Content -->
   <main class="main-content" aria-live="polite" style="padding-top: 0;" id="main-content">
     <div class="highlights-grid" id="highlightsGrid">
-      <div style="text-align: center; padding: 40px;">
-        <div class="spinner" style="margin: 0 auto;"></div>
+      <!-- Skeleton Loading -->
+      <div id="highlights-skeleton" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+        <div class="skeleton" style="height: 150px; border-radius: 8px;"></div>
+        <div class="skeleton" style="height: 150px; border-radius: 8px;"></div>
+        <div class="skeleton" style="height: 150px; border-radius: 8px;"></div>
+        <div class="skeleton" style="height: 150px; border-radius: 8px;"></div>
       </div>
     </div>
   </main>
