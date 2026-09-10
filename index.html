@@ -980,7 +980,7 @@
       try {
         const record = await getSeasonRecord();
         document.getElementById('season-record').innerHTML = `
-          <span style="font-size: 2rem; font-weight: 800; color: var(--gold);">${record.wins} - ${record.losses}</span>
+          <span class="season-record-number" style="font-size: 2.5rem; font-weight: 800;">${record.wins} - ${record.losses}</span>
         `;
       } catch (e) {
         console.error('Error loading record:', e);

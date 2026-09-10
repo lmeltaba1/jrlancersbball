@@ -316,8 +316,8 @@ function renderLeaderboard(families, currentUserEmail, maxDisplay = 10) {
     html += `</div>`;
   }
 
-  // Leaderboard list
-  html += `<div style="border-top: 1px solid var(--border-color); padding-top: 8px;">`;
+  // Leaderboard list - scrollable, shows top 3 by default
+  html += `<div style="border-top: 1px solid var(--border-color); padding-top: 8px; max-height: 105px; overflow-y: auto;">`;
 
   const displayCount = Math.min(maxDisplay, families.length);
   for (let i = 0; i < displayCount; i++) {
@@ -325,11 +325,12 @@ function renderLeaderboard(families, currentUserEmail, maxDisplay = 10) {
     const rank = i + 1;
     const medal = getRankMedal(rank);
     const isUser = userFamily && family.name === userFamily.name;
+    const isTop3 = rank <= 3;
 
-    html += `<div style="display: flex; align-items: center; padding: 8px 0; ${isUser ? 'background: var(--bg-elevated); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 6px;' : ''}">`;
-    html += `<span style="width: 24px; text-align: center; font-size: 0.85rem; ${medal ? '' : 'color: var(--text-secondary);'}">${medal || rank}</span>`;
-    html += `<span style="flex: 1; font-weight: ${rank <= 3 ? '600' : '400'}; color: var(--text-primary); margin-left: 8px;">${family.name}</span>`;
-    html += `<span style="font-weight: 600; color: ${rank === 1 ? 'var(--gold)' : 'var(--text-primary)'};">${family.totalPoints}</span>`;
+    html += `<div style="display: flex; align-items: center; padding: 6px 0; ${isUser ? 'background: var(--bg-elevated); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 6px;' : ''}">`;
+    html += `<span style="width: 20px; text-align: center; font-size: ${isTop3 ? '0.8rem' : '0.75rem'}; ${!medal ? 'color: var(--text-secondary);' : ''}">${medal || rank}</span>`;
+    html += `<span style="flex: 1; font-weight: ${isTop3 ? '600' : '400'}; color: var(--text-primary); margin-left: 8px; font-size: ${isTop3 ? '0.9rem' : '0.85rem'};">${family.name}</span>`;
+    html += `<span style="font-weight: ${isTop3 ? '700' : '500'}; color: ${rank === 1 ? 'var(--gold)' : isTop3 ? 'var(--text-primary)' : 'var(--text-secondary)'}; font-size: ${isTop3 ? '0.9rem' : '0.85rem'};">${family.totalPoints}</span>`;
     html += `</div>`;
   }
 

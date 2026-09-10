@@ -660,6 +660,11 @@
       `;
       document.getElementById('game-info').innerHTML = gameInfoHtml;
 
+      // Launch confetti for wins
+      if (game.result === 'W') {
+        setTimeout(() => launchConfetti(60), 500);
+      }
+
       // Attendance Card (for upcoming games/events only)
       if (!isCompleted) {
         const attendanceCard = document.getElementById('attendance-card');

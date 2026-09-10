@@ -293,3 +293,226 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// ========== TOAST NOTIFICATIONS ==========
+// Usage: showToast('Message sent!', 'success')
+// Types: 'success', 'error', 'info', 'warning'
+
+function showToast(message, type = 'info', duration = 3000) {
+  // Create container if it doesn't exist
+  let container = document.querySelector('.toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  // Create toast element
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+
+  // Icon SVGs
+  const icons = {
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+    warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+  };
+
+  toast.innerHTML = `
+    <div class="toast-icon">${icons[type] || icons.info}</div>
+    <div class="toast-message">${escapeHtml(message)}</div>
+  `;
+
+  container.appendChild(toast);
+
+  // Auto remove after duration
+  setTimeout(() => {
+    toast.classList.add('removing');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+
+  return toast;
+}
+
+// ========== CONFETTI CELEBRATION ==========
+// Usage: launchConfetti() - call when showing a win
+
+function launchConfetti(count = 50) {
+  // Create container if it doesn't exist
+  let container = document.querySelector('.confetti-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'confetti-container';
+    document.body.appendChild(container);
+  }
+
+  const colors = ['gold', 'white', 'black'];
+  const shapes = ['circle', 'square', 'ribbon'];
+
+  for (let i = 0; i < count; i++) {
+    const confetti = document.createElement('div');
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
+
+    confetti.className = `confetti ${color} ${shape}`;
+    confetti.style.left = Math.random() * 100 + '%';
+    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+    confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+
+    container.appendChild(confetti);
+
+    // Remove after animation
+    setTimeout(() => confetti.remove(), 4000);
+  }
+
+  // Clean up container after all confetti is done
+  setTimeout(() => {
+    if (container && container.children.length === 0) {
+      container.remove();
+    }
+  }, 5000);
+}
+
+// ========== ANIMATED COUNTERS ==========
+// Usage: animateCounter(element, fromValue, toValue, duration)
+
+function animateCounter(element, from, to, duration = 500) {
+  const startTime = performance.now();
+  const diff = to - from;
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // Ease out cubic
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const currentValue = Math.round(from + diff * easeOut);
+
+    element.textContent = currentValue;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      // Add pop animation at the end
+      element.classList.add('counting');
+      setTimeout(() => element.classList.remove('counting'), 400);
+    }
+  }
+
+  requestAnimationFrame(update);
+}
+
+// Animate a stat value with glow effect
+function flashStatValue(element) {
+  element.classList.add('updated');
+  setTimeout(() => element.classList.remove('updated'), 500);
+}
+
+// ========== BOTTOM SHEET ==========
+// Usage: openBottomSheet({ title: 'Title', content: '<html>', size: 'medium' })
+// Sizes: 'small', 'medium', 'large', 'full'
+
+let currentBottomSheet = null;
+
+function openBottomSheet(options = {}) {
+  const { title = '', content = '', size = 'medium', onClose = null } = options;
+
+  // Close existing sheet if any
+  closeBottomSheet();
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'bottom-sheet-overlay';
+  overlay.innerHTML = `
+    <div class="bottom-sheet ${size}">
+      <div class="bottom-sheet-handle"></div>
+      <div class="bottom-sheet-header">
+        <div class="bottom-sheet-title">${escapeHtml(title)}</div>
+        <button class="bottom-sheet-close" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="bottom-sheet-body">${content}</div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+
+  // Store reference and callback
+  currentBottomSheet = { overlay, onClose };
+
+  // Animate in
+  requestAnimationFrame(() => {
+    overlay.classList.add('active');
+  });
+
+  // Close handlers
+  overlay.querySelector('.bottom-sheet-close').addEventListener('click', closeBottomSheet);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeBottomSheet();
+  });
+
+  // Close on escape key
+  const escHandler = (e) => {
+    if (e.key === 'Escape') closeBottomSheet();
+  };
+  document.addEventListener('keydown', escHandler);
+  currentBottomSheet.escHandler = escHandler;
+
+  // Swipe down to close
+  let startY = 0;
+  let currentY = 0;
+  const sheet = overlay.querySelector('.bottom-sheet');
+
+  sheet.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+
+  sheet.addEventListener('touchmove', (e) => {
+    currentY = e.touches[0].clientY;
+    const diff = currentY - startY;
+    if (diff > 0) {
+      sheet.style.transform = `translateY(${diff}px)`;
+    }
+  }, { passive: true });
+
+  sheet.addEventListener('touchend', () => {
+    const diff = currentY - startY;
+    if (diff > 100) {
+      closeBottomSheet();
+    } else {
+      sheet.style.transform = '';
+    }
+    startY = 0;
+    currentY = 0;
+  });
+
+  return overlay;
+}
+
+function closeBottomSheet() {
+  if (!currentBottomSheet) return;
+
+  const { overlay, onClose, escHandler } = currentBottomSheet;
+
+  overlay.classList.remove('active');
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', escHandler);
+
+  setTimeout(() => {
+    overlay.remove();
+    if (onClose) onClose();
+  }, 400);
+
+  currentBottomSheet = null;
+}
+
+// Get bottom sheet body element (for updating content)
+function getBottomSheetBody() {
+  if (!currentBottomSheet) return null;
+  return currentBottomSheet.overlay.querySelector('.bottom-sheet-body');
+}
+
