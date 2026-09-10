@@ -17,7 +17,8 @@
       "**/node_modules/**",
       "functions/**",
       "CLAUDE.md",
-      "docs/**"
+      "docs/**",
+      "deploy.sh"
     ],
     "headers": [
       {
@@ -39,24 +40,6 @@
       },
       {
         "source": "**/*.css",
-        "headers": [
-          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-        ]
-      },
-      {
-        "source": "/sw.js",
-        "headers": [
-          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-        ]
-      },
-      {
-        "source": "**/*.jpg",
-        "headers": [
-          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-        ]
-      },
-      {
-        "source": "**/*.png",
         "headers": [
           { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
         ]

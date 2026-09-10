@@ -120,6 +120,16 @@ if (typeof firebase !== 'undefined') {
     }
     if (typeof firebase.firestore === 'function') {
       db = firebase.firestore();
+      // Enable offline persistence for faster loads
+      db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          // Multiple tabs open, persistence can only be enabled in one tab at a time
+          console.log('Persistence unavailable: multiple tabs open');
+        } else if (err.code === 'unimplemented') {
+          // Browser doesn't support persistence
+          console.log('Persistence unavailable: browser not supported');
+        }
+      });
     }
     if (typeof firebase.storage === 'function') {
       storage = firebase.storage();
