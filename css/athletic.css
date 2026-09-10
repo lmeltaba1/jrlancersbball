@@ -2338,3 +2338,178 @@ body.has-ticker .header {
 .bottom-sheet.compact .bottom-sheet-body {
   padding: 16px;
 }
+
+/* ========== RESPONSIVE DESIGN ========== */
+
+/* 360px+ : Mid-size phones (Galaxy S, Pixel) */
+@media (min-width: 360px) {
+  .nav-item svg { width: 23px; height: 23px; }
+  .card { padding: 14px; }
+  .game-card-body { padding: 14px 16px; }
+}
+
+/* 390px+ : Standard iPhones (14/15) */
+@media (min-width: 390px) {
+  html { font-size: 13.5px; }
+  .nav-item { padding: 8px 9px; }
+  .main-content { padding: 14px 16px; }
+  .header-content { padding: 12px 16px; }
+}
+
+/* 428px+ : Large phones (Pro Max, phablets) */
+@media (min-width: 428px) {
+  html { font-size: 14px; }
+  .nav-item { font-size: 9px; padding: 8px 10px; }
+  .nav-item svg { width: 24px; height: 24px; }
+  .header-content { padding: 12px 18px; }
+  .highlights-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+}
+
+/* 600px+ : Small Tablets */
+@media (min-width: 600px) {
+  .main-content, .header-content, .bottom-nav { max-width: 720px; }
+  .main-content { padding: 16px 20px; }
+  .card { padding: 18px; margin-bottom: 14px; }
+  .hero-banner h2 { font-size: 3.8rem; }
+}
+
+/* 768px+ : Tablets */
+@media (min-width: 768px) {
+  html { font-size: 15px; }
+  .main-content, .header-content, .bottom-nav { max-width: 900px; }
+  .main-content { padding: 20px 24px; }
+
+  /* Header */
+  .header-content { padding: 14px 20px; }
+  .header h1 { font-size: 1.8rem; gap: 16px; }
+  .header-logo { width: 40px; height: 40px; }
+
+  /* Navigation */
+  .bottom-nav { padding: 12px 8px; }
+  .nav-item { font-size: 10px; padding: 8px 12px; }
+  .nav-item svg { width: 26px; height: 26px; margin-bottom: 4px; }
+
+  /* Cards & Hero */
+  .card { padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 0.8rem; }
+  .hero-banner h2 { font-size: 4rem; }
+
+  /* 2-Column Grids */
+  .schedule-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .roster-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  /* Highlights 3-col */
+  .highlights-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+  }
+
+  /* Game Cards */
+  .game-card { border-radius: var(--radius-xl); }
+  .game-card-header { padding: 14px 18px; }
+  .game-card-body { padding: 18px 20px; }
+  .team-name { font-size: 1.4rem; }
+
+  /* Stats */
+  .stat-grid { gap: 8px; }
+  .stat-box { padding: 10px 8px; }
+  .stat-value { font-size: 1.2rem; }
+  .scoreboard { padding: 16px; }
+  .scoreboard-team .score { font-size: 3.5rem; }
+  .stat-btn { min-width: 56px; height: 56px; }
+
+  /* Forms */
+  .form-input { padding: 16px 18px; }
+  .btn { padding: 16px 36px; font-size: 1rem; }
+
+  /* Bottom Sheets → Centered Modals */
+  .bottom-sheet {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(100%);
+    max-width: 600px;
+    width: 90%;
+    border-radius: var(--radius-xl);
+    max-height: 85vh;
+  }
+  .bottom-sheet-overlay.active .bottom-sheet {
+    transform: translateX(-50%) translateY(0);
+  }
+  .bottom-sheet.full-height { max-height: 85vh; }
+}
+
+/* 1024px+ : Desktops */
+@media (min-width: 1024px) {
+  html { font-size: 16px; }
+  .main-content, .header-content, .bottom-nav { max-width: 1080px; }
+  .main-content { padding: 24px 32px; }
+
+  /* Header */
+  .header-content { padding: 16px 24px; }
+  .header h1 { font-size: 2rem; }
+  .header-logo { width: 44px; height: 44px; }
+
+  /* Navigation */
+  .bottom-nav { padding: 14px 12px; }
+  .nav-item { font-size: 11px; padding: 10px 16px; gap: 6px; }
+  .nav-item svg { width: 28px; height: 28px; }
+
+  /* Cards & Hero */
+  .card { padding: 24px; }
+  .hero-banner h2 { font-size: 4.5rem; }
+  .hero-banner p { font-size: 1rem; }
+
+  /* 3-Column Schedule */
+  .schedule-list {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .roster-list { gap: 12px; }
+  .roster-item { padding: 14px 16px; }
+
+  /* Highlights 4-col */
+  .highlights-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 20px !important;
+  }
+
+  /* Quick Links */
+  .quick-links { gap: 20px; }
+  .quick-link { padding: 24px 14px; }
+  .quick-link svg { width: 32px; height: 32px; margin-bottom: 12px; }
+
+  /* Game Cards */
+  .game-card-header { padding: 16px 20px; }
+  .game-card-body { padding: 20px 24px; }
+  .team-name { font-size: 1.5rem; }
+
+  /* Stats */
+  .scoreboard { padding: 20px; }
+  .scoreboard-team .score { font-size: 4rem; }
+  .player-stat-card { padding: 20px; }
+
+  /* Forms */
+  .form-group { margin-bottom: 20px; }
+  .btn { padding: 18px 40px; }
+
+  /* Modals */
+  .bottom-sheet { max-width: 700px; max-height: 80vh; }
+  .bottom-sheet-body { padding: 24px; }
+}
+
+/* 1200px+ : Large Desktops */
+@media (min-width: 1200px) {
+  .main-content, .header-content, .bottom-nav { max-width: 1200px; }
+}

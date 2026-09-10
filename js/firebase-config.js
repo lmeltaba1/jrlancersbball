@@ -144,37 +144,32 @@ if (typeof firebase !== 'undefined') {
   }
 }
 
-// Register main service worker for offline caching
+// Unregister old caching service worker (was causing loading issues)
+// Keep firebase-messaging-sw.js for push notifications
 if ('serviceWorker' in navigator) {
-  // Register sw.js for caching (separate from firebase-messaging-sw.js)
-  navigator.serviceWorker.register('/sw.js')
-    .then(registration => {
-      console.log('SW: Registered with scope', registration.scope);
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(registration => {
+      // Only unregister sw.js, keep firebase-messaging-sw.js
+      if (registration.active && registration.active.scriptURL.includes('/sw.js')) {
+        registration.unregister().then(() => {
+          console.log('SW: Unregistered caching service worker');
+        });
+      }
+    });
+  });
 
-      // Check for updates periodically (every hour)
-      setInterval(() => {
-        registration.update();
-      }, 60 * 60 * 1000);
-
-      // Listen for new service worker waiting
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (newWorker) {
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New version available - show update prompt
-              console.log('SW: New version available');
-              // Optionally show a toast: showToast('App update available. Refresh to update.', 'info', 10000);
-            }
-          });
+  // Clear all caches from the old service worker
+  if ('caches' in window) {
+    caches.keys().then(names => {
+      names.forEach(name => {
+        if (name.startsWith('lancers-')) {
+          caches.delete(name);
         }
       });
-    })
-    .catch(err => {
-      console.log('SW: Registration failed:', err.message);
     });
+  }
 
-  // Listen for navigation messages from service worker (notification clicks)
+  // Listen for navigation messages from FCM service worker (notification clicks)
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'NAVIGATE') {
       window.location.href = event.data.url;

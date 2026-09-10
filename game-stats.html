@@ -1120,7 +1120,7 @@
       // Update UI based on mode
       if (viewOnlyMode) {
         document.body.classList.add('view-only-mode');
-        document.querySelector('header h1 a').innerHTML = '<img src="images/lancers-logo.jpg" alt="Lancers" class="header-logo" width="36" height="36">Live Stats <span style="font-size: 0.6em; opacity: 0.7;">(View Only)</span>';
+        document.querySelector('header h1 a[href="index.html"]').innerHTML = '<img src="images/lancers-logo.jpg" alt="Lancers" class="header-logo" width="36" height="36">Live Stats <span style="font-size: 0.6em; opacity: 0.7;">(View Only)</span>';
         // Hide opponent controls, timeout controls, and action buttons
         document.querySelector('.opponent-row').style.display = 'none';
         document.querySelector('.timeout-row').style.display = 'none';

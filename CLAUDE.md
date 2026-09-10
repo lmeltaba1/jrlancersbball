@@ -53,11 +53,11 @@ The app is fully functional with all core features implemented. **Season simulat
 
 | File | Purpose |
 |------|---------|
-| `js/firebase-config.js` | Firebase init, auth helpers, `getPlayerFromRoster()`, `requireAuth()`, `isEmailInRoster()`, `loadRosterData()`, `loadAdminEmails()`, SW registration |
+| `js/firebase-config.js` | Firebase init, auth helpers, `getPlayerFromRoster()`, `requireAuth()`, `isEmailInRoster()`, `loadRosterData()`, `loadAdminEmails()` |
 | `js/app.js` | Shared utilities: `loadRoster()`, `loadSchedule()`, `formatDate()`, `escapeHtml()`, `leagueNames`, `getCurrentDate()` - included in most HTML files |
 | `js/theme.js` | Dark/light mode toggle |
 | `css/athletic.css` | All styles, CSS variables for theming |
-| `sw.js` | PWA service worker - offline caching for static assets |
+| `sw.js` | Self-destruct stub - unregisters old caching SW (no longer used) |
 | `firebase-messaging-sw.js` | FCM service worker - push notification handling |
 | `functions/data/roster-full.json` | Source data for roster (synced to Firestore via `syncConfig`) |
 | `functions/data/schedule-full.json` | Source data for schedule (synced to Firestore via `syncConfig`) |
@@ -241,10 +241,10 @@ lancers/
 ├── images/
 │   └── lancers-logo.png
 ├── js/
-│   ├── firebase-config.js # Firebase + auth helpers + role checks + SW registration
+│   ├── firebase-config.js # Firebase + auth helpers + role checks
 │   ├── app.js             # Shared utilities (included in most HTML)
 │   └── theme.js           # Theme toggle
-├── sw.js                  # PWA service worker (offline caching)
+├── sw.js                  # Self-destruct stub (unregisters old caching SW)
 ├── firebase-messaging-sw.js # FCM push notification handler
 ├── *.html                 # All pages
 ├── firestore.rules        # Firestore security
@@ -282,16 +282,11 @@ Helper: `getHeadCoachEmail()` - Returns head coach email for coach-only notifica
 - Notification click opens URL via `clients.openWindow(url)`
 - No caching - dedicated to FCM only
 
-**sw.js** (PWA Caching):
-- Registered via `js/firebase-config.js`
-- Caches static assets (HTML, CSS, JS, images) for offline support
-- **Never caches**: Firebase, auth, Firestore, Cloud Functions URLs
-- Caching strategies:
-  - HTML pages: Network-first with cache fallback
-  - Static assets: Stale-while-revalidate (fast load + background update)
-  - Firebase/API: Always network (never cached)
-- Graceful updates: New version waits for page navigation, no forced refresh
-- Cache versioning via `CACHE_VERSION` constant for controlled invalidation
+**sw.js** (Removed):
+- Was previously used for offline caching but caused loading issues
+- Now contains self-destruct code that unregisters itself and clears caches
+- `firebase-config.js` also actively unregisters it for users who had it installed
+- Can be deleted once all users have visited the app at least once
 
 ## Post-Game Wrap-Up System
 
@@ -401,7 +396,6 @@ All admin endpoints use Firebase Auth token verification via `verifyAdminAuth()`
 - **Listener error handling**: All `onSnapshot` listeners have error callbacks showing user-friendly messages
 - **Listener cleanup**: `pagehide` event handler added alongside `beforeunload` for mobile navigation cleanup
 - **Loading timeout feedback**: After 8 seconds, skeleton loading shows "Tap to reload" link
-- **PWA offline caching**: Service worker caches static assets for instant loads and offline support
 - **Firestore persistence**: Offline persistence enabled via `enablePersistence({ synchronizeTabs: true })`
 
 ## Accessibility (Sept 2026 Update)
