@@ -884,22 +884,29 @@
         const gameName = game ? `vs ${game.opponent}` : '';
         const gameDate = game ? formatDateStr(game.date) : '';
         const isVideo = h.mediaType === 'video';
+        const mediaUrl = h.downloadUrl || h.url || '';
+        const isPlaceholder = mediaUrl.includes('example.com');
         const canDelete = currentUser && (h.uploadedBy === currentUser.uid || (currentUserInfo && currentUserInfo.isCoach));
 
         return `
           <div class="highlight-card">
-            <div class="highlight-media" onclick="openViewer('${h.downloadUrl}', ${isVideo})">
-              ${isVideo ? `
-                ${h.thumbnailUrl ? `
+            <div class="highlight-media" onclick="openViewer('${mediaUrl}', ${isVideo})">
+              ${isPlaceholder ? `
+                <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); min-height: 200px;">
+                  <svg viewBox="0 0 24 24" style="width: 48px; height: 48px; fill: var(--lancers-gold); opacity: 0.5;"><path d="M8 5v14l11-7z"/></svg>
+                  <span style="color: var(--text-muted); font-size: 0.75rem; margin-top: 8px;">Simulated</span>
+                </div>
+              ` : isVideo ? `
+                ${h.thumbnailUrl && !h.thumbnailUrl.includes('example.com') ? `
                   <img src="${h.thumbnailUrl}" alt="Video thumbnail" loading="lazy">
                 ` : `
-                  <video src="${h.downloadUrl}" preload="metadata"></video>
+                  <video src="${mediaUrl}#t=0.5" preload="metadata" muted playsinline></video>
                 `}
                 <div class="play-icon">
                   <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </div>
               ` : `
-                <img src="${h.downloadUrl}" alt="Highlight" loading="lazy">
+                <img src="${mediaUrl}" alt="Highlight" loading="lazy">
               `}
             </div>
             <div class="highlight-info">
@@ -911,10 +918,10 @@
               <div class="highlight-footer">
                 <span>${gameDate} &bull; by ${h.uploaderName || 'Unknown'}</span>
                 <div style="display: flex; gap: 8px;">
-                  <a href="${h.downloadUrl}" download class="download-btn" onclick="event.stopPropagation()" style="background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                  ${!isPlaceholder ? `<a href="${mediaUrl}" download class="download-btn" onclick="event.stopPropagation()" style="background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; text-decoration: none; display: flex; align-items: center; gap: 4px;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                     Save
-                  </a>
+                  </a>` : ''}
                   ${canDelete ? `<button class="delete-btn" onclick="deleteHighlight('${h.id}', '${h.storagePath}')">Delete</button>` : ''}
                 </div>
               </div>
@@ -1302,6 +1309,12 @@
 
     // Viewer Modal
     function openViewer(url, isVideo) {
+      // Check for placeholder URLs (simulation data)
+      if (!url || url.includes('example.com')) {
+        showToast('This is simulated highlight data - no actual video', 'info');
+        return;
+      }
+
       const modal = document.getElementById('viewerModal');
       const content = document.getElementById('viewerContent');
 

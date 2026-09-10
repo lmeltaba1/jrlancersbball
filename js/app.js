@@ -842,53 +842,147 @@ function animateLeaderboardChanges(newLeaderboard, containerSelector) {
   previousLeaderboard = [...newLeaderboard];
 }
 
-// ========== GAME TIMELINE ==========
-// Visual timeline of game events with scoring plays
+// ========== GAME FLOW CHART ==========
+// ESPN-style game flow chart showing score progression over time
 // Usage: createGameTimeline(events, currentQuarter) returns HTML string
 
 function createGameTimeline(events, currentQuarter = 'final') {
   if (!events || events.length === 0) {
-    return '<div class="game-timeline"><div class="timeline-track"></div></div>';
+    return '<div class="game-flow-chart"><p style="color: var(--text-muted); text-align: center; padding: 20px;">No play-by-play data available</p></div>';
   }
 
-  // Quarter positions (0-100%)
-  const quarterPositions = { 'Q1': 0, 'Q2': 25, 'halftime': 50, 'Q3': 50, 'Q4': 75, 'OT': 100, 'final': 100 };
-  const progress = quarterPositions[currentQuarter] || 100;
+  // Get scoring events with running scores
+  const scoringEvents = events.filter(e =>
+    (e.stat === 'points' && e.value > 0) || e.type === 'phase'
+  ).filter(e => typeof e.lancersScore === 'number' && typeof e.opponentScore === 'number');
 
-  // Filter scoring events
-  const scoringEvents = events.filter(e => e.stat === 'points' && e.value > 0);
+  if (scoringEvents.length === 0) {
+    return '<div class="game-flow-chart"><p style="color: var(--text-muted); text-align: center; padding: 20px;">No scoring data available</p></div>';
+  }
 
-  // Create event dots
-  let eventDots = '';
-  scoringEvents.forEach((event, i) => {
-    const quarter = event.gamePhase || 'Q1';
-    const quarterBase = quarterPositions[quarter] || 0;
-    // Spread events within their quarter
-    const offset = (i % 10) * 2;
-    const position = Math.min(quarterBase + offset, 98);
-    const isLancers = event.team === 'lancers';
-    const isBigPlay = event.value >= 3;
+  // Chart dimensions
+  const width = 320;
+  const height = 180;
+  const padding = { top: 25, right: 15, bottom: 35, left: 35 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
 
-    eventDots += `
-      <div class="timeline-event ${isLancers ? 'lancers' : 'opponent'} ${isBigPlay ? 'big-play' : ''}"
-           style="left: ${position}%;">
-        <div class="timeline-tooltip">${escapeHtml(event.description || '')}</div>
-      </div>
-    `;
+  // Get max score for Y-axis
+  const maxScore = Math.max(
+    ...scoringEvents.map(e => Math.max(e.lancersScore, e.opponentScore))
+  );
+  const yMax = Math.ceil(maxScore / 10) * 10 + 5;
+
+  // Get final scores
+  const lastEvent = scoringEvents[scoringEvents.length - 1];
+  const finalLancers = lastEvent.lancersScore;
+  const finalOpponent = lastEvent.opponentScore;
+  const result = finalLancers > finalOpponent ? 'W' : finalLancers < finalOpponent ? 'L' : 'T';
+
+  // Quarter positions (0-100% of chart width)
+  const quarterPositions = { 'Q1': 0, 'Q2': 0.25, 'Q3': 0.5, 'Q4': 0.75, 'final': 1 };
+
+  // Build data points - start at 0,0
+  const lancersPoints = [{ x: 0, y: 0 }];
+  const opponentPoints = [{ x: 0, y: 0 }];
+
+  // Group events by quarter and track position within quarter
+  const quarterCounts = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 };
+  const quarterTotals = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 };
+
+  // First pass: count events per quarter
+  scoringEvents.forEach(e => {
+    const q = e.gamePhase || 'Q1';
+    if (quarterTotals[q] !== undefined) quarterTotals[q]++;
   });
 
+  // Second pass: position events
+  scoringEvents.forEach((event, idx) => {
+    const quarter = event.gamePhase || 'Q1';
+    const qStart = quarterPositions[quarter] || 0;
+    const qEnd = quarterPositions[quarter === 'Q4' ? 'final' :
+                  quarter === 'Q3' ? 'Q4' :
+                  quarter === 'Q2' ? 'Q3' : 'Q2'] || 0.25;
+
+    // Position within quarter
+    quarterCounts[quarter] = (quarterCounts[quarter] || 0) + 1;
+    const posInQuarter = quarterTotals[quarter] > 0
+      ? quarterCounts[quarter] / (quarterTotals[quarter] + 1)
+      : 0.5;
+
+    const x = qStart + (qEnd - qStart) * posInQuarter;
+
+    lancersPoints.push({ x, y: event.lancersScore });
+    opponentPoints.push({ x, y: event.opponentScore });
+  });
+
+  // Convert to SVG coordinates
+  function toSvgX(x) { return padding.left + x * chartWidth; }
+  function toSvgY(y) { return padding.top + chartHeight - (y / yMax) * chartHeight; }
+
+  // Create path strings
+  function createPath(points) {
+    if (points.length === 0) return '';
+    let d = `M ${toSvgX(points[0].x)} ${toSvgY(points[0].y)}`;
+    for (let i = 1; i < points.length; i++) {
+      d += ` L ${toSvgX(points[i].x)} ${toSvgY(points[i].y)}`;
+    }
+    return d;
+  }
+
+  const lancersPath = createPath(lancersPoints);
+  const opponentPath = createPath(opponentPoints);
+
+  // Y-axis labels (0, mid, max)
+  const yMid = Math.round(yMax / 2);
+  const yLabels = [
+    { value: 0, y: toSvgY(0) },
+    { value: yMid, y: toSvgY(yMid) },
+    { value: yMax, y: toSvgY(yMax) }
+  ];
+
+  // Quarter markers
+  const quarters = ['1st', '2nd', '3rd', '4th'];
+  const qMarkers = quarters.map((label, i) => ({
+    label,
+    x: toSvgX((i + 0.5) * 0.25)
+  }));
+
   return `
-    <div class="game-timeline">
-      <div class="timeline-track">
-        <div class="timeline-progress" style="width: ${progress}%;"></div>
-        <div class="timeline-events">${eventDots}</div>
+    <div class="game-flow-chart">
+      <div class="game-flow-header">
+        <span class="game-flow-score lancers">Lancers ${finalLancers}</span>
+        <span class="game-flow-result ${result === 'W' ? 'win' : result === 'L' ? 'loss' : ''}">${result}</span>
+        <span class="game-flow-score opponent">Opponent ${finalOpponent}</span>
       </div>
-      <div class="timeline-quarters">
-        <span class="timeline-quarter ${currentQuarter === 'Q1' ? 'active' : ''}">Q1</span>
-        <span class="timeline-quarter ${currentQuarter === 'Q2' ? 'active' : ''}">Q2</span>
-        <span class="timeline-quarter ${currentQuarter === 'Q3' ? 'active' : ''}">Q3</span>
-        <span class="timeline-quarter ${currentQuarter === 'Q4' ? 'active' : ''}">Q4</span>
-        <span class="timeline-quarter ${currentQuarter === 'final' ? 'active' : ''}">END</span>
+      <svg viewBox="0 0 ${width} ${height}" class="game-flow-svg">
+        <!-- Grid lines -->
+        <line x1="${padding.left}" y1="${toSvgY(yMid)}" x2="${width - padding.right}" y2="${toSvgY(yMid)}" stroke="var(--border-color)" stroke-width="1" stroke-dasharray="4,4" opacity="0.5"/>
+
+        <!-- Y-axis -->
+        <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="var(--border-color)" stroke-width="1"/>
+        ${yLabels.map(l => `<text x="${padding.left - 8}" y="${l.y + 4}" fill="var(--text-muted)" font-size="10" text-anchor="end">${l.value}</text>`).join('')}
+
+        <!-- X-axis -->
+        <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="var(--border-color)" stroke-width="1"/>
+        ${qMarkers.map(q => `<text x="${q.x}" y="${height - padding.bottom + 18}" fill="var(--text-muted)" font-size="11" text-anchor="middle">${q.label}</text>`).join('')}
+
+        <!-- Quarter dividers -->
+        ${[0.25, 0.5, 0.75].map(x => `<line x1="${toSvgX(x)}" y1="${padding.top}" x2="${toSvgX(x)}" y2="${height - padding.bottom}" stroke="var(--border-color)" stroke-width="1" stroke-dasharray="2,2" opacity="0.3"/>`).join('')}
+
+        <!-- Opponent line (gray dashed) -->
+        <path d="${opponentPath}" fill="none" stroke="#888" stroke-width="2" stroke-dasharray="6,3" opacity="0.7"/>
+
+        <!-- Lancers line (gold solid) -->
+        <path d="${lancersPath}" fill="none" stroke="var(--lancers-gold)" stroke-width="2.5"/>
+
+        <!-- End dots -->
+        <circle cx="${toSvgX(1)}" cy="${toSvgY(finalLancers)}" r="4" fill="var(--lancers-gold)"/>
+        <circle cx="${toSvgX(1)}" cy="${toSvgY(finalOpponent)}" r="4" fill="#888" stroke="var(--card-bg)" stroke-width="1"/>
+      </svg>
+      <div class="game-flow-legend">
+        <span class="legend-item"><span class="legend-line lancers"></span>Lancers</span>
+        <span class="legend-item"><span class="legend-line opponent"></span>Opponent</span>
       </div>
     </div>
   `;
