@@ -280,6 +280,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
   <script>
     // Profile menu functions
@@ -334,28 +335,7 @@
       if (banner && text) { text.textContent = 'Viewing as: ' + emulatedEmail; banner.style.display = 'block'; }
     }
 
-    // Inline functions to bypass caching
-    async function loadSchedule() {
-      const response = await fetch('data/schedule.json?v=' + Date.now());
-      return response.json();
-    }
-
-    async function loadRoster() {
-      const response = await fetch('data/roster.json?v=' + Date.now());
-      return response.json();
-    }
-
-    function formatDate(dateString) {
-      const [year, month, day] = dateString.split('-').map(Number);
-      const date = new Date(year, month - 1, day);
-      return {
-        month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-        day: date.getDate(),
-        weekday: date.toLocaleDateString('en-US', { weekday: 'short' })
-      };
-    }
-
-    const leagueNames = { parkrock: 'Park Rock', cnr: 'CNR' };
+    // loadSchedule(), loadRoster(), formatDate(), and leagueNames are defined in app.js
 
     // Mock data for testing (used when no Firebase stats exist)
     const MOCK_STATS = {
@@ -433,11 +413,14 @@
     });
 
     async function loadPageContent() {
+      console.log('loadPageContent starting, db:', !!db);
       try {
         // Load roster and schedule
+        console.log('Calling loadRoster and loadSchedule...');
         const [roster, schedule] = await Promise.all([loadRoster(), loadSchedule()]);
-        players = roster.players;
-        games = schedule.games;
+        console.log('Loaded roster:', roster, 'schedule:', schedule);
+        players = roster.players || [];
+        games = schedule.games || [];
 
         // Populate player filter
         const playerSelect = document.getElementById('player-filter');
@@ -604,14 +587,14 @@
       document.getElementById('player-game-log').style.display = 'block';
 
       const playerId = currentPlayerFilter;
-      const player = players.find(p => p.id == playerId);
+      const player = players.find(p => p.id === parseInt(playerId));
       if (!player) return;
 
       // Get all games this player has stats in
       const playerGameStats = [];
       Object.entries(allGameStats).forEach(([gameId, gameData]) => {
         if (gameData.playerStats && gameData.playerStats[playerId]) {
-          const game = games.find(g => g.id == gameId);
+          const game = games.find(g => g.id === parseInt(gameId));
           if (game) {
             playerGameStats.push({
               game: game,

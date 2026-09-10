@@ -586,6 +586,7 @@
     let games = [];
     let players = [];
     let highlights = [];
+    let unsubscribeHighlights = null;
 
     // Parse MP4 creation_time from mvhd atom (browser-compatible)
     async function getMp4CreationTime(file) {
@@ -683,9 +684,10 @@
     let currentUser = null;
     // currentUserInfo is declared in firebase-config.js
     let selectedFile = null;
+    let currentPreviewUrl = null; // Track object URL for cleanup
 
-    // Format date helper
-    function formatDate(dateString) {
+    // Format date as string (different from app.js formatDate which returns object)
+    function formatDateStr(dateString) {
       const [year, month, day] = dateString.split('-').map(Number);
       const date = new Date(year, month - 1, day);
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -724,11 +726,11 @@
     });
 
     async function loadPageContent() {
-      // Load schedule and roster
+      // Load schedule and roster from Firestore
       try {
         const [scheduleData, rosterData] = await Promise.all([
-          fetch('data/schedule.json?v=' + Date.now()).then(r => r.json()),
-          fetch('data/roster.json?v=' + Date.now()).then(r => r.json())
+          loadSchedule(),
+          loadRoster()
         ]);
 
         // Get games (completed ones first for upload selection)
@@ -779,7 +781,7 @@
         if (game.opponent && game.date <= todayStr) {
           const opt = document.createElement('option');
           opt.value = game.id;
-          opt.textContent = `vs ${game.opponent} - ${formatDate(game.date)}`;
+          opt.textContent = `vs ${game.opponent} - ${formatDateStr(game.date)}`;
           gameFilter.appendChild(opt);
         }
       });
@@ -804,7 +806,7 @@
         if (game.opponent && game.date <= todayStr) {
           const opt = document.createElement('option');
           opt.value = game.id;
-          opt.textContent = `vs ${game.opponent} - ${formatDate(game.date)}`;
+          opt.textContent = `vs ${game.opponent} - ${formatDateStr(game.date)}`;
           gameSelect.appendChild(opt);
         }
       });
@@ -823,9 +825,10 @@
         return;
       }
 
-      // Real-time listener with error handler
-      db.collection('highlights')
+      // Real-time listener with error handler (limit to prevent memory issues)
+      unsubscribeHighlights = db.collection('highlights')
         .orderBy('timestamp', 'desc')
+        .limit(100)
         .onSnapshot(
           (snapshot) => {
             highlights = snapshot.docs.map(doc => ({
@@ -850,10 +853,10 @@
       let filtered = highlights;
 
       if (gameFilter) {
-        filtered = filtered.filter(h => h.gameId == gameFilter);
+        filtered = filtered.filter(h => h.gameId === parseInt(gameFilter));
       }
       if (playerFilter) {
-        filtered = filtered.filter(h => h.playerId == playerFilter);
+        filtered = filtered.filter(h => h.playerId === parseInt(playerFilter));
       }
 
       if (filtered.length === 0) {
@@ -870,11 +873,11 @@
       }
 
       container.innerHTML = filtered.map(h => {
-        const player = players.find(p => p.id == h.playerId);
-        const game = games.find(g => g.id == h.gameId);
+        const player = players.find(p => p.id === parseInt(h.playerId));
+        const game = games.find(g => g.id === parseInt(h.gameId));
         const playerName = player ? `${player.firstName} #${player.number}` : 'Unknown';
         const gameName = game ? `vs ${game.opponent}` : '';
-        const gameDate = game ? formatDate(game.date) : '';
+        const gameDate = game ? formatDateStr(game.date) : '';
         const isVideo = h.mediaType === 'video';
         const canDelete = currentUser && (h.uploadedBy === currentUser.uid || (currentUserInfo && currentUserInfo.isCoach));
 
@@ -927,6 +930,11 @@
     }
 
     function resetUploadForm() {
+      // Revoke preview URL to prevent memory leak
+      if (currentPreviewUrl) {
+        URL.revokeObjectURL(currentPreviewUrl);
+        currentPreviewUrl = null;
+      }
       selectedFile = null;
       document.getElementById('fileInput').value = '';
       document.getElementById('uploadGame').value = '';
@@ -965,9 +973,15 @@
       const picker = document.getElementById('filePicker');
       picker.classList.add('has-file');
 
+      // Revoke previous preview URL to prevent memory leak
+      if (currentPreviewUrl) {
+        URL.revokeObjectURL(currentPreviewUrl);
+      }
+
       // Show preview
       const isVideo = file.type.startsWith('video/');
       const url = URL.createObjectURL(file);
+      currentPreviewUrl = url; // Track for later cleanup
 
       picker.innerHTML = `
         <input type="file" id="fileInput" accept="image/*,video/*" onchange="handleFileSelect(event)">
@@ -1274,6 +1288,11 @@
       modal.classList.remove('active');
       document.getElementById('viewerContent').innerHTML = '';
     }
+
+    // Cleanup listener on page unload to prevent memory leaks
+    window.addEventListener('beforeunload', () => {
+      if (unsubscribeHighlights) unsubscribeHighlights();
+    });
   </script>
 </body>
 </html>

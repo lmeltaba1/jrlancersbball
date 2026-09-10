@@ -680,23 +680,7 @@
       if (banner && text) { text.textContent = 'Viewing as: ' + emulatedEmail; banner.style.display = 'block'; }
     }
 
-    // Helpers
-    async function loadSchedule() {
-      const response = await fetch('data/schedule.json?v=' + Date.now());
-      return response.json();
-    }
-    async function loadRoster() {
-      const response = await fetch('data/roster.json?v=' + Date.now());
-      return response.json();
-    }
-    function formatDate(dateString) {
-      const [year, month, day] = dateString.split('-').map(Number);
-      const date = new Date(year, month - 1, day);
-      return {
-        month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-        day: date.getDate()
-      };
-    }
+    // loadSchedule(), loadRoster(), formatDate() defined in app.js
 
     // Check if current time is within tracking window
     // 10 minutes before game start to 30 minutes after game ends (assume 1hr game)
@@ -765,7 +749,17 @@
     // Helper to get player name for event descriptions
     function getPlayerName(playerId) {
       const player = players.find(p => p.id === playerId);
+      if (!player) {
+        console.warn(`Player not found for ID: ${playerId}`);
+      }
       return player ? player.firstName : 'Unknown';
+    }
+
+    // Escape HTML to prevent XSS in event descriptions
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     // Generate UUID for events
@@ -835,7 +829,7 @@
         <div class="event-item ${e.type}" style="padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 8px; align-items: center; background: ${bgColor};">
           <span style="color: ${isTimeout ? '#000' : 'var(--text-muted)'}; font-size: 0.75rem; min-width: 50px;">${formatEventTime(e.timestamp)}</span>
           <span style="background: ${getPhaseColor(e.gamePhase)}; color: #000; font-size: 0.65rem; padding: 2px 6px; border-radius: 3px; font-weight: 600;">${e.gamePhase}</span>
-          <span style="flex: 1; font-size: 0.85rem; color: ${textColor}; font-weight: ${isTimeout ? '700' : '400'};">${e.description}</span>
+          <span style="flex: 1; font-size: 0.85rem; color: ${textColor}; font-weight: ${isTimeout ? '700' : '400'};">${escapeHtml(e.description)}</span>
           ${scoreDisplay}
         </div>
       `}).join('');
@@ -1817,6 +1811,11 @@
         setTimeout(() => document.getElementById('connection-status').style.background = '#22C55E', 2000);
       }
     }
+
+    // Cleanup listener on page unload to prevent memory leaks
+    window.addEventListener('beforeunload', () => {
+      if (unsubscribe) unsubscribe();
+    });
   </script>
 </body>
 </html>

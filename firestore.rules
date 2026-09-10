@@ -6,27 +6,28 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper: Check if user is coach (must be in roster.json coaches list)
-    function isCoach() {
-      return isAuthenticated();
-      // Note: Full coach check would require storing coaches in Firestore
+    // Helper: Check if user is the head coach
+    function isHeadCoach() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/config/headCoach) &&
+        get(/databases/$(database)/documents/config/headCoach).data.email == request.auth.token.email.lower();
     }
 
-    // Game stats - read by anyone, write by authenticated users
+    // Game stats - read/write by authenticated users
     match /gameStats/{gameId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // Volunteers - read by anyone, write by authenticated users
+    // Volunteers - read/write by authenticated users
     match /volunteers/{gameId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // Attendance - read by anyone, write by authenticated users
+    // Attendance - read/write by authenticated users
     match /attendance/{docId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
@@ -54,15 +55,15 @@ service cloud.firestore {
       allow write: if isAuthenticated() && request.auth.uid == uid;
     }
 
-    // Config (schedule/roster sync) - readable by all, writable by functions only
+    // Config (schedule/roster sync) - readable by authenticated, writable by functions only
     match /config/{docId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow write: if false; // Only cloud functions can write
     }
 
     // Highlights - photos/videos of game moments
     match /highlights/{docId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow create, delete: if isAuthenticated();
       allow update: if isAuthenticated()
         && resource.data.uploadedBy == request.auth.uid;
@@ -71,7 +72,7 @@ service cloud.firestore {
     // Viewers - invited family members who can view but not interact
     // Parents can manage viewers for their player
     match /viewers/{playerId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated();
       // Note: Frontend verifies user is a parent of this player before allowing writes
     }
@@ -80,22 +81,28 @@ service cloud.firestore {
     match /wrapups/{gameId} {
       // Anyone authenticated can read wrap-ups
       allow read: if isAuthenticated();
-      // Only authenticated users can update coach notes (frontend checks coach role)
-      allow update: if isAuthenticated();
+      // Only head coach can update (add coach notes)
+      allow update: if isHeadCoach();
       // Only cloud functions create wrap-ups
       allow create, delete: if false;
     }
 
-    // Posts - coach announcements with reactions and comments
+    // Posts - head coach announcements with reactions and comments
     match /posts/{postId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated();
+      // Only head coach can create, update, delete posts
+      allow create, update, delete: if isHeadCoach();
 
-      // Comments on posts
+      // Comments on posts - any authenticated user can comment
       match /comments/{commentId} {
         allow read, create, delete: if isAuthenticated();
         allow update: if isAuthenticated() && resource.data.authorUid == request.auth.uid;
       }
+    }
+
+    // Rate limits - managed by Cloud Functions only
+    match /rateLimits/{docId} {
+      allow read, write: if false;
     }
   }
 }

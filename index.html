@@ -695,7 +695,12 @@
 
     // Load family's volunteer stats (counts all family members' volunteering)
     async function loadMyVolunteerStats(userEmail) {
-      if (!db || !userEmail) return;
+      if (!db) {
+        console.warn('VolunteerStats: db not ready, retrying in 500ms');
+        setTimeout(() => loadMyVolunteerStats(userEmail), 500);
+        return;
+      }
+      if (!userEmail) return;
 
       const card = document.getElementById('my-volunteer-card');
       const statsContainer = document.getElementById('my-volunteer-stats');
@@ -703,8 +708,7 @@
 
       try {
         // Load roster to find all family member emails
-        const rosterRes = await fetch('data/roster.json?v=' + Date.now());
-        const roster = await rosterRes.json();
+        const roster = await loadRoster();
 
         // Find all parent emails for this family (same logic as gamification.js)
         const familyEmails = new Set();
@@ -799,22 +803,30 @@
         card.style.display = 'block';
       } catch (e) {
         console.error('Error loading volunteer stats:', e);
+        // Show card with error state so user knows something went wrong
+        statsContainer.innerHTML = `
+          <div style="color: var(--text-secondary); text-align: center; padding: 12px;">
+            Could not load stats
+          </div>
+        `;
+        card.style.display = 'block';
       }
     }
 
     // Load Team Spirit Leaderboard
     async function loadLeaderboard(userEmail) {
-      if (!db) return;
+      if (!db) {
+        console.warn('Leaderboard: db not ready, retrying in 500ms');
+        setTimeout(() => loadLeaderboard(userEmail), 500);
+        return;
+      }
 
       const card = document.getElementById('leaderboard-card');
       const content = document.getElementById('leaderboard-content');
 
       try {
-        // Load roster data
-        const rosterResponse = await fetch('data/roster.json?v=' + Date.now());
-        const roster = await rosterResponse.json();
-
-        // Load schedule data
+        // Load roster and schedule data from Firestore
+        const roster = await loadRoster();
         const schedule = await loadSchedule();
 
         // Load volunteers data

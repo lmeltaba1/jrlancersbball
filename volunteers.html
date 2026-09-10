@@ -246,23 +246,7 @@
       if (banner && text) { text.textContent = 'Viewing as: ' + emulatedEmail; banner.style.display = 'block'; }
     }
 
-    // Inline functions to bypass caching
-    async function loadSchedule() {
-      const response = await fetch('data/schedule.json?v=' + Date.now());
-      return response.json();
-    }
-
-    function formatDate(dateString) {
-      const [year, month, day] = dateString.split('-').map(Number);
-      const date = new Date(year, month - 1, day);
-      return {
-        month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-        day: date.getDate(),
-        weekday: date.toLocaleDateString('en-US', { weekday: 'short' })
-      };
-    }
-
-    // getCurrentDate() is defined in js/app.js with SIMULATED_DATE
+    // loadSchedule(), formatDate(), getCurrentDate() defined in app.js
 
     let currentUser = null;
     let userInfo = null;

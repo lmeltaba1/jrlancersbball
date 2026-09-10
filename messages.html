@@ -427,11 +427,13 @@
     }
 
     var postsCache = {}; // Store posts for detail view
+    var unsubscribePosts = null;
+    var unsubscribeMessages = null;
 
     function loadPosts() {
       if (!db) return;
       // Order by pinned first, then by timestamp
-      db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(function(snap) {
+      unsubscribePosts = db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(function(snap) {
         var list = document.getElementById('postsList');
         var empty = document.getElementById('postsEmpty');
         if (snap.empty) {
@@ -496,6 +498,16 @@
 
       if (!content) {
         alert('Please enter a message');
+        return;
+      }
+
+      // Input length limits
+      if (title.length > 200) {
+        alert('Title is too long (max 200 characters)');
+        return;
+      }
+      if (content.length > 5000) {
+        alert('Post is too long (max 5000 characters)');
         return;
       }
 
@@ -582,6 +594,12 @@
       var text = input.value.trim();
       if (!text || !currentPostId) return;
 
+      // Comment length limit
+      if (text.length > 500) {
+        alert('Comment is too long (max 500 characters)');
+        return;
+      }
+
       input.disabled = true;
       db.collection('posts').doc(currentPostId).collection('comments').add({
         author: displayName,
@@ -646,7 +664,7 @@
       var foundLastRead = false;
       var latestMessageId = null;
 
-      db.collection('messages').orderBy('timestamp', 'asc').onSnapshot(function(snap) {
+      unsubscribeMessages = db.collection('messages').orderBy('timestamp', 'asc').onSnapshot(function(snap) {
         var container = document.getElementById('chatMessages');
 
         snap.docChanges().forEach(function(change) {
@@ -730,6 +748,11 @@
       var text = input.value.trim();
       if (!text || !db || !currentUser) {
         console.log('sendMessage blocked:', { text: !!text, db: !!db, currentUser: !!currentUser });
+        return;
+      }
+      // Message length limit
+      if (text.length > 500) {
+        alert('Message is too long (max 500 characters)');
         return;
       }
       console.log('Sending message:', { text, senderName: displayName, senderEmail: effectiveEmail, isEmulating: currentUserInfo.isEmulating });
@@ -835,6 +858,12 @@
       console.log('Auth error:', err);
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('authRequired').style.display = 'block';
+    });
+
+    // Cleanup listeners on page unload to prevent memory leaks
+    window.addEventListener('beforeunload', function() {
+      if (unsubscribePosts) unsubscribePosts();
+      if (unsubscribeMessages) unsubscribeMessages();
     });
   </script>
 </body>

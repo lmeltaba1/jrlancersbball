@@ -85,18 +85,31 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Helper to load roster data from Firestore
+async function loadRosterData() {
+  if (!db) return null;
+  try {
+    const doc = await db.collection('config').doc('roster').get();
+    if (doc.exists) {
+      return doc.data();
+    }
+  } catch (e) {
+    console.error('Error loading roster from Firestore:', e);
+  }
+  return null;
+}
+
 // Helper to get player info from roster
 async function getPlayerFromRoster(email) {
   if (!email) return null;
 
   try {
-    const res = await fetch('data/roster.json?v=' + Date.now());
-    if (!res.ok) {
-      console.error('Failed to fetch roster:', res.status);
-      // Return a basic coach object to prevent lockout on fetch errors
+    const data = await loadRosterData();
+    if (!data) {
+      console.error('Failed to load roster data');
+      // Return a basic coach object to prevent lockout on errors
       return { isCoach: true, isParent: false, isViewer: false, name: email, canChat: true, canViewPlaybook: true, canSignUp: true };
     }
-    const data = await res.json();
     const emailLower = email.toLowerCase();
 
     // Check if coach
@@ -336,11 +349,11 @@ function hideViewerRestrictedNav() {
 }
 
 // Helper to check if email is in roster (for registration validation)
-// Checks both roster.json and Firestore viewers collection
+// Checks both Firestore roster and Firestore viewers collection
 async function isEmailInRoster(email) {
   try {
-    const res = await fetch('data/roster.json?v=' + Date.now());
-    const data = await res.json();
+    const data = await loadRosterData();
+    if (!data) return false;
     const emailLower = email.toLowerCase();
 
     // Check coaches
@@ -419,9 +432,8 @@ async function isEmailInRoster(email) {
 // Get all users from roster for emulation (admin only)
 async function getAllRosterUsers() {
   try {
-    const res = await fetch('data/roster.json?v=' + Date.now());
-    if (!res.ok) return [];
-    const data = await res.json();
+    const data = await loadRosterData();
+    if (!data) return [];
     const users = [];
 
     // Add coaches
@@ -437,35 +449,37 @@ async function getAllRosterUsers() {
     }
 
     // Add parents
-    for (const player of data.players) {
-      if (player.parents) {
-        for (const parent of player.parents) {
-          // Check if already added (might be parent of multiple players)
-          const existing = users.find(u => u.email.toLowerCase() === parent.email.toLowerCase());
-          if (!existing) {
-            users.push({
-              email: parent.email,
-              name: parent.name,
-              role: 'Parent',
-              player: `#${player.number} ${player.firstName}`
-            });
+    if (data.players) {
+      for (const player of data.players) {
+        if (player.parents) {
+          for (const parent of player.parents) {
+            // Check if already added (might be parent of multiple players)
+            const existing = users.find(u => u.email.toLowerCase() === parent.email.toLowerCase());
+            if (!existing) {
+              users.push({
+                email: parent.email,
+                name: parent.name,
+                role: 'Parent',
+                player: `#${player.number} ${player.firstName}`
+              });
+            }
           }
         }
       }
-    }
 
-    // Add viewers from roster
-    for (const player of data.players) {
-      if (player.viewers) {
-        for (const viewer of player.viewers) {
-          const existing = users.find(u => u.email.toLowerCase() === viewer.email.toLowerCase());
-          if (!existing) {
-            users.push({
-              email: viewer.email,
-              name: viewer.name,
-              role: 'Viewer',
-              player: `#${player.number} ${player.firstName}`
-            });
+      // Add viewers from roster
+      for (const player of data.players) {
+        if (player.viewers) {
+          for (const viewer of player.viewers) {
+            const existing = users.find(u => u.email.toLowerCase() === viewer.email.toLowerCase());
+            if (!existing) {
+              users.push({
+                email: viewer.email,
+                name: viewer.name,
+                role: 'Viewer',
+                player: `#${player.number} ${player.firstName}`
+              });
+            }
           }
         }
       }

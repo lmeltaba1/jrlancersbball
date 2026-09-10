@@ -27,16 +27,56 @@ function getFirestoreTimestamp() {
   return null;
 }
 
-// Data loading functions
+// Data loading functions - fetch from Firestore (requires auth)
+let _cachedRoster = null;
+let _cachedSchedule = null;
+
 async function loadRoster() {
-  // Always fetch fresh data with cache-busting
-  const response = await fetch('data/roster.json?v=' + Date.now());
-  return response.json();
+  // Return cached data if available
+  if (_cachedRoster) return _cachedRoster;
+
+  // Load from Firestore (requires authentication)
+  if (typeof db !== 'undefined' && db) {
+    try {
+      const doc = await db.collection('config').doc('roster').get();
+      if (doc.exists) {
+        _cachedRoster = doc.data();
+        return _cachedRoster;
+      }
+    } catch (e) {
+      console.error('Error loading roster from Firestore:', e);
+    }
+  }
+
+  // Return empty structure if not authenticated
+  return { team: {}, coaches: [], players: [] };
 }
 
 async function loadSchedule() {
-  const response = await fetch('data/schedule.json?v=' + Date.now());
-  return response.json();
+  // Return cached data if available
+  if (_cachedSchedule) return _cachedSchedule;
+
+  // Load from Firestore (requires authentication)
+  if (typeof db !== 'undefined' && db) {
+    try {
+      const doc = await db.collection('config').doc('schedule').get();
+      if (doc.exists) {
+        _cachedSchedule = doc.data();
+        return _cachedSchedule;
+      }
+    } catch (e) {
+      console.error('Error loading schedule from Firestore:', e);
+    }
+  }
+
+  // Return empty structure if not authenticated
+  return { season: '', games: [], events: [] };
+}
+
+// Clear cached data (call on logout)
+function clearDataCache() {
+  _cachedRoster = null;
+  _cachedSchedule = null;
 }
 
 // Position colors for basketball
@@ -243,15 +283,3 @@ function calculatePoints(playerStats) {
          ((playerStats.threePointersMade || 0) * 3);
 }
 
-// Service worker disabled for cache reset - re-enable after v10 rollout
-// if ('serviceWorker' in navigator) {
-//   window.addEventListener('load', () => {
-//     navigator.serviceWorker.register('sw.js')
-//       .then(registration => {
-//         console.log('SW registered:', registration);
-//       })
-//       .catch(error => {
-//         console.log('SW registration failed:', error);
-//       });
-//   });
-// }

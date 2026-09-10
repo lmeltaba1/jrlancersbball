@@ -17,6 +17,55 @@ const sendgridApiKey = defineSecret('SENDGRID_API_KEY');
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 // Cloudinary secrets removed - now using GCP Transcoder API
 
+// Rate limiting helper - tracks requests per user/action in Firestore
+// Returns true if rate limited, false if allowed
+async function checkRateLimit(userEmail, action, maxRequests = 10, windowMinutes = 60) {
+  const key = `${action}:${userEmail.toLowerCase()}`;
+  const rateLimitRef = db.collection('rateLimits').doc(key);
+  const windowMs = windowMinutes * 60 * 1000;
+  const now = Date.now();
+
+  try {
+    const doc = await rateLimitRef.get();
+    if (doc.exists) {
+      const data = doc.data();
+      const windowStart = data.windowStart?.toMillis() || 0;
+
+      // Check if window has expired
+      if (now - windowStart > windowMs) {
+        // Reset window
+        await rateLimitRef.set({
+          count: 1,
+          windowStart: Timestamp.now()
+        });
+        return false; // Not rate limited
+      }
+
+      // Window still active - check count
+      if (data.count >= maxRequests) {
+        console.log(`Rate limited: ${userEmail} for ${action} (${data.count} requests in ${windowMinutes} min)`);
+        return true; // Rate limited
+      }
+
+      // Increment count
+      await rateLimitRef.update({
+        count: FieldValue.increment(1)
+      });
+      return false; // Not rate limited
+    } else {
+      // First request
+      await rateLimitRef.set({
+        count: 1,
+        windowStart: Timestamp.now()
+      });
+      return false; // Not rate limited
+    }
+  } catch (error) {
+    console.error('Rate limit check error:', error);
+    return false; // Allow on error to avoid blocking legitimate requests
+  }
+}
+
 // Single notification function for all use cases
 // options.emails - array of emails to send to (null = everyone)
 // options.excludeUid - uid to exclude (for chat - don't notify sender)
@@ -498,34 +547,38 @@ exports.syncConfig = onRequest({ invoker: 'public' }, async (request, response) 
     return;
   }
 
-  const https = require('https');
-  const fetchJson = (url) => {
-    return new Promise((resolve, reject) => {
-      https.get(url, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
-        });
-      }).on('error', reject);
-    });
-  };
+  const fs = require('fs');
+  const path = require('path');
 
   try {
-    const baseUrl = 'https://lancers-bball.web.app';
-    const [schedule, roster] = await Promise.all([
-      fetchJson(`${baseUrl}/data/schedule.json`),
-      fetchJson(`${baseUrl}/data/roster.json`)
-    ]);
+    // Read from local files (not publicly accessible)
+    const schedule = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'schedule-full.json'), 'utf8'));
+    const roster = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'roster-full.json'), 'utf8'));
+
+    // Create coachEmails lookup map for Firestore rules
+    const coachEmails = {};
+    let headCoachEmail = null;
+    if (roster.coaches && Array.isArray(roster.coaches)) {
+      for (const coach of roster.coaches) {
+        if (coach.email) {
+          coachEmails[coach.email.toLowerCase()] = true;
+          if (coach.role === 'Head Coach') {
+            headCoachEmail = coach.email.toLowerCase();
+          }
+        }
+      }
+    }
 
     await Promise.all([
       db.collection('config').doc('schedule').set(schedule),
-      db.collection('config').doc('roster').set(roster)
+      db.collection('config').doc('roster').set(roster),
+      db.collection('config').doc('coachEmails').set(coachEmails),
+      db.collection('config').doc('headCoach').set({ email: headCoachEmail })
     ]);
 
     response.json({
       success: true,
-      message: `Synced ${schedule.games.length} games and ${roster.players.length} players to Firestore`
+      message: `Synced ${schedule.games.length} games, ${roster.players.length} players, ${Object.keys(coachEmails).length} coaches, head coach: ${headCoachEmail}`
     });
   } catch (error) {
     response.status(500).json({ error: error.message });
@@ -992,13 +1045,46 @@ exports.generateWrapupReport = onRequest({
   timeoutSeconds: 300,
   memory: '1GiB'
 }, async (request, response) => {
-  // Allow CORS for browser requests (regenerate button)
-  response.set('Access-Control-Allow-Origin', '*');
+  // Allow CORS only from our app
+  const allowedOrigins = ['https://lancers-bball.web.app', 'https://lancers-bball.firebaseapp.com', 'http://localhost:5000'];
+  const origin = request.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    response.set('Access-Control-Allow-Origin', origin);
+  }
+  response.set('Access-Control-Allow-Credentials', 'true');
   if (request.method === 'OPTIONS') {
     response.set('Access-Control-Allow-Methods', 'POST');
-    response.set('Access-Control-Allow-Headers', 'Content-Type');
+    response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     response.status(204).send('');
     return;
+  }
+
+  // Verify Firebase Auth token (optional for scheduled triggers, required for browser requests)
+  let userEmail = null;
+  const authHeader = request.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const idToken = authHeader.split('Bearer ')[1];
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      userEmail = decodedToken.email?.toLowerCase();
+      // Check if user is the head coach
+      const headCoachDoc = await db.collection('config').doc('headCoach').get();
+      const headCoachEmail = headCoachDoc.exists ? headCoachDoc.data().email : null;
+      if (userEmail !== headCoachEmail) {
+        response.status(403).json({ error: 'Only the head coach can trigger wrap-up generation' });
+        return;
+      }
+
+      // Rate limit: 5 requests per hour per user
+      if (await checkRateLimit(userEmail, 'generateWrapup', 5, 60)) {
+        response.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
+        return;
+      }
+    } catch (authError) {
+      console.error('Auth verification failed:', authError);
+      response.status(401).json({ error: 'Invalid authentication token' });
+      return;
+    }
   }
 
   const gameId = request.body.gameId || request.query.gameId;
@@ -1134,12 +1220,48 @@ exports.generateWrapupReport = onRequest({
 
 // Approve wrap-up and send notification to all parents
 exports.approveWrapup = onRequest(async (request, response) => {
-  // Allow CORS for the web app
-  response.set('Access-Control-Allow-Origin', '*');
+  // Allow CORS only from our app
+  const allowedOrigins = ['https://lancers-bball.web.app', 'https://lancers-bball.firebaseapp.com', 'http://localhost:5000'];
+  const origin = request.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    response.set('Access-Control-Allow-Origin', origin);
+  }
+  response.set('Access-Control-Allow-Credentials', 'true');
   if (request.method === 'OPTIONS') {
     response.set('Access-Control-Allow-Methods', 'POST');
     response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     response.status(204).send('');
+    return;
+  }
+
+  // Verify Firebase Auth token - required for approving wrap-ups
+  const authHeader = request.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    response.status(401).json({ error: 'Authorization required' });
+    return;
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+  let userEmail;
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    userEmail = decodedToken.email?.toLowerCase();
+    // Check if user is the head coach
+    const headCoachDoc = await db.collection('config').doc('headCoach').get();
+    const headCoachEmail = headCoachDoc.exists ? headCoachDoc.data().email : null;
+    if (userEmail !== headCoachEmail) {
+      response.status(403).json({ error: 'Only the head coach can approve wrap-ups' });
+      return;
+    }
+
+    // Rate limit: 10 requests per hour per user
+    if (await checkRateLimit(userEmail, 'approveWrapup', 10, 60)) {
+      response.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
+      return;
+    }
+  } catch (authError) {
+    console.error('Auth verification failed:', authError);
+    response.status(401).json({ error: 'Invalid authentication token' });
     return;
   }
 
@@ -1626,6 +1748,70 @@ exports.checkPendingWrapups = onSchedule({
   }
 
   return null;
+});
+
+// Clean up all pending wrap-ups (stops notifications)
+exports.cleanupPendingWrapups = onRequest(async (request, response) => {
+  // Allow CORS
+  const allowedOrigins = ['https://lancers-bball.web.app', 'https://lancers-bball.firebaseapp.com', 'http://localhost:5000'];
+  const origin = request.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    response.set('Access-Control-Allow-Origin', origin);
+  }
+  response.set('Access-Control-Allow-Credentials', 'true');
+  if (request.method === 'OPTIONS') {
+    response.set('Access-Control-Allow-Methods', 'POST');
+    response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    response.status(204).send('');
+    return;
+  }
+
+  // Verify head coach auth
+  const authHeader = request.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    response.status(401).json({ error: 'Authorization required' });
+    return;
+  }
+
+  try {
+    const idToken = authHeader.split('Bearer ')[1];
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const userEmail = decodedToken.email?.toLowerCase();
+
+    const headCoachDoc = await db.collection('config').doc('headCoach').get();
+    const headCoachEmail = headCoachDoc.exists ? headCoachDoc.data().email : null;
+    if (userEmail !== headCoachEmail) {
+      response.status(403).json({ error: 'Only the head coach can cleanup wrap-ups' });
+      return;
+    }
+  } catch (authError) {
+    response.status(401).json({ error: 'Invalid authentication token' });
+    return;
+  }
+
+  try {
+    // Delete all wrap-ups with status pending or pendingApproval
+    const pendingSnapshot = await db.collection('wrapups')
+      .where('status', 'in', ['pending', 'pendingApproval', 'generating'])
+      .get();
+
+    if (pendingSnapshot.empty) {
+      response.json({ success: true, deleted: 0, message: 'No pending wrap-ups found' });
+      return;
+    }
+
+    const batch = db.batch();
+    pendingSnapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    console.log(`Deleted ${pendingSnapshot.size} pending wrap-ups`);
+    response.json({ success: true, deleted: pendingSnapshot.size });
+  } catch (error) {
+    console.error('Error cleaning up wrap-ups:', error);
+    response.status(500).json({ error: error.message });
+  }
 });
 
 // ============================================================

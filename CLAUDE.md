@@ -29,11 +29,12 @@ The app is fully functional with all core features implemented. **Season simulat
 
 - **Frontend:** Vanilla HTML/CSS/JS (no React, no build)
 - **Styling:** css/athletic.css (dark theme default, light mode toggle)
-- **Backend:** Firebase (Auth, Firestore, Storage)
-- **Data:** Static JSON files in /data for roster and schedule
+- **Backend:** Firebase (Auth, Firestore, Storage, Cloud Functions)
+- **Data:** Firestore `config/roster` and `config/schedule` documents (synced from static JSON via `syncConfig` function)
 
 ### Firebase Collections
 
+- `config` - App configuration (roster, schedule, headCoach documents)
 - `attendance` - Player availability per game
 - `volunteers` - Volunteer signups per game (scorekeeper, tableWorker)
 - `gameStats` - Player statistics per game
@@ -45,17 +46,19 @@ The app is fully functional with all core features implemented. **Season simulat
 - `fcmTokens` - Push notification tokens
 - `userProfiles` - User profile data
 - `wrapups` - Post-game wrap-up reports (AI-generated narratives, coach notes)
+- `rateLimits` - Rate limiting for cloud functions (per user/action)
 
 ### Key Files
 
 | File | Purpose |
 |------|---------|
-| `js/firebase-config.js` | Firebase init, auth helpers, `getPlayerFromRoster()`, `requireAuth()`, `isEmailInRoster()` |
-| `js/app.js` | Shared utilities: `loadRoster()`, `loadSchedule()`, `formatDate()` |
+| `js/firebase-config.js` | Firebase init, auth helpers, `getPlayerFromRoster()`, `requireAuth()`, `isEmailInRoster()`, `loadRosterData()` |
+| `js/app.js` | Shared utilities: `loadRoster()`, `loadSchedule()`, `formatDate()`, `leagueNames`, `getCurrentDate()` - included in most HTML files |
 | `js/theme.js` | Dark/light mode toggle |
 | `css/athletic.css` | All styles, CSS variables for theming |
-| `data/roster.json` | Player data, parent contacts, coach info, static viewers |
-| `data/schedule.json` | Game schedule with dates, opponents, locations |
+| `functions/data/roster-full.json` | Source data for roster (synced to Firestore via `syncConfig`) |
+| `functions/data/schedule-full.json` | Source data for schedule (synced to Firestore via `syncConfig`) |
+| `functions/index.js` | Cloud Functions: notifications, wrap-ups, rate limiting, config sync |
 
 ## Security & Roles
 
@@ -69,13 +72,15 @@ The app is fully functional with all core features implemented. **Season simulat
 
 ### Authentication Flow
 
-1. User registers with email (must be pre-approved in roster.json or Firestore viewers)
-2. `isEmailInRoster()` validates email before registration
+1. User registers with email (must be pre-approved in Firestore `config/roster` or `viewers` collection)
+2. `isEmailInRoster()` validates email before registration (checks Firestore)
 3. `requireAuth()` on each page checks login and role
 4. `getPlayerFromRoster()` returns user info with permissions:
    - `isCoach`, `isParent`, `isViewer`
    - `canChat`, `canViewPlaybook`, `canSignUp`
    - `player`, `playerName`, `position`
+
+**Important:** All roster/schedule data is loaded from Firestore (requires authentication). The static JSON files in `functions/data/` are source files that get synced to Firestore via the `syncConfig` cloud function.
 
 ### Viewer Management
 
@@ -222,16 +227,19 @@ Rules files: `firestore.rules`, `storage.rules`
 ```
 lancers/
 ├── css/athletic.css       # All styles
-├── data/
-│   ├── roster.json        # Players, parents, coaches, viewers
-│   └── schedule.json      # Games
 ├── docs/
 │   └── HIGHLIGHTS.md      # Highlights feature design doc
+├── functions/
+│   ├── index.js           # Cloud Functions
+│   ├── package.json       # Function dependencies
+│   └── data/
+│       ├── roster-full.json   # Source roster data
+│       └── schedule-full.json # Source schedule data
 ├── images/
 │   └── lancers-logo.png
 ├── js/
 │   ├── firebase-config.js # Firebase + auth helpers + role checks
-│   ├── app.js             # Shared utilities
+│   ├── app.js             # Shared utilities (included in most HTML)
 │   └── theme.js           # Theme toggle
 ├── *.html                 # All pages
 ├── firestore.rules        # Firestore security
@@ -309,10 +317,19 @@ AI-generated game recaps with coach commentary, triggered after games end.
 
 ### Cloud Functions
 
+**Wrap-Up Functions:**
 - `generateWrapupReport` - HTTP endpoint, calls Claude API (claude-sonnet-4-20250514)
 - `checkPendingWrapups` - Scheduled every 30 min, auto-triggers pending wrap-ups
 - `approveWrapup` - HTTP endpoint, marks complete and notifies everyone
 - `triggerWrapupGeneration` - Manual trigger for testing
+- `cleanupPendingWrapups` - HTTP endpoint (head coach only), deletes all pending/generating wrap-ups
+
+**Config Sync:**
+- `syncConfig` - HTTP endpoint, syncs `data/roster.json` and `data/schedule.json` to Firestore `config` collection
+
+**Rate Limiting:**
+- All sensitive functions use `checkRateLimit(userEmail, action, maxRequests, windowMinutes)`
+- Rate limits stored in `rateLimits` collection with TTL cleanup
 
 ## Development & Testing Tools
 

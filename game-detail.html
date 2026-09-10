@@ -373,6 +373,13 @@
       if (wrapper && menu && !wrapper.contains(e.target)) menu.style.display = 'none';
     });
 
+    // Escape HTML to prevent XSS in event descriptions
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
     // Emulation functions (admin only)
     async function populateEmulateDropdown() {
       const select = document.getElementById('emulateSelect');
@@ -396,24 +403,7 @@
       if (banner && text) { text.textContent = 'Viewing as: ' + emulatedEmail; banner.style.display = 'block'; }
     }
 
-    // Inline functions to bypass caching
-    async function loadSchedule() {
-      const response = await fetch('data/schedule.json?v=' + Date.now());
-      return response.json();
-    }
-
-    function formatDate(dateString) {
-      const [year, month, day] = dateString.split('-').map(Number);
-      const date = new Date(year, month - 1, day);
-      return {
-        month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-        day: date.getDate(),
-        weekday: date.toLocaleDateString('en-US', { weekday: 'long' }),
-        full: date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-      };
-    }
-
-    // leagueNames is defined in js/app.js
+    // loadSchedule(), formatDate(), leagueNames defined in app.js
 
     let currentUser = null;
     let userInfo = null;
@@ -468,7 +458,7 @@
       try {
         const [scheduleData, rosterDataResult] = await Promise.all([
           loadSchedule(),
-          fetch('data/roster.json?v=' + Date.now()).then(r => r.json())
+          loadRoster()
         ]);
 
         rosterData = rosterDataResult;
@@ -677,8 +667,7 @@
 
         // Load roster and attendance
         try {
-          const rosterRes = await fetch('data/roster.json?v=' + Date.now());
-          const rosterData = await rosterRes.json();
+          const rosterData = await loadRoster();
           const allPlayers = rosterData.players || [];
 
           let attendanceData = {};
@@ -1160,7 +1149,20 @@
       btn.textContent = 'Publishing...';
 
       try {
-        const response = await fetch(`https://us-central1-lancers-bball.cloudfunctions.net/approveWrapup?gameId=${game.id}`);
+        // Get Firebase ID token for authentication
+        const user = firebase.auth().currentUser;
+        if (!user) {
+          throw new Error('You must be logged in to approve wrap-ups');
+        }
+        const idToken = await user.getIdToken();
+
+        const response = await fetch(`https://us-central1-lancers-bball.cloudfunctions.net/approveWrapup?gameId=${game.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          }
+        });
         const result = await response.json();
 
         if (result.success) {
@@ -1303,9 +1305,19 @@
       approveBtn.style.opacity = '0.5';
 
       try {
+        // Get Firebase ID token for authentication
+        const user = firebase.auth().currentUser;
+        if (!user) {
+          throw new Error('You must be logged in to regenerate wrap-ups');
+        }
+        const idToken = await user.getIdToken();
+
         const response = await fetch(`https://us-central1-lancers-bball.cloudfunctions.net/generateWrapupReport`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
           body: JSON.stringify({ gameId: game.id.toString() })
         });
 
@@ -1449,7 +1461,7 @@
           html += `
             <div style="padding: 6px 10px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 8px; background: ${bgColor};">
               <span style="color: ${isTimeout ? '#000' : 'var(--text-muted)'}; font-size: 0.7rem; min-width: 50px;">${time}</span>
-              <span style="flex: 1; font-size: 0.8rem; color: ${textColor}; font-weight: ${isTimeout ? '700' : '400'};">${event.description}</span>
+              <span style="flex: 1; font-size: 0.8rem; color: ${textColor}; font-weight: ${isTimeout ? '700' : '400'};">${escapeHtml(event.description)}</span>
               ${highlightIcon}
               ${scoreDisplay}
             </div>
@@ -1629,7 +1641,7 @@
       container.innerHTML = `
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: ${hasMore ? '12px' : '0'};">
           ${displayHighlights.map(h => {
-            const player = players.find(p => p.id == h.playerId);
+            const player = players.find(p => p.id === parseInt(h.playerId));
             const playerName = player ? player.firstName : 'Unknown';
             const isVideo = h.mediaType === 'video';
 
@@ -1795,7 +1807,7 @@
             matchStatus.style.background = 'rgba(34, 197, 94, 0.2)';
             matchStatus.innerHTML = `
               <p style="color: #22C55E; font-weight: 600; margin-bottom: 5px;">Match found!</p>
-              <p style="color: var(--text-primary);">${playerName}: ${event.description}</p>
+              <p style="color: var(--text-primary);">${escapeHtml(playerName)}: ${escapeHtml(event.description)}</p>
             `;
             document.getElementById('playerSelectContainer').style.display = 'none';
             return;
@@ -1834,7 +1846,7 @@
         return;
       }
 
-      const player = rosterData.players.find(p => p.id == playerId);
+      const player = rosterData.players.find(p => p.id === parseInt(playerId));
       if (!player) return;
 
       // Show progress

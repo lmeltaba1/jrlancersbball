@@ -335,6 +335,7 @@
     var initialLoadComplete = false;
     var unreadDividerAdded = false;
     var lastDateShown = null;
+    var unsubscribeMessages = null;
 
     function escapeHtml(text) {
       var div = document.createElement('div');
@@ -447,6 +448,12 @@
       var text = document.getElementById('messageInput').value.trim();
       if (!text || !currentUser || !db) return;
 
+      // Message length limit
+      if (text.length > 500) {
+        alert('Message is too long (max 500 characters)');
+        return;
+      }
+
       db.collection('messages').add({
         text: text,
         senderName: displayName,
@@ -496,7 +503,7 @@
         var latestMessageId = null;
         var foundLastRead = false;
 
-        db.collection('messages').orderBy('timestamp', 'asc').onSnapshot(function(snapshot) {
+        unsubscribeMessages = db.collection('messages').orderBy('timestamp', 'asc').onSnapshot(function(snapshot) {
           var chatMessages = document.getElementById('chatMessages');
 
           snapshot.docChanges().forEach(function(change) {
@@ -557,6 +564,11 @@
         var chatMessages = document.getElementById('chatMessages');
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }, 300);
+    });
+
+    // Cleanup listener on page unload to prevent memory leaks
+    window.addEventListener('beforeunload', function() {
+      if (unsubscribeMessages) unsubscribeMessages();
     });
   </script>
 </body>
