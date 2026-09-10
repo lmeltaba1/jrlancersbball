@@ -1,12 +1,38 @@
 // Jr. Lancers Basketball - Firebase Configuration
-// TODO: Replace with your Firebase project credentials
 
-// Admin email for emulation feature
-var ADMIN_EMAIL = 'lmeltabarger@icloud.com';
+// Admin emails cache (loaded from Firestore)
+var _cachedAdminEmails = null;
 
-// Emulation helpers
+// Load admin emails from Firestore
+async function loadAdminEmails() {
+  if (_cachedAdminEmails !== null) return _cachedAdminEmails;
+  if (typeof db === 'undefined' || !db) return {};
+  try {
+    const doc = await db.collection('config').doc('adminEmails').get();
+    if (doc.exists) {
+      _cachedAdminEmails = doc.data();
+      return _cachedAdminEmails;
+    }
+  } catch (e) {
+    console.error('Error loading admin emails:', e);
+  }
+  return {};
+}
+
+// Check if email is an admin (async version for initial check)
+async function isAdminAsync(email) {
+  if (!email) return false;
+  const adminEmails = await loadAdminEmails();
+  return email.toLowerCase() in adminEmails;
+}
+
+// Emulation helpers - sync version uses cached data
 function isAdmin(email) {
-  return email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  if (!email) return false;
+  // Use cached admin emails if available, otherwise return false
+  // The async version should be used during initialization
+  if (_cachedAdminEmails === null) return false;
+  return email.toLowerCase() in _cachedAdminEmails;
 }
 
 function getEmulatedEmail() {
@@ -20,6 +46,8 @@ function getEmulatedEmail() {
 function setEmulatedEmail(email) {
   try {
     sessionStorage.setItem('emulatedEmail', email);
+    // Log emulation to Firestore for audit trail
+    logEmulationEvent('start', email);
   } catch (e) {
     console.error('Could not save emulation state:', e);
   }
@@ -27,8 +55,31 @@ function setEmulatedEmail(email) {
 
 function clearEmulation() {
   try {
+    const wasEmulating = sessionStorage.getItem('emulatedEmail');
     sessionStorage.removeItem('emulatedEmail');
+    // Log emulation end to Firestore for audit trail
+    if (wasEmulating) {
+      logEmulationEvent('stop', wasEmulating);
+    }
   } catch (e) {}
+}
+
+// Log emulation events to Firestore for security audit
+async function logEmulationEvent(action, targetEmail) {
+  if (typeof db === 'undefined' || !db || typeof auth === 'undefined' || !auth || !auth.currentUser) return;
+  try {
+    await db.collection('emulationLogs').add({
+      adminEmail: auth.currentUser.email,
+      adminUid: auth.currentUser.uid,
+      targetEmail: targetEmail,
+      action: action, // 'start' or 'stop'
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      userAgent: navigator.userAgent,
+      page: window.location.pathname
+    });
+  } catch (e) {
+    console.error('Could not log emulation event:', e);
+  }
 }
 
 function getEffectiveEmail(realEmail) {
@@ -104,6 +155,9 @@ async function getPlayerFromRoster(email) {
   if (!email) return null;
 
   try {
+    // Load admin emails first to ensure isAdmin() works correctly
+    await loadAdminEmails();
+
     const data = await loadRosterData();
     if (!data) {
       console.error('Failed to load roster data');

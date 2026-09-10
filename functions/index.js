@@ -5,12 +5,73 @@ const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const { getAuth } = require('firebase-admin/auth');
 const sgMail = require('@sendgrid/mail');
 
 initializeApp();
 
 const db = getFirestore();
 const messaging = getMessaging();
+const auth = getAuth();
+
+// Helper to verify admin/head coach authentication via Bearer token
+// Returns { success: true, email } or { success: false, error, status }
+async function verifyAdminAuth(request, options = {}) {
+  const authHeader = request.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { success: false, error: 'Authorization required', status: 401 };
+  }
+
+  try {
+    const idToken = authHeader.split('Bearer ')[1];
+    const decodedToken = await auth.verifyIdToken(idToken);
+    const userEmail = decodedToken.email?.toLowerCase();
+
+    if (!userEmail) {
+      return { success: false, error: 'No email in token', status: 401 };
+    }
+
+    // Check if head coach required
+    if (options.headCoachOnly) {
+      const headCoachDoc = await db.collection('config').doc('headCoach').get();
+      const headCoachEmail = headCoachDoc.exists ? headCoachDoc.data().email?.toLowerCase() : null;
+      if (userEmail !== headCoachEmail) {
+        return { success: false, error: 'Only the head coach can perform this action', status: 403 };
+      }
+    }
+
+    // Check if any coach allowed
+    if (options.coachOnly) {
+      const coachEmailsDoc = await db.collection('config').doc('coachEmails').get();
+      const coachEmails = coachEmailsDoc.exists ? coachEmailsDoc.data() : {};
+      if (!coachEmails[userEmail]) {
+        return { success: false, error: 'Only coaches can perform this action', status: 403 };
+      }
+    }
+
+    return { success: true, email: userEmail };
+  } catch (error) {
+    console.error('Auth verification error:', error);
+    return { success: false, error: 'Invalid authentication token', status: 401 };
+  }
+}
+
+// Helper to set CORS headers for authenticated endpoints
+function setCorsHeaders(request, response) {
+  const allowedOrigins = ['https://lancers-bball.web.app', 'https://lancers-bball.firebaseapp.com', 'http://localhost:5000'];
+  const origin = request.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    response.set('Access-Control-Allow-Origin', origin);
+  }
+  response.set('Access-Control-Allow-Credentials', 'true');
+  if (request.method === 'OPTIONS') {
+    response.set('Access-Control-Allow-Methods', 'GET, POST');
+    response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    response.status(204).send('');
+    return true; // Indicates preflight handled
+  }
+  return false;
+}
 
 // Define secrets
 const sendgridApiKey = defineSecret('SENDGRID_API_KEY');
@@ -153,98 +214,7 @@ exports.helloWorld = onRequest((request, response) => {
   response.send("Hello from Jr. Lancers Basketball!");
 });
 
-// Debug endpoint to inspect FCM tokens
-exports.debugTokens = onRequest(async (request, response) => {
-  const apiKey = request.query.key;
-  if (apiKey !== 'lancers2026') {
-    response.status(403).send('Unauthorized');
-    return;
-  }
-
-  const rosterDoc = await db.collection('config').doc('roster').get();
-  const coaches = rosterDoc.exists ? rosterDoc.data().coaches || [] : [];
-  const headCoach = coaches.find(c => c.role === 'Head Coach');
-
-  const tokensSnapshot = await db.collection('fcmTokens').get();
-  const tokens = [];
-
-  tokensSnapshot.forEach(doc => {
-    const data = doc.data();
-    tokens.push({
-      docId: doc.id,
-      email: data.email,
-      hasToken: !!data.token,
-      tokenPreview: data.token ? data.token.substring(0, 30) + '...' : 'none',
-      isCoach: headCoach && data.email?.toLowerCase() === headCoach.email?.toLowerCase()
-    });
-  });
-
-  response.json({
-    headCoachEmail: headCoach?.email || 'not found',
-    tokenCount: tokens.length,
-    tokens: tokens
-  });
-});
-
-// Send test RSVP reminder to a specific email
-exports.sendTestReminder = onRequest(async (request, response) => {
-  const apiKey = request.query.key;
-  if (apiKey !== 'lancers2026') {
-    response.status(403).send('Unauthorized');
-    return;
-  }
-
-  const email = request.query.email;
-  if (!email) {
-    response.status(400).json({ error: 'email parameter required' });
-    return;
-  }
-
-  try {
-    // Find token for this email
-    const tokensSnapshot = await db.collection('fcmTokens')
-      .where('email', '==', email.toLowerCase())
-      .get();
-
-    if (tokensSnapshot.empty) {
-      response.json({
-        success: false,
-        error: 'No FCM token found for ' + email,
-        hint: 'User needs to enable notifications in the app first'
-      });
-      return;
-    }
-
-    const tokens = [];
-    tokensSnapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.token) tokens.push(data.token);
-    });
-
-    const notificationMessage = {
-      data: {
-        title: 'RSVP Needed',
-        body: 'Practice on Wed, Jan 20 - Let us know if your player can attend!',
-        type: 'attendance',
-        url: '/attendance.html?game=114'
-      },
-      tokens: tokens
-    };
-
-    const result = await messaging.sendEachForMulticast(notificationMessage);
-
-    response.json({
-      success: true,
-      email: email,
-      tokenCount: tokens.length,
-      sent: result.successCount,
-      failed: result.failureCount
-    });
-  } catch (error) {
-    console.error('Error sending test reminder:', error);
-    response.status(500).json({ error: error.message });
-  }
-});
+// Debug endpoints removed for security - use Firebase Console to inspect tokens
 
 // Scheduled function to send attendance reminders - daily at 9 AM Central
 exports.sendAttendanceReminders = onSchedule({
@@ -393,9 +363,11 @@ exports.sendAttendanceReminders = onSchedule({
 
 // Manual trigger for attendance reminders (for testing)
 exports.triggerAttendanceReminders = onRequest(async (request, response) => {
-  const apiKey = request.query.key;
-  if (apiKey !== 'lancers2026') {
-    response.status(403).send('Unauthorized');
+  if (setCorsHeaders(request, response)) return;
+
+  const authResult = await verifyAdminAuth(request, { headCoachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ error: authResult.error });
     return;
   }
 
@@ -541,10 +513,19 @@ exports.triggerAttendanceReminders = onRequest(async (request, response) => {
 
 // Sync schedule and roster from hosted JSON to Firestore
 exports.syncConfig = onRequest({ invoker: 'public' }, async (request, response) => {
-  const apiKey = request.query.key;
-  if (apiKey !== 'lancers2026') {
-    response.status(403).send('Unauthorized');
-    return;
+  if (setCorsHeaders(request, response)) return;
+
+  // Allow initial bootstrap with secret key (one-time setup), otherwise require head coach auth
+  const bootstrapKey = request.query.bootstrap;
+  if (bootstrapKey === process.env.BOOTSTRAP_SECRET) {
+    // Bootstrap mode - allowed for initial setup
+    console.log('syncConfig: Bootstrap mode');
+  } else {
+    const authResult = await verifyAdminAuth(request, { headCoachOnly: true });
+    if (!authResult.success) {
+      response.status(authResult.status).json({ error: authResult.error });
+      return;
+    }
   }
 
   const fs = require('fs');
@@ -569,11 +550,26 @@ exports.syncConfig = onRequest({ invoker: 'public' }, async (request, response) 
       }
     }
 
+    // Admin emails for emulation feature (head coach by default)
+    // Add any additional admins from roster.adminEmails if defined
+    const adminEmails = {};
+    if (headCoachEmail) {
+      adminEmails[headCoachEmail] = true;
+    }
+    if (roster.adminEmails && Array.isArray(roster.adminEmails)) {
+      for (const email of roster.adminEmails) {
+        if (email) {
+          adminEmails[email.toLowerCase()] = true;
+        }
+      }
+    }
+
     await Promise.all([
       db.collection('config').doc('schedule').set(schedule),
       db.collection('config').doc('roster').set(roster),
       db.collection('config').doc('coachEmails').set(coachEmails),
-      db.collection('config').doc('headCoach').set({ email: headCoachEmail })
+      db.collection('config').doc('headCoach').set({ email: headCoachEmail }),
+      db.collection('config').doc('adminEmails').set(adminEmails)
     ]);
 
     response.json({
@@ -793,9 +789,11 @@ exports.sendScorekeeperReminders = onSchedule({
 
 // Manual trigger for scorekeeper reminder (for testing)
 exports.triggerScorekeeperReminder = onRequest(async (request, response) => {
-  const apiKey = request.query.key;
-  if (apiKey !== 'lancers2026') {
-    response.status(403).send('Unauthorized');
+  if (setCorsHeaders(request, response)) return;
+
+  const authResult = await verifyAdminAuth(request, { headCoachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ error: authResult.error });
     return;
   }
 
@@ -1587,9 +1585,11 @@ async function compileHighlightsVideo(gameId, videoHighlights) {
 
 // Manual trigger for wrap-up generation (for testing)
 exports.triggerWrapupGeneration = onRequest(async (request, response) => {
-  const apiKey = request.query.key;
-  if (apiKey !== 'lancers2026') {
-    response.status(403).send('Unauthorized');
+  if (setCorsHeaders(request, response)) return;
+
+  const authResult = await verifyAdminAuth(request, { headCoachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ error: authResult.error });
     return;
   }
 
@@ -2143,9 +2143,11 @@ function generateSimGamePlayByPlay(game, gameStartTime) {
 
 // Cleanup duplicate highlights for a game
 exports.cleanupDuplicateHighlights = onRequest({ timeoutSeconds: 60 }, async (request, response) => {
-  const apiKey = request.query.key;
-  if (apiKey !== 'lancers2026') {
-    response.status(403).send('Unauthorized');
+  if (setCorsHeaders(request, response)) return;
+
+  const authResult = await verifyAdminAuth(request, { coachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ error: authResult.error });
     return;
   }
 
@@ -2205,9 +2207,11 @@ exports.cleanupDuplicateHighlights = onRequest({ timeoutSeconds: 60 }, async (re
 
 // Delete specific highlights by ID
 exports.deleteHighlights = onRequest({ timeoutSeconds: 60 }, async (request, response) => {
-  const apiKey = request.query.key;
-  if (apiKey !== 'lancers2026') {
-    response.status(403).send('Unauthorized');
+  if (setCorsHeaders(request, response)) return;
+
+  const authResult = await verifyAdminAuth(request, { coachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ error: authResult.error });
     return;
   }
 
@@ -2231,9 +2235,11 @@ exports.deleteHighlights = onRequest({ timeoutSeconds: 60 }, async (request, res
 
 // Test endpoint: Reset game and trigger end-game flow
 exports.resetAndEndGame = onRequest({ timeoutSeconds: 60 }, async (request, response) => {
-  const apiKey = request.query.key;
-  if (apiKey !== 'lancers2026') {
-    response.status(403).send('Unauthorized');
+  if (setCorsHeaders(request, response)) return;
+
+  const authResult = await verifyAdminAuth(request, { headCoachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ error: authResult.error });
     return;
   }
 
@@ -2299,9 +2305,11 @@ exports.resetAndEndGame = onRequest({ timeoutSeconds: 60 }, async (request, resp
 
 // Simulate season data endpoint
 exports.simulateSeasonData = onRequest({ timeoutSeconds: 300 }, async (request, response) => {
-  const apiKey = request.query.key;
-  if (apiKey !== 'lancers2026') {
-    response.status(403).send('Unauthorized');
+  if (setCorsHeaders(request, response)) return;
+
+  const authResult = await verifyAdminAuth(request, { headCoachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ error: authResult.error });
     return;
   }
 

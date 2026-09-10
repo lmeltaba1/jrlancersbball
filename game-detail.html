@@ -364,7 +364,7 @@
       switcher.style.display = 'block';
       buttons.innerHTML = allPlayers.map(p => {
         const isActive = p.id === currentPlayerId;
-        return `<button onclick="switchPlayer(${p.id})" style="width: 100%; padding: 8px; margin-bottom: 4px; background: ${isActive ? 'var(--lancers-gold)' : 'var(--bg-elevated)'}; color: ${isActive ? '#000' : 'var(--text-primary)'}; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font-weight: ${isActive ? '600' : '400'};">#${p.number} ${p.firstName}</button>`;
+        return `<button onclick="switchPlayer(${p.id})" style="width: 100%; padding: 8px; margin-bottom: 4px; background: ${isActive ? 'var(--lancers-gold)' : 'var(--bg-elevated)'}; color: ${isActive ? '#000' : 'var(--text-primary)'}; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font-weight: ${isActive ? '600' : '400'};">#${escapeHtml(p.number)} ${escapeHtml(p.firstName)}</button>`;
       }).join('');
     }
     document.addEventListener('click', function(e) {
@@ -389,7 +389,7 @@
       select.innerHTML = '<option value="">-- Select User --</option>' +
         users.map(u => {
           const selected = currentEmulated && currentEmulated.toLowerCase() === u.email.toLowerCase();
-          return `<option value="${u.email}" ${selected ? 'selected' : ''}>${u.name} (${u.role}${u.player ? ' - ' + u.player : ''})</option>`;
+          return `<option value="${escapeHtml(u.email)}" ${selected ? 'selected' : ''}>${escapeHtml(u.name)} (${escapeHtml(u.role)}${u.player ? ' - ' + escapeHtml(u.player) : ''})</option>`;
         }).join('');
     }
     function emulateUser(email) {

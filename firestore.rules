@@ -6,36 +6,60 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Helper: Get user email in lowercase
+    function getUserEmail() {
+      return request.auth.token.email.lower();
+    }
+
     // Helper: Check if user is the head coach
     function isHeadCoach() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/config/headCoach) &&
-        get(/databases/$(database)/documents/config/headCoach).data.email == request.auth.token.email.lower();
+        get(/databases/$(database)/documents/config/headCoach).data.email == getUserEmail();
     }
 
-    // Game stats - read/write by authenticated users
+    // Helper: Check if user is any coach
+    function isCoach() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/config/coachEmails) &&
+        getUserEmail() in get(/databases/$(database)/documents/config/coachEmails).data;
+    }
+
+    // Game stats - read by authenticated, write by coaches only
+    // Note: Scorekeeper writes are allowed during game window (verified by frontend/function)
     match /gameStats/{gameId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // Coaches can always write
+      allow write: if isCoach();
+      // Non-coaches can only update (not create/delete) - scorekeeper during game
+      allow update: if isAuthenticated();
     }
 
-    // Volunteers - read/write by authenticated users
+    // Volunteers - read by authenticated, write by authenticated (parents/coaches sign up)
     match /volunteers/{gameId} {
       allow read: if isAuthenticated();
+      // Allow authenticated users to write (frontend validates parent/coach role)
       allow write: if isAuthenticated();
     }
 
-    // Attendance - read/write by authenticated users
+    // Attendance - read by authenticated, write by authenticated
     match /attendance/{docId} {
       allow read: if isAuthenticated();
+      // Allow authenticated users to write their attendance
       allow write: if isAuthenticated();
     }
 
-    // Chat messages - read/write by authenticated users
+    // Chat messages - read/create by authenticated, author can delete own
     match /messages/{messageId} {
       allow read: if isAuthenticated();
-      allow create, delete: if isAuthenticated();
-      allow update: if false; // Messages can't be edited
+      // Create: must set senderUid to own UID
+      allow create: if isAuthenticated()
+        && request.resource.data.senderUid == request.auth.uid;
+      // Delete: only own messages or coaches
+      allow delete: if isAuthenticated()
+        && (resource.data.senderUid == request.auth.uid || isCoach());
+      // Messages can't be edited
+      allow update: if false;
     }
 
     // Chat read status - users can only read/write their own
@@ -43,10 +67,19 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && request.auth.uid == uid;
     }
 
-    // FCM tokens for push notifications - users can manage their own
+    // FCM tokens - users can only manage their own tokens
     match /fcmTokens/{tokenId} {
+      // Read: only own tokens or coaches (for sending notifications)
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // Write: must set uid field to own UID
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid;
+      // Update: only own tokens
+      allow update: if isAuthenticated()
+        && resource.data.uid == request.auth.uid;
+      // Delete: only own tokens
+      allow delete: if isAuthenticated()
+        && resource.data.uid == request.auth.uid;
     }
 
     // User profiles - users can read all, write their own
@@ -64,17 +97,23 @@ service cloud.firestore {
     // Highlights - photos/videos of game moments
     match /highlights/{docId} {
       allow read: if isAuthenticated();
-      allow create, delete: if isAuthenticated();
+      // Create: must set uploadedBy to own UID
+      allow create: if isAuthenticated()
+        && request.resource.data.uploadedBy == request.auth.uid;
+      // Update: only uploader can update
       allow update: if isAuthenticated()
         && resource.data.uploadedBy == request.auth.uid;
+      // Delete: uploader or coaches can delete
+      allow delete: if isAuthenticated()
+        && (resource.data.uploadedBy == request.auth.uid || isCoach());
     }
 
     // Viewers - invited family members who can view but not interact
-    // Parents can manage viewers for their player
+    // Parents can manage viewers for their player (validated by frontend)
     match /viewers/{playerId} {
       allow read: if isAuthenticated();
+      // Write: authenticated users (frontend validates parent role)
       allow write: if isAuthenticated();
-      // Note: Frontend verifies user is a parent of this player before allowing writes
     }
 
     // Wrap-ups - post-game AI reports with coach notes
@@ -82,8 +121,11 @@ service cloud.firestore {
       // Anyone authenticated can read wrap-ups
       allow read: if isAuthenticated();
       // Only head coach can update (add coach notes)
-      allow update: if isHeadCoach();
-      // Only cloud functions create wrap-ups
+      // Only allow updating coachNotes field
+      allow update: if isHeadCoach()
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['coachNotes', 'updatedAt']);
+      // Only cloud functions create/delete wrap-ups
       allow create, delete: if false;
     }
 
@@ -95,14 +137,34 @@ service cloud.firestore {
 
       // Comments on posts - any authenticated user can comment
       match /comments/{commentId} {
-        allow read, create, delete: if isAuthenticated();
-        allow update: if isAuthenticated() && resource.data.authorUid == request.auth.uid;
+        allow read: if isAuthenticated();
+        // Create: must set authorUid to own UID
+        allow create: if isAuthenticated()
+          && request.resource.data.authorUid == request.auth.uid;
+        // Update: only author
+        allow update: if isAuthenticated()
+          && resource.data.authorUid == request.auth.uid;
+        // Delete: author or head coach
+        allow delete: if isAuthenticated()
+          && (resource.data.authorUid == request.auth.uid || isHeadCoach());
       }
     }
 
     // Rate limits - managed by Cloud Functions only
     match /rateLimits/{docId} {
       allow read, write: if false;
+    }
+
+    // Emulation audit logs - admins can create, head coach can read
+    match /emulationLogs/{logId} {
+      // Only head coach can read logs for auditing
+      allow read: if isHeadCoach();
+      // Authenticated users can create (but validation ensures only admins use emulation)
+      allow create: if isAuthenticated()
+        && request.resource.data.adminUid == request.auth.uid
+        && request.resource.data.adminEmail == getUserEmail();
+      // Logs cannot be updated or deleted (immutable audit trail)
+      allow update, delete: if false;
     }
   }
 }

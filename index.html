@@ -473,8 +473,8 @@
       buttons.innerHTML = allPlayers.map(p => {
         const isActive = p.id === currentPlayerId;
         return `<button onclick="switchPlayer(${p.id})" style="width: 100%; padding: 10px; margin-bottom: 4px; background: ${isActive ? 'var(--lancers-gold)' : 'var(--bg-elevated)'}; color: ${isActive ? '#000' : 'var(--text-primary)'}; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: ${isActive ? '700' : '500'}; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-          <span style="background: ${isActive ? '#000' : 'var(--bg-body)'}; color: ${isActive ? 'var(--lancers-gold)' : 'var(--text-primary)'}; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem;">${p.number}</span>
-          ${p.firstName} ${p.lastName}
+          <span style="background: ${isActive ? '#000' : 'var(--bg-body)'}; color: ${isActive ? 'var(--lancers-gold)' : 'var(--text-primary)'}; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem;">${escapeHtml(p.number)}</span>
+          ${escapeHtml(p.firstName)} ${escapeHtml(p.lastName)}
         </button>`;
       }).join('');
     }
@@ -499,7 +499,7 @@
       select.innerHTML = '<option value="">-- Select User --</option>' +
         users.map(u => {
           const selected = currentEmulated && currentEmulated.toLowerCase() === u.email.toLowerCase();
-          return `<option value="${u.email}" ${selected ? 'selected' : ''}>${u.name} (${u.role}${u.player ? ' - ' + u.player : ''})</option>`;
+          return `<option value="${escapeHtml(u.email)}" ${selected ? 'selected' : ''}>${escapeHtml(u.name)} (${escapeHtml(u.role)}${u.player ? ' - ' + escapeHtml(u.player) : ''})</option>`;
         }).join('');
     }
 

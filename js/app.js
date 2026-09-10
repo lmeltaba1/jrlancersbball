@@ -283,3 +283,13 @@ function calculatePoints(playerStats) {
          ((playerStats.threePointersMade || 0) * 3);
 }
 
+// Escape HTML to prevent XSS attacks
+// Use this function when inserting dynamic content (player names, messages, etc.) into innerHTML
+function escapeHtml(text) {
+  if (text == null) return '';
+  const str = String(text);
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
