@@ -34,7 +34,7 @@ The app is fully functional with all core features implemented. **Season simulat
 
 ### Firebase Collections
 
-- `config` - App configuration (roster, schedule, headCoach documents)
+- `config` - App configuration (roster, schedule, headCoach, coachEmails, adminEmails documents)
 - `attendance` - Player availability per game
 - `volunteers` - Volunteer signups per game (scorekeeper, tableWorker)
 - `gameStats` - Player statistics per game
@@ -47,13 +47,14 @@ The app is fully functional with all core features implemented. **Season simulat
 - `userProfiles` - User profile data
 - `wrapups` - Post-game wrap-up reports (AI-generated narratives, coach notes)
 - `rateLimits` - Rate limiting for cloud functions (per user/action)
+- `emulationLogs` - Audit trail for admin user emulation (immutable)
 
 ### Key Files
 
 | File | Purpose |
 |------|---------|
-| `js/firebase-config.js` | Firebase init, auth helpers, `getPlayerFromRoster()`, `requireAuth()`, `isEmailInRoster()`, `loadRosterData()` |
-| `js/app.js` | Shared utilities: `loadRoster()`, `loadSchedule()`, `formatDate()`, `leagueNames`, `getCurrentDate()` - included in most HTML files |
+| `js/firebase-config.js` | Firebase init, auth helpers, `getPlayerFromRoster()`, `requireAuth()`, `isEmailInRoster()`, `loadRosterData()`, `loadAdminEmails()` |
+| `js/app.js` | Shared utilities: `loadRoster()`, `loadSchedule()`, `formatDate()`, `escapeHtml()`, `leagueNames`, `getCurrentDate()` - included in most HTML files |
 | `js/theme.js` | Dark/light mode toggle |
 | `css/athletic.css` | All styles, CSS variables for theming |
 | `functions/data/roster-full.json` | Source data for roster (synced to Firestore via `syncConfig`) |
@@ -345,6 +346,45 @@ Buttons:
 - **Run Full Simulation** - Clears and regenerates all simulation data
 - **Delete Fake Highlights Only** - Removes highlights with example.com URLs
 - **Delete Incomplete Games** - Removes gameStats docs without gamePhase='final'
+
+## Security (Sept 2026 Update)
+
+### Cloud Functions Authentication
+All admin endpoints use Firebase Auth token verification via `verifyAdminAuth()`:
+- `headCoachOnly: true` - Only head coach can access
+- `coachOnly: true` - Any coach can access
+- No more hardcoded API keys
+
+### Firestore Rules
+- `isCoach()` helper checks `config/coachEmails` document
+- Messages require `senderUid` to match auth UID
+- Highlights require `uploadedBy` to match auth UID
+- FCM tokens restricted to owner only
+- Emulation logs are immutable (no update/delete)
+
+### Admin Emulation
+- Admin emails stored in Firestore `config/adminEmails` (synced via `syncConfig`)
+- Falls back to head coach if `adminEmails` doesn't exist
+- All emulation events logged to `emulationLogs` collection
+
+### XSS Prevention
+- Global `escapeHtml()` in `js/app.js` for all dynamic content
+- Player names, messages, and user content escaped before innerHTML
+
+## Performance (Sept 2026 Update)
+
+- **Deferred scripts**: Analytics, messaging, gamification load with `defer`
+- **Skeleton loading**: Shows placeholder cards while Firebase initializes
+- **Image dimensions**: Header logo has width/height to prevent CLS
+- **Lazy loading**: Highlight images use `loading="lazy"`
+- **Touch targets**: Profile button is 44x44px minimum
+
+## Accessibility (Sept 2026 Update)
+
+- **Navigation**: `role="navigation"` and `aria-label` on bottom nav
+- **Live regions**: `aria-live="polite"` on main content areas
+- **Keyboard support**: Back buttons have `tabindex`, `onkeydown` handlers
+- **Button labels**: Profile button has `aria-label="User menu"`
 
 ## Known Issues / Future Work
 

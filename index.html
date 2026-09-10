@@ -17,7 +17,7 @@
   <header class="header">
     <div class="header-content">
       <h1>
-        <img src="images/lancers-logo.jpg?v=2" alt="Lancers" class="header-logo">
+        <img src="images/lancers-logo.jpg?v=2" alt="Lancers" class="header-logo" width="36" height="36">
         Jr. Lancers
       </h1>
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -31,7 +31,7 @@
         </button>
         <!-- Profile Button -->
         <div id="profileBtnWrapper" style="position: relative; display: none;">
-          <button id="profileBtn" onclick="toggleProfileMenu()" style="background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          <button id="profileBtn" onclick="toggleProfileMenu()" aria-label="User menu" aria-haspopup="true" style="background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 50%; width: 44px; height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px; color: var(--text-primary);">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
@@ -75,7 +75,15 @@
   </div>
 
   <!-- Main Content -->
-  <main class="main-content">
+  <main class="main-content" aria-live="polite" id="main-content">
+    <!-- Skeleton Loading (shown while Firebase initializes) -->
+    <div id="loading-skeleton" class="skeleton-only">
+      <div class="skeleton skeleton-card" style="height: 80px;"></div>
+      <div class="skeleton skeleton-card" style="height: 120px;"></div>
+      <div class="skeleton skeleton-card" style="height: 100px;"></div>
+      <div class="skeleton skeleton-card" style="height: 80px;"></div>
+    </div>
+
     <!-- Player Banner (shown when logged in with a player) -->
     <div id="player-banner" class="card" style="display: none; background: var(--bg-card); border: 1px solid var(--border-accent); cursor: pointer;" onclick="goToPlayerProfile()">
       <div style="display: flex; align-items: center; gap: 16px;">
@@ -205,7 +213,7 @@
   </main>
 
   <!-- Bottom Navigation -->
-  <nav class="bottom-nav">
+  <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="index.html" class="nav-item active">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -254,12 +262,12 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js" defer></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
-  <script src="js/gamification.js"></script>
+  <script src="js/gamification.js" defer></script>
   <script>
     // SIMULATED_DATE, getCurrentDate, formatDate, leagueNames are all in js/app.js
 
@@ -948,6 +956,10 @@
 
       // Wait for critical sections (don't block on failures)
       await Promise.allSettled([loadNextEventPromise, loadSeasonRecordPromise, loadVolunteerStatusPromise]);
+
+      // Hide skeleton loading
+      const skeleton = document.getElementById('loading-skeleton');
+      if (skeleton) skeleton.style.display = 'none';
 
       // Then handle auth-dependent sections
       requireAuth().then(handleAuthenticatedUser).catch(e => console.error('Auth error:', e));
