@@ -17,50 +17,7 @@
     .player-card:active {
       transform: scale(0.98);
     }
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.85);
-      z-index: 1000;
-      display: none;
-      overflow-y: auto;
-      padding: 10px;
-      padding-top: 60px;
-      padding-bottom: 100px;
-    }
-    .modal-overlay.active {
-      display: block;
-    }
-    .modal-content {
-      max-width: 500px;
-      margin: 0 auto;
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .modal-header h2 {
-      font-size: 1rem;
-    }
-    .modal-close {
-      background: var(--bg-elevated);
-      border: none;
-      color: var(--text-primary);
-      font-size: 1.5rem;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
+    /* Player modal uses global bottom-sheet styles from athletic.css */
     .stat-toggle {
       display: flex;
       gap: 4px;
@@ -368,16 +325,18 @@
     </div>
   </main>
 
-  <!-- Player Stats Modal -->
-  <div class="modal-overlay" id="player-modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div>
-          <h2 id="modal-player-name" style="margin: 0; color: var(--text-primary);"></h2>
-          <div id="modal-player-info" style="color: var(--text-secondary); font-size: 0.85rem;"></div>
-        </div>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
+  <!-- Player Stats Bottom Sheet -->
+  <div class="bottom-sheet-overlay" id="player-modal-overlay" onclick="closeModal()"></div>
+  <div class="bottom-sheet full-height" id="player-modal">
+    <div class="bottom-sheet-handle"></div>
+    <div class="bottom-sheet-header">
+      <div>
+        <h2 class="bottom-sheet-title" id="modal-player-name"></h2>
+        <div id="modal-player-info" style="color: var(--text-secondary); font-size: 0.85rem;"></div>
       </div>
+      <button class="bottom-sheet-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="bottom-sheet-body">
 
       <div class="card" style="padding: 8px;">
         <div class="stat-toggle">
@@ -919,18 +878,20 @@
       document.getElementById('player-highlights').innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">Loading...</p>';
       loadPlayerHighlights(playerId);
 
-      // Save focus and show modal
+      // Save focus and show bottom sheet
       previousActiveElement = document.activeElement;
+      document.getElementById('player-modal-overlay').classList.add('active');
       document.getElementById('player-modal').classList.add('active');
       document.body.style.overflow = 'hidden';
-      // Focus the modal close button
-      const closeBtn = document.querySelector('#player-modal .modal-close');
+      // Focus the close button
+      const closeBtn = document.querySelector('#player-modal .bottom-sheet-close');
       if (closeBtn) closeBtn.focus();
     }
 
     let previousActiveElement = null;
 
     function closeModal() {
+      document.getElementById('player-modal-overlay').classList.remove('active');
       document.getElementById('player-modal').classList.remove('active');
       document.body.style.overflow = '';
       // Restore focus to the element that opened the modal

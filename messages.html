@@ -114,24 +114,7 @@
     .search-input { width: 100%; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-elevated); color: var(--text-primary); font-size: 1rem; margin-bottom: 16px; }
 
     /* Modal */
-    .modal-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.8); z-index: 1000;
-      display: flex; align-items: center; justify-content: center;
-      padding: 20px;
-    }
-    .modal-content {
-      background: var(--bg-card); border-radius: 16px;
-      width: 100%; max-width: 500px; max-height: 90vh;
-      overflow-y: auto;
-    }
-    .modal-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 16px 20px; border-bottom: 1px solid var(--border-color);
-    }
-    .modal-header h3 { margin: 0; color: var(--lancers-gold); }
-    .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer; padding: 0; }
-    .modal-body { padding: 20px; }
+    /* Modals use global bottom-sheet styles from athletic.css */
     .form-group { margin-bottom: 16px; }
     .form-group label { display: block; margin-bottom: 6px; color: var(--text-secondary); font-size: 0.9rem; font-weight: 600; }
     .form-group input, .form-group textarea {
@@ -140,7 +123,6 @@
       font-size: 1rem; font-family: inherit;
     }
     .form-group textarea { min-height: 120px; resize: vertical; }
-    .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border-color); display: flex; gap: 12px; justify-content: flex-end; }
     .btn-cancel { padding: 10px 20px; background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); cursor: pointer; font-weight: 600; }
     .btn-submit { padding: 10px 20px; background: var(--lancers-gold); border: none; border-radius: 8px; color: black; cursor: pointer; font-weight: 600; }
     .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -280,46 +262,46 @@
     </button>
   </div>
 
-  <!-- New Post Modal -->
-  <div class="modal-overlay" id="newPostModal" style="display: none;" onclick="if(event.target===this)closeNewPostModal()">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>New Post</h3>
-        <button class="modal-close" onclick="closeNewPostModal()">&times;</button>
+  <!-- New Post Bottom Sheet -->
+  <div class="bottom-sheet-overlay" id="newPostOverlay" onclick="closeNewPostModal()"></div>
+  <div class="bottom-sheet" id="newPostModal">
+    <div class="bottom-sheet-handle"></div>
+    <div class="bottom-sheet-header">
+      <h2 class="bottom-sheet-title" style="color: var(--lancers-gold);">New Post</h2>
+      <button class="bottom-sheet-close" onclick="closeNewPostModal()">&times;</button>
+    </div>
+    <div class="bottom-sheet-body">
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="postTitle" placeholder="Enter post title...">
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>Title</label>
-          <input type="text" id="postTitle" placeholder="Enter post title...">
-        </div>
-        <div class="form-group">
-          <label>Message</label>
-          <textarea id="postContent" placeholder="Write your announcement..."></textarea>
-        </div>
-        <div class="form-group">
-          <label style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="postPinned" style="width: auto;">
-            Pin this post to top
-          </label>
-        </div>
+      <div class="form-group">
+        <label>Message</label>
+        <textarea id="postContent" placeholder="Write your announcement..."></textarea>
       </div>
-      <div class="modal-footer">
-        <button class="btn-cancel" onclick="closeNewPostModal()">Cancel</button>
-        <button class="btn-submit" id="submitPostBtn" onclick="submitNewPost()">Post</button>
+      <div class="form-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="postPinned" style="width: auto;">
+          Pin this post to top
+        </label>
       </div>
+    </div>
+    <div class="bottom-sheet-footer" style="display: flex; gap: 12px; justify-content: flex-end;">
+      <button class="btn-cancel" onclick="closeNewPostModal()">Cancel</button>
+      <button class="btn-submit" id="submitPostBtn" onclick="submitNewPost()">Post</button>
     </div>
   </div>
 
-  <!-- Post Detail Modal -->
-  <div class="modal-overlay" id="postDetailModal" style="display: none;" onclick="if(event.target===this)closePostDetail()">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="detailPostTitle">Post</h3>
-        <button class="modal-close" onclick="closePostDetail()">&times;</button>
-      </div>
-      <div class="modal-body" id="postDetailBody">
-        <!-- Filled dynamically -->
-      </div>
+  <!-- Post Detail Bottom Sheet -->
+  <div class="bottom-sheet-overlay" id="postDetailOverlay" onclick="closePostDetail()"></div>
+  <div class="bottom-sheet full-height" id="postDetailModal">
+    <div class="bottom-sheet-handle"></div>
+    <div class="bottom-sheet-header">
+      <h2 class="bottom-sheet-title" id="detailPostTitle">Post</h2>
+      <button class="bottom-sheet-close" onclick="closePostDetail()">&times;</button>
+    </div>
+    <div class="bottom-sheet-body" id="postDetailBody">
+      <!-- Filled dynamically -->
     </div>
   </div>
 
@@ -492,16 +474,20 @@
       });
     }
 
-    // New Post Modal
+    // New Post Bottom Sheet
     function openNewPostModal() {
       document.getElementById('postTitle').value = '';
       document.getElementById('postContent').value = '';
       document.getElementById('postPinned').checked = false;
-      document.getElementById('newPostModal').style.display = 'flex';
+      document.getElementById('newPostOverlay').classList.add('active');
+      document.getElementById('newPostModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
     }
 
     function closeNewPostModal() {
-      document.getElementById('newPostModal').style.display = 'none';
+      document.getElementById('newPostOverlay').classList.remove('active');
+      document.getElementById('newPostModal').classList.remove('active');
+      document.body.style.overflow = '';
     }
 
     function submitNewPost() {
@@ -573,12 +559,16 @@
         }
       }, 0);
 
-      document.getElementById('postDetailModal').style.display = 'flex';
+      document.getElementById('postDetailOverlay').classList.add('active');
+      document.getElementById('postDetailModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
       loadComments(postId);
     }
 
     function closePostDetail() {
-      document.getElementById('postDetailModal').style.display = 'none';
+      document.getElementById('postDetailOverlay').classList.remove('active');
+      document.getElementById('postDetailModal').classList.remove('active');
+      document.body.style.overflow = '';
       currentPostId = null;
     }
 

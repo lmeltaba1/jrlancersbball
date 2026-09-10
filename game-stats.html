@@ -245,47 +245,12 @@
       color: #000;
     }
 
-    /* Sub Modal */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.95);
-      z-index: 999999;
-      display: none;
-      padding: 12px;
-      padding-top: calc(env(safe-area-inset-top, 20px) + 60px);
-      padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-      overflow-y: auto;
-    }
-    .modal-overlay.active { display: block; }
-    .modal-content {
-      max-width: 400px;
-      margin: 0 auto;
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .modal-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-    .modal-close {
+    /* Sub modal uses global bottom-sheet styles from athletic.css */
+    /* Override close button color for substitutions */
+    #sub-modal .bottom-sheet-close {
       background: #EF4444;
       border: none;
       color: #fff;
-      width: 44px;
-      height: 44px;
-      border-radius: 8px;
-      font-size: 1.5rem;
-      font-weight: 700;
-      cursor: pointer;
     }
     .sub-section {
       margin-bottom: 16px;
@@ -557,13 +522,15 @@
     </div>
   </main>
 
-  <!-- Substitution Modal -->
-  <div class="modal-overlay" id="sub-modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div class="modal-title">Substitutions</div>
-        <button class="modal-close" onclick="closeSubModal()">×</button>
-      </div>
+  <!-- Substitution Bottom Sheet -->
+  <div class="bottom-sheet-overlay" id="sub-modal-overlay" onclick="closeSubModal()"></div>
+  <div class="bottom-sheet" id="sub-modal">
+    <div class="bottom-sheet-handle"></div>
+    <div class="bottom-sheet-header">
+      <h2 class="bottom-sheet-title">Substitutions</h2>
+      <button class="bottom-sheet-close" onclick="closeSubModal()">×</button>
+    </div>
+    <div class="bottom-sheet-body">
       <div id="sub-hint" class="sub-hint"></div>
       <div class="sub-section">
         <div class="sub-section-title">On Court</div>
@@ -1612,18 +1579,22 @@
       document.getElementById('opponent-score').textContent = opponentScore;
     }
 
-    // Substitution Modal
+    // Substitution Bottom Sheet
     function openSubModal() {
       selectedPlayerId = null;
       selectedFrom = null;
       renderSubModal();
+      document.getElementById('sub-modal-overlay').classList.add('active');
       document.getElementById('sub-modal').classList.add('active');
+      document.body.style.overflow = 'hidden';
     }
 
     function closeSubModal() {
       selectedPlayerId = null;
       selectedFrom = null;
+      document.getElementById('sub-modal-overlay').classList.remove('active');
       document.getElementById('sub-modal').classList.remove('active');
+      document.body.style.overflow = '';
     }
 
     function renderSubModal() {

@@ -132,53 +132,7 @@
     }
 
     /* Upload Modal */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.7);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .modal-overlay.active {
-      display: flex;
-    }
-    .modal-content {
-      background: var(--card-bg);
-      border-radius: 16px;
-      width: 100%;
-      max-width: 400px;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px;
-      border-bottom: 1px solid var(--border-color);
-    }
-    .modal-header h2 {
-      margin: 0;
-      font-size: 1.1rem;
-    }
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: var(--text-secondary);
-      padding: 0;
-      line-height: 1;
-    }
-    .modal-body {
-      padding: 16px;
-    }
+    /* Upload modal uses global bottom-sheet styles from athletic.css */
     .file-picker {
       border: 2px dashed var(--border-color);
       border-radius: 12px;
@@ -417,59 +371,59 @@
     </div>
   </main>
 
-  <!-- Upload Modal -->
-  <div class="modal-overlay" id="uploadModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Add Highlight</h2>
-        <button class="modal-close" onclick="closeUploadModal()">&times;</button>
+  <!-- Upload Bottom Sheet -->
+  <div class="bottom-sheet-overlay" id="uploadOverlay" onclick="closeUploadModal()"></div>
+  <div class="bottom-sheet" id="uploadModal">
+    <div class="bottom-sheet-handle"></div>
+    <div class="bottom-sheet-header">
+      <h2 class="bottom-sheet-title">Add Highlight</h2>
+      <button class="bottom-sheet-close" onclick="closeUploadModal()">&times;</button>
+    </div>
+    <div class="bottom-sheet-body">
+      <div class="file-picker" id="filePicker" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept="image/*,video/*" onchange="handleFileSelect(event)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        <p>Tap to select video or photo</p>
       </div>
-      <div class="modal-body">
-        <div class="file-picker" id="filePicker" onclick="document.getElementById('fileInput').click()">
-          <input type="file" id="fileInput" accept="image/*,video/*" onchange="handleFileSelect(event)">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+
+      <!-- Smart match suggestion banner -->
+      <div id="suggestionBanner" style="display: none; padding: 10px 12px; background: #22C55E20; border: 1px solid #22C55E; border-radius: 8px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; color: #22C55E; font-size: 0.85rem;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <p>Tap to select video or photo</p>
+          <span id="suggestionText">Auto-detected game and player</span>
         </div>
-
-        <!-- Smart match suggestion banner -->
-        <div id="suggestionBanner" style="display: none; padding: 10px 12px; background: #22C55E20; border: 1px solid #22C55E; border-radius: 8px; margin-bottom: 16px;">
-          <div style="display: flex; align-items: center; gap: 8px; color: #22C55E; font-size: 0.85rem;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <span id="suggestionText">Auto-detected game and player</span>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Game</label>
-          <select id="uploadGame" required>
-            <option value="">Select a game...</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Player</label>
-          <select id="uploadPlayer" required>
-            <option value="">Select a player...</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Caption (optional)</label>
-          <textarea id="uploadCaption" placeholder="Describe this highlight..."></textarea>
-        </div>
-
-        <div class="progress-bar" id="progressBar">
-          <div class="progress-bar-fill" id="progressFill"></div>
-        </div>
-
-        <button class="upload-submit" id="uploadSubmit" onclick="uploadHighlight()" disabled>
-          Upload
-        </button>
       </div>
+
+      <div class="form-group">
+        <label>Game</label>
+        <select id="uploadGame" required>
+          <option value="">Select a game...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Player</label>
+        <select id="uploadPlayer" required>
+          <option value="">Select a player...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Caption (optional)</label>
+        <textarea id="uploadCaption" placeholder="Describe this highlight..."></textarea>
+      </div>
+
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+
+      <button class="upload-submit" id="uploadSubmit" onclick="uploadHighlight()" disabled>
+        Upload
+      </button>
     </div>
   </div>
 
@@ -936,13 +890,15 @@
 
     function openUploadModal() {
       modalPreviousActiveElement = document.activeElement;
+      document.getElementById('uploadOverlay').classList.add('active');
       document.getElementById('uploadModal').classList.add('active');
       document.body.style.overflow = 'hidden';
-      const closeBtn = document.querySelector('#uploadModal .modal-close');
+      const closeBtn = document.querySelector('#uploadModal .bottom-sheet-close');
       if (closeBtn) closeBtn.focus();
     }
 
     function closeUploadModal() {
+      document.getElementById('uploadOverlay').classList.remove('active');
       document.getElementById('uploadModal').classList.remove('active');
       document.body.style.overflow = '';
       resetUploadForm();
