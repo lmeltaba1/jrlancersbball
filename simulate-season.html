@@ -450,7 +450,7 @@ async function runSimulation() {
           thumbnailUrl: `https://storage.example.com/thumbnails/game${gameId}_highlight${highlightNum}.jpg`,
           description: event.description,
           timestamp: firebase.firestore.Timestamp.fromDate(highlightTime),
-          uploadedBy: pickRandom(VOLUNTEERS).email,
+          uploadedBy: auth.currentUser.uid,  // Must match current user's UID per Firestore rules
           uploadedAt: firebase.firestore.FieldValue.serverTimestamp(),
           _matchedEventId: event.id // For verification
         });

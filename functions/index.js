@@ -14,6 +14,29 @@ const db = getFirestore();
 const messaging = getMessaging();
 const auth = getAuth();
 
+// Single source of truth for current time - ALWAYS reads from Firestore config/simulation
+// Uses offset-based approach so simulated time advances naturally with real time
+// timeOffsetMs = milliseconds to add to system time (can be negative)
+async function getCurrentTime() {
+  try {
+    const simDoc = await db.collection('config').doc('simulation').get();
+    if (simDoc.exists) {
+      const data = simDoc.data();
+      // New offset-based approach - time advances naturally
+      if (typeof data.timeOffsetMs === 'number') {
+        return new Date(Date.now() + data.timeOffsetMs);
+      }
+      // Legacy static timestamp support
+      if (data.simulatedNow) {
+        return data.simulatedNow.toDate();
+      }
+    }
+  } catch (e) {
+    console.error('Error reading simulation config:', e);
+  }
+  return new Date();
+}
+
 // Helper to verify admin/head coach authentication via Bearer token
 // Returns { success: true, email } or { success: false, error, status }
 async function verifyAdminAuth(request, options = {}) {
@@ -311,7 +334,8 @@ exports.sendAttendanceReminders = onSchedule({
       return null;
     }
 
-    const today = new Date();
+    const now = await getCurrentTime();
+    const today = new Date(now.getTime());
     today.setHours(0, 0, 0, 0);
 
     // Combine games and events into one list
@@ -536,7 +560,8 @@ exports.sendVolunteerReminders = onSchedule({
     const roster = rosterDoc.data();
     const games = schedule.games || [];
 
-    const today = new Date();
+    const now = await getCurrentTime();
+    const today = new Date(now.getTime());
     today.setHours(0, 0, 0, 0);
 
     // Check games at 2 days and 1 day before
@@ -579,7 +604,8 @@ exports.sendVolunteerRemindersGameDay = onSchedule({
     const roster = rosterDoc.data();
     const games = schedule.games || [];
 
-    const today = new Date();
+    const now = await getCurrentTime();
+    const today = new Date(now.getTime());
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split('T')[0];
 
@@ -622,7 +648,8 @@ exports.triggerAttendanceReminders = onRequest(async (request, response) => {
     const schedule = scheduleDoc.data();
     const roster = rosterDoc.data();
 
-    const today = new Date();
+    const now = await getCurrentTime();
+    const today = new Date(now.getTime());
     today.setHours(0, 0, 0, 0);
 
     // Combine games and events into one list
@@ -928,7 +955,7 @@ exports.sendScorekeeperReminders = onSchedule({
     const schedule = scheduleDoc.data();
     const games = schedule.games || [];
 
-    const now = new Date();
+    const now = await getCurrentTime();
     // Check for games starting in 8-15 minutes (gives buffer for 5-min schedule)
     const windowStart = new Date(now.getTime() + 8 * 60 * 1000);
     const windowEnd = new Date(now.getTime() + 15 * 60 * 1000);
@@ -1189,11 +1216,11 @@ exports.onGameEnded = onDocumentUpdated('gameStats/{gameId}', async (event) => {
     const result = lancersScore > oppScore ? 'WIN' : (lancersScore < oppScore ? 'LOSS' : 'TIE');
     const gameUrl = `/game-detail.html?id=${gameId}`;
 
-    // Send notification to everyone - upload highlights
+    // Send notification to everyone - upload highlights (link to highlights section)
     await sendNotification(
       `Game Over - ${result}!`,
       `Lancers ${lancersScore} - ${opponentName} ${oppScore}. Now is the time to upload highlights!`,
-      { type: 'gameEnded', url: gameUrl, gameId: gameId }
+      { type: 'gameEnded', url: `${gameUrl}#highlights-card`, gameId: gameId }
     );
 
     // Send notification to head coach - add commentary
@@ -1204,14 +1231,17 @@ exports.onGameEnded = onDocumentUpdated('gameStats/{gameId}', async (event) => {
       { emails: await getHeadCoachEmail() }
     );
 
-    // Create wrap-up document with 2-hour coach window
-    const windowEnds = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    // Use game's endedAt timestamp (supports simulated time) or fall back to config time
+    const gameEndedAt = after.endedAt?.toDate ? after.endedAt.toDate() : await getCurrentTime();
+    const windowEnds = new Date(gameEndedAt.getTime() + 2 * 60 * 60 * 1000);
+
+    // Create wrap-up document with 2-hour coach window from game end time
     await db.collection('wrapups').doc(gameId).set({
       gameId: parseInt(gameId),
       status: 'pending',
       coachNotes: null,
       coachWindowEndsAt: Timestamp.fromDate(windowEnds),
-      gameEndedAt: Timestamp.now(),
+      gameEndedAt: Timestamp.fromDate(gameEndedAt),
       createdAt: Timestamp.now(),
       opponent: opponentName,
       finalScore: `${lancersScore}-${oppScore}`,
@@ -1615,16 +1645,7 @@ Do not use the phrase "young Lancers" - just say "Lancers" or "the team".`;
       messages: [{ role: 'user', content: prompt }]
     });
 
-    return {
-      narrative: message.content[0].text,
-      playerOfTheGame: playerStatsList[0] ? {
-        playerId: parseInt(playerStatsList[0].id),
-        name: playerStatsList[0].name,
-        points: playerStatsList[0].points || 0
-      } : null,
-      generatedAt: Timestamp.now(),
-      modelUsed: 'claude-sonnet-4-20250514'
-    };
+    return message.content[0].text;
   } catch (error) {
     console.error('Claude API error:', error);
     return generateFallbackNarrative(gameStats, wrapupData, opponentName);
@@ -1649,16 +1670,7 @@ function generateFallbackNarrative(gameStats, wrapupData, opponentName) {
 
   // Coach notes are private input for AI prompt only - not appended to output
 
-  return {
-    narrative,
-    playerOfTheGame: topScorer ? {
-      playerId: parseInt(topScorer[0]),
-      name: topScorer[1].name,
-      points: topScorer[1].points || 0
-    } : null,
-    generatedAt: Timestamp.now(),
-    modelUsed: 'fallback'
-  };
+  return narrative;
 }
 
 // Compile highlight videos using GCP Transcoder API
@@ -1914,6 +1926,189 @@ exports.triggerWrapupGeneration = onRequest(async (request, response) => {
   req.end();
 });
 
+// Get current time (uses simulated time from Firestore if set)
+async function getServerNow() {
+  try {
+    const simDoc = await db.collection('config').doc('simulation').get();
+    if (simDoc.exists && simDoc.data().simulatedNow) {
+      console.log('Using simulated time from client:', simDoc.data().simulatedNow.toDate());
+      return simDoc.data().simulatedNow;
+    }
+  } catch (e) {
+    // Ignore errors, use real time
+  }
+  return Timestamp.now();
+}
+
+// HTTP endpoint to set simulation time (coaches only)
+// Time advances naturally - set to "6:28 PM" and wait 2 minutes, it becomes "6:30 PM"
+exports.setSimulationTime = onRequest({
+  cors: true
+}, async (request, response) => {
+  if (setCorsHeaders(request, response)) return;
+
+  const authResult = await verifyAdminAuth(request, { coachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ success: false, error: authResult.error });
+    return;
+  }
+
+  const { time, clear } = request.body;
+  const simRef = db.collection('config').doc('simulation');
+
+  // Clear simulation
+  if (clear) {
+    await simRef.delete();
+    response.json({ success: true, message: 'Simulation cleared - using real system time' });
+    return;
+  }
+
+  // Get current time (for display)
+  if (!time) {
+    const doc = await simRef.get();
+    const offset = doc.exists && typeof doc.data().timeOffsetMs === 'number'
+      ? doc.data().timeOffsetMs : 0;
+    const currentSimTime = new Date(Date.now() + offset);
+    response.json({
+      success: true,
+      currentTime: currentSimTime.toISOString(),
+      offset,
+      isSimulated: offset !== 0 || doc.exists
+    });
+    return;
+  }
+
+  // Set new time
+  const targetTime = new Date(time);
+  if (isNaN(targetTime.getTime())) {
+    response.status(400).json({ success: false, error: 'Invalid date format' });
+    return;
+  }
+
+  const newOffset = targetTime.getTime() - Date.now();
+  await simRef.set({
+    timeOffsetMs: newOffset,
+    setAt: Timestamp.now(),
+    setBy: authResult.email
+  });
+
+  response.json({
+    success: true,
+    message: `Time set to ${targetTime.toISOString()}. Time will advance naturally.`,
+    simulatedTime: targetTime.toISOString(),
+    offset: newOffset
+  });
+});
+
+// Trigger wrap-up check when simulation time changes (for testing)
+exports.onSimulationTimeChanged = onDocumentWritten({
+  document: 'config/simulation',
+  secrets: [anthropicApiKey]
+}, async (event) => {
+  const after = event.data.after?.data();
+  if (!after) return null;
+
+  // Get current simulated time using offset or legacy timestamp
+  let now;
+  if (typeof after.timeOffsetMs === 'number') {
+    now = new Date(Date.now() + after.timeOffsetMs);
+  } else if (after.simulatedNow) {
+    now = after.simulatedNow.toDate();
+  } else {
+    return null; // No simulation config
+  }
+
+  console.log(`Simulation time changed to: ${now.toISOString()}`);
+  console.log('Checking for pending wrap-ups...');
+
+  // Find wrap-ups where window ended but status is still pending
+  const pendingSnapshot = await db.collection('wrapups')
+    .where('status', '==', 'pending')
+    .get();
+
+  for (const doc of pendingSnapshot.docs) {
+    const data = doc.data();
+    const windowEnds = data.coachWindowEndsAt;
+
+    // Generate 5 min before window ends (1:55 after game)
+    const generateAt = new Date(windowEnds.toDate().getTime() - 5 * 60 * 1000);
+
+    console.log(`  Game ${doc.id}: generateAt=${generateAt.toISOString()}, now=${now.toISOString()}`);
+    if (now >= generateAt) {
+      console.log(`  -> Triggering wrap-up for game ${doc.id}`);
+      await triggerWrapupForGame(doc.id, data);
+    }
+  }
+
+  return null;
+});
+
+async function triggerWrapupForGame(gameId, wrapupData) {
+  try {
+    // Mark as generating
+    await db.collection('wrapups').doc(gameId).update({ status: 'generating' });
+
+    const [gameStatsDoc, highlightsSnapshot, scheduleDoc] = await Promise.all([
+      db.collection('gameStats').doc(gameId).get(),
+      db.collection('highlights').where('gameId', '==', parseInt(gameId)).get(),
+      db.collection('config').doc('schedule').get()
+    ]);
+
+    if (!gameStatsDoc.exists) {
+      console.log(`Game stats not found for ${gameId}`);
+      return;
+    }
+
+    // Get highlights
+    const highlights = [];
+    highlightsSnapshot.forEach(hdoc => highlights.push({ id: hdoc.id, ...hdoc.data() }));
+
+    // Compile video if there are video highlights
+    let compiledVideo = null;
+    const videoHighlights = highlights.filter(h =>
+      (h.downloadUrl || h.url)?.match(/\.(mp4|mov|webm)/i)
+    );
+    if (videoHighlights.length > 0) {
+      try {
+        compiledVideo = await compileHighlightsVideo(gameId, videoHighlights);
+      } catch (e) {
+        console.log('Video compilation failed:', e.message);
+      }
+    }
+
+    // Generate AI narrative
+    const narrative = await generateNarrativeWithClaude(gameStatsDoc.data(), wrapupData, wrapupData.opponent);
+
+    // Update wrap-up with results
+    await db.collection('wrapups').doc(gameId).update({
+      status: 'pendingApproval',
+      report: {
+        narrative: narrative,
+        generatedAt: Timestamp.now()
+      },
+      compiledVideo: compiledVideo,
+      highlightCount: highlights.length
+    });
+
+    // Notify head coach
+    const gameUrl = `/game-detail.html?id=${gameId}`;
+    await sendNotification(
+      'Game Wrap-Up Ready for Review',
+      `The ${wrapupData.opponent} game wrap-up is ready. Please review and approve.`,
+      { type: 'wrapupReady', url: `${gameUrl}#wrapup-card`, gameId: gameId },
+      { emails: await getHeadCoachEmail() }
+    );
+
+    console.log(`Wrap-up generated for game ${gameId}`);
+  } catch (error) {
+    console.error(`Error generating wrap-up for game ${gameId}:`, error);
+    await db.collection('wrapups').doc(gameId).update({
+      status: 'error',
+      error: error.message
+    });
+  }
+}
+
 // Scheduled fallback: Check for pending wrap-ups that need generation
 exports.checkPendingWrapups = onSchedule({
   schedule: 'every 30 minutes',
@@ -1921,7 +2116,8 @@ exports.checkPendingWrapups = onSchedule({
 }, async (event) => {
   console.log('Checking for pending wrap-ups...');
 
-  const now = Timestamp.now();
+  const now = await getServerNow();
+  console.log('Using time:', now.toDate());
 
   // Find wrap-ups where coach window has ended but status is still pending
   const pendingSnapshot = await db.collection('wrapups')

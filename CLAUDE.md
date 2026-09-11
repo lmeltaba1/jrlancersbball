@@ -34,7 +34,7 @@ The app is fully functional with all core features implemented. **Season simulat
 
 ### Firebase Collections
 
-- `config` - App configuration (roster, schedule, headCoach, coachEmails, adminEmails documents)
+- `config` - App configuration (roster, schedule, headCoach, coachEmails, adminEmails, simulation documents)
 - `attendance` - Player availability per game
 - `volunteers` - Volunteer signups per game (scorekeeper, tableWorker)
 - `gameStats` - Player statistics per game
@@ -62,6 +62,67 @@ The app is fully functional with all core features implemented. **Season simulat
 | `functions/data/roster-full.json` | Source data for roster (synced to Firestore via `syncConfig`) |
 | `functions/data/schedule-full.json` | Source data for schedule (synced to Firestore via `syncConfig`) |
 | `functions/index.js` | Cloud Functions: notifications, wrap-ups, rate limiting, config sync |
+| `functions/set-time.js` | CLI tool: set/clear/view simulated time via gcloud credentials |
+
+## Time System
+
+All time operations in the app read from a single source of truth: Firestore `config/simulation` document.
+
+### Offset-Based Time
+
+The system stores a `timeOffsetMs` value (milliseconds) which is added to `Date.now()` to calculate the current "app time". This allows time to advance naturally once set.
+
+**Example:** Set time to Dec 13, 2026 6:28 PM → wait 5 minutes → app shows 6:33 PM
+
+### Firestore: `config/simulation`
+
+```javascript
+{
+  timeOffsetMs: 1234567890,      // Offset in ms from real time
+  setAt: Timestamp               // When the time was set (for debugging)
+}
+```
+
+### Frontend: `getCurrentDate()`
+
+Located in `js/firebase-config.js`, called from `js/app.js`:
+```javascript
+function getCurrentDate() {
+  return _timeOffsetMs !== null ? new Date(Date.now() + _timeOffsetMs) : new Date();
+}
+```
+
+All frontend code uses `getCurrentDate()` instead of `new Date()`.
+
+### Backend: `getCurrentTime()`
+
+Located in `functions/index.js`:
+```javascript
+async function getCurrentTime() {
+  const simDoc = await db.collection('config').doc('simulation').get();
+  if (simDoc.exists && typeof simDoc.data().timeOffsetMs === 'number') {
+    return new Date(Date.now() + simDoc.data().timeOffsetMs);
+  }
+  return new Date();
+}
+```
+
+All Cloud Functions use `await getCurrentTime()` instead of `new Date()`.
+
+### CLI Tool: `functions/set-time.js`
+
+Uses gcloud application default credentials (no auth token needed):
+```bash
+node functions/set-time.js "Dec 13, 2026 6:28 PM"   # Set time
+node functions/set-time.js clear                     # Use real time
+node functions/set-time.js                           # Show current time
+```
+
+### Time Change Triggers
+
+When `config/simulation` is updated, `onTimeChanged` Cloud Function fires:
+- Checks for games whose wrap-up window has ended
+- Triggers wrap-up generation for pending games
 
 ## Security & Roles
 

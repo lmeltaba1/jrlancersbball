@@ -91,7 +91,9 @@ service cloud.firestore {
     // Config (schedule/roster sync) - readable by authenticated, writable by functions only
     match /config/{docId} {
       allow read: if isAuthenticated();
-      allow write: if false; // Only cloud functions can write
+      // Allow any authenticated user to write simulation config (for testing)
+      allow write: if docId == 'simulation' && isAuthenticated();
+      // Other config docs only writable by cloud functions
     }
 
     // Highlights - photos/videos of game moments

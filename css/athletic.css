@@ -1326,7 +1326,7 @@ a:hover {
 /* ========== SAFE AREA ========== */
 @supports (padding: max(0px)) {
   .header-content {
-    padding-top: max(16px, env(safe-area-inset-top));
+    padding-top: max(12px, env(safe-area-inset-top)) !important;
   }
 }
 

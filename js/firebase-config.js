@@ -128,6 +128,42 @@ var auth = null;
 var db = null;
 var storage = null;
 
+// Simulated time - offset-based approach so time advances naturally
+// timeOffsetMs = milliseconds to add to system time (can be negative)
+var _timeOffsetMs = null;
+var _timeLoaded = false;
+var _configVersion = 'v3';
+
+async function loadTime() {
+  if (_timeLoaded) return _timeOffsetMs;
+  try {
+    if (db) {
+      var doc = await db.collection('config').doc('simulation').get();
+      if (doc.exists) {
+        var data = doc.data();
+        // New offset-based approach - time advances naturally
+        if (typeof data.timeOffsetMs === 'number') {
+          _timeOffsetMs = data.timeOffsetMs;
+        }
+        // Legacy static timestamp support (converted to offset)
+        else if (data.simulatedNow) {
+          _timeOffsetMs = data.simulatedNow.toDate().getTime() - Date.now();
+        }
+      }
+    }
+  } catch (e) {}
+  _timeLoaded = true;
+  return _timeOffsetMs;
+}
+
+function getCurrentDate() {
+  return _timeOffsetMs !== null ? new Date(Date.now() + _timeOffsetMs) : new Date();
+}
+
+function isSimulated() {
+  return _timeOffsetMs !== null;
+}
+
 // Initialize Firebase
 if (typeof firebase !== 'undefined') {
   try {
@@ -438,8 +474,9 @@ function requireAuth(options = {}) {
       }
 
       try {
-        // Load admin emails first so isAdmin() works for emulation check
+        // Load admin emails and time config
         await loadAdminEmails();
+        await loadTime();
 
         // Check for emulation (admin only)
         const effectiveEmail = getEffectiveEmail(user.email);

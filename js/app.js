@@ -1,55 +1,12 @@
 // Jr. Lancers Basketball - Main App JavaScript
+// Time functions (loadTime, getCurrentDate, isSimulated) are in firebase-config.js
 
-// SIMULATION: Set date and/or time for testing
-// - Set both for full simulation: SIMULATED_DATE='2026-12-20', SIMULATED_TIME='10:25:00'
-// - Set date only to use real clock time on simulated date
-// - Set both to null for real date/time
-// Can also override via URL param ?simDateTime=2026-12-20T10:25:00
-const SIMULATED_DATE = '2026-12-20';
-const SIMULATED_TIME = '10:25:00'; // HH:MM:SS format, or null for real time
-
-// Get simulated datetime from URL param or constants
-function getSimulatedDateTime() {
-  // Check URL parameter first (highest priority for E2E testing)
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlDateTime = urlParams.get('simDateTime');
-  if (urlDateTime) {
-    const parsed = new Date(urlDateTime);
-    if (!isNaN(parsed.getTime())) return parsed;
-  }
-
-  // Use SIMULATED_DATE and SIMULATED_TIME constants
-  if (SIMULATED_DATE) {
-    if (SIMULATED_TIME) {
-      // Both date and time specified - use exact datetime
-      return new Date(SIMULATED_DATE + 'T' + SIMULATED_TIME);
-    } else {
-      // Date only - use real clock time on simulated date
-      const now = new Date();
-      const simDate = new Date(SIMULATED_DATE + 'T00:00:00');
-      simDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
-      return simDate;
-    }
-  }
-
-  return null;
-}
-
-// Get current date (uses simulated datetime if set)
-function getCurrentDate() {
-  const simDateTime = getSimulatedDateTime();
-  if (simDateTime) return simDateTime;
-  return new Date();
-}
-
-// Get Firestore timestamp (uses simulated date if set, real server time otherwise)
-// Use this instead of firebase.firestore.FieldValue.serverTimestamp()
+// Get Firestore timestamp
 function getFirestoreTimestamp() {
   if (typeof firebase !== 'undefined' && firebase.firestore) {
-    if (SIMULATED_DATE) {
-      return firebase.firestore.Timestamp.fromDate(getCurrentDate());
-    }
-    return firebase.firestore.FieldValue.serverTimestamp();
+    return _time
+      ? firebase.firestore.Timestamp.fromDate(_time)
+      : firebase.firestore.FieldValue.serverTimestamp();
   }
   return null;
 }
