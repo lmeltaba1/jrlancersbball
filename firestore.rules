@@ -179,8 +179,10 @@ service cloud.firestore {
         // Update (mark as read) own notifications
         allow update: if isAuthenticated() && request.auth.uid == uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-        // Only cloud functions can create/delete notifications
-        allow create, delete: if false;
+        // Users can delete their own notifications
+        allow delete: if isAuthenticated() && request.auth.uid == uid;
+        // Only cloud functions can create notifications
+        allow create: if false;
       }
     }
   }
