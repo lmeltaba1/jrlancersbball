@@ -352,6 +352,7 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
+  <script src="js/notifications.js"></script>
   <script>
     // Profile menu functions
     function toggleProfileMenu() {
@@ -429,6 +430,7 @@
         console.log(`Auth completed in ${Date.now() - pageStartTime}ms`);
         currentUser = auth.currentUser;
         userInfo = info;
+        if (typeof initNotificationCenter === 'function') initNotificationCenter();
         if (info.isViewer) hideViewerRestrictedNav();
         // Show profile button
         const profileWrapper = document.getElementById('profileBtnWrapper');

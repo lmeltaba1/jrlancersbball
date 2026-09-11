@@ -199,6 +199,7 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
+  <script src="js/notifications.js"></script>
   <script>
     // Profile menu functions
     function toggleProfileMenu() {
@@ -268,6 +269,7 @@
       requireAuth({ requireParent: true }).then(async function(info) {
         currentUser = auth.currentUser;
         userInfo = info;
+        if (typeof initNotificationCenter === 'function') initNotificationCenter();
         // Show profile button
         const profileWrapper = document.getElementById('profileBtnWrapper');
         if (profileWrapper) profileWrapper.style.display = 'block';

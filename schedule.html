@@ -169,6 +169,7 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
+  <script src="js/notifications.js"></script>
   <script>
     // Profile menu functions
     function toggleProfileMenu() {
@@ -282,6 +283,7 @@
         clearTimeout(loadingTimeout);
         currentUserInfo = userInfo; // Store for use in renderSchedule
         if (userInfo.isViewer) hideViewerRestrictedNav();
+        if (typeof initNotificationCenter === 'function') initNotificationCenter();
         // Show profile button
         const profileWrapper = document.getElementById('profileBtnWrapper');
         if (profileWrapper) profileWrapper.style.display = 'block';

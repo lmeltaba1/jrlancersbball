@@ -25,14 +25,14 @@ service cloud.firestore {
         getUserEmail() in get(/databases/$(database)/documents/config/coachEmails).data;
     }
 
-    // Game stats - read by authenticated, write by coaches only
-    // Note: Scorekeeper writes are allowed during game window (verified by frontend/function)
+    // Game stats - read by authenticated, create/update by authenticated (scorekeeper), delete by coach
+    // Note: Scorekeeper writes are allowed during game window (verified by frontend)
     match /gameStats/{gameId} {
       allow read: if isAuthenticated();
-      // Coaches can always write
-      allow write: if isCoach();
-      // Non-coaches can only update (not create/delete) - scorekeeper during game
-      allow update: if isAuthenticated();
+      // Any authenticated user can create/update (frontend validates scorekeeper role + time window)
+      allow create, update: if isAuthenticated();
+      // Only coaches can delete
+      allow delete: if isCoach();
     }
 
     // Volunteers - read by authenticated, write by authenticated (parents/coaches sign up)
@@ -165,6 +165,23 @@ service cloud.firestore {
         && request.resource.data.adminEmail == getUserEmail();
       // Logs cannot be updated or deleted (immutable audit trail)
       allow update, delete: if false;
+    }
+
+    // User notifications - in-app notification center
+    // Each user has their own notifications subcollection
+    match /userNotifications/{uid} {
+      // Users can only access their own notifications
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+
+      match /notifications/{notificationId} {
+        // Read own notifications
+        allow read: if isAuthenticated() && request.auth.uid == uid;
+        // Update (mark as read) own notifications
+        allow update: if isAuthenticated() && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        // Only cloud functions can create/delete notifications
+        allow create, delete: if false;
+      }
     }
   }
 }

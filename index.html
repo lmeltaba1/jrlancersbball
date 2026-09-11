@@ -272,6 +272,7 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
+  <script src="js/notifications.js"></script>
   <script src="js/gamification.js" defer></script>
   <script>
     // SIMULATED_DATE, getCurrentDate, formatDate, leagueNames are all in js/app.js
@@ -957,6 +958,11 @@
       // Wait for auth first since Firestore requires authentication
       try {
         const userInfo = await requireAuth();
+
+        // Initialize notification center
+        if (typeof initNotificationCenter === 'function') {
+          initNotificationCenter();
+        }
 
         // Now load all sections in parallel (auth is ready)
         const loadNextEventPromise = loadNextEventSection();

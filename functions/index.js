@@ -1,5 +1,5 @@
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
-const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
@@ -130,15 +130,17 @@ async function checkRateLimit(userEmail, action, maxRequests = 10, windowMinutes
 // Single notification function for all use cases
 // options.emails - array of emails to send to (null = everyone)
 // options.excludeUid - uid to exclude (for chat - don't notify sender)
+// Also writes to userNotifications for in-app display
 async function sendNotification(title, body, data = {}, options = {}) {
   const tokensSnapshot = await db.collection('fcmTokens').get();
   const tokens = [];
+  const recipientUids = new Set(); // Track UIDs for in-app notifications
 
   const targetEmails = options.emails?.map(e => e.toLowerCase());
 
+  // Collect push tokens from fcmTokens
   tokensSnapshot.forEach(doc => {
     const tokenData = doc.data();
-    if (!tokenData.token) return;
 
     // Exclude sender for chat
     if (options.excludeUid && tokenData.uid === options.excludeUid) return;
@@ -146,25 +148,69 @@ async function sendNotification(title, body, data = {}, options = {}) {
     // Filter by email list if provided
     if (targetEmails && !targetEmails.includes(tokenData.email?.toLowerCase())) return;
 
-    tokens.push(tokenData.token);
+    // Collect UID for in-app notifications
+    if (tokenData.uid) recipientUids.add(tokenData.uid);
+
+    // Collect token for push notifications (only if valid)
+    if (tokenData.token) tokens.push(tokenData.token);
   });
 
-  if (tokens.length === 0) {
-    console.log(`Notification "${title}": No tokens to send to`);
-    return;
+  // Also get ALL users from userProfiles for in-app notifications
+  // This ensures in-app notifications work even if user never enabled push
+  const profilesSnapshot = await db.collection('userProfiles').get();
+  profilesSnapshot.forEach(doc => {
+    const uid = doc.id;
+
+    // Exclude sender
+    if (options.excludeUid && uid === options.excludeUid) return;
+
+    // Filter by email if provided
+    if (targetEmails) {
+      const email = doc.data().email?.toLowerCase();
+      if (!email || !targetEmails.includes(email)) return;
+    }
+
+    recipientUids.add(uid);
+  });
+
+  // Write to userNotifications for in-app display
+  const notificationData = {
+    title,
+    body,
+    data,
+    sentAt: FieldValue.serverTimestamp(),
+    read: false
+  };
+
+  const inAppPromises = Array.from(recipientUids).map(uid =>
+    db.collection('userNotifications').doc(uid)
+      .collection('notifications').add(notificationData)
+      .catch(err => console.error(`Failed to write notification for ${uid}:`, err))
+  );
+
+  // Send push notifications
+  let pushResult = { successCount: 0, failureCount: 0 };
+  if (tokens.length > 0) {
+    console.log(`Notification "${title}": Sending to ${tokens.length} devices`);
+    try {
+      const response = await messaging.sendEachForMulticast({
+        data: { title, body, ...data },
+        tokens
+      });
+      pushResult = response;
+      console.log(`Notification "${title}": ${response.successCount} sent, ${response.failureCount} failed`);
+    } catch (error) {
+      console.error(`Notification "${title}": Error -`, error.message);
+    }
+  } else {
+    console.log(`Notification "${title}": No FCM tokens to send to`);
   }
 
-  console.log(`Notification "${title}": Sending to ${tokens.length} devices`);
+  // Wait for in-app notifications to be written
+  await Promise.all(inAppPromises);
+  console.log(`Notification "${title}": Written to ${recipientUids.size} user inboxes`);
 
-  try {
-    const response = await messaging.sendEachForMulticast({
-      data: { title, body, ...data },
-      tokens
-    });
-    console.log(`Notification "${title}": ${response.successCount} sent, ${response.failureCount} failed`);
-  } catch (error) {
-    console.error(`Notification "${title}": Error -`, error.message);
-  }
+  return { push: pushResult, inApp: recipientUids.size };
 }
 
 // Helper to get head coach email
@@ -882,15 +928,21 @@ exports.triggerScorekeeperReminder = onRequest(async (request, response) => {
   }
 });
 
-// Trigger notification when game starts (phase changes from 'pre' to 'Q1')
-exports.onGameStarted = onDocumentUpdated('gameStats/{gameId}', async (event) => {
-  const before = event.data.before.data();
-  const after = event.data.after.data();
+// Trigger notification when game starts (phase changes to 'Q1')
+exports.onGameStarted = onDocumentWritten('gameStats/{gameId}', async (event) => {
+  // Handle both create and update
+  const beforeData = event.data.before.exists ? event.data.before.data() : null;
+  const afterData = event.data.after.exists ? event.data.after.data() : null;
 
-  // Only trigger when phase changes from 'pre' to 'Q1'
-  if (before.gamePhase !== 'pre' || after.gamePhase !== 'Q1') {
-    return null;
-  }
+  // Skip if document was deleted
+  if (!afterData) return null;
+
+  const beforePhase = beforeData ? beforeData.gamePhase : null;
+  const afterPhase = afterData.gamePhase;
+
+  // Only trigger when phase becomes 'Q1' (from 'pre' or from null/create)
+  if (afterPhase !== 'Q1') return null;
+  if (beforePhase === 'Q1') return null; // Already in Q1, no change
 
   const gameId = event.params.gameId;
   console.log(`Game ${gameId} started! Sending notifications...`);
@@ -921,16 +973,22 @@ exports.onGameStarted = onDocumentUpdated('gameStats/{gameId}', async (event) =>
 
 // Trigger notification when game ends (phase changes to 'final')
 exports.onGameEnded = onDocumentUpdated('gameStats/{gameId}', async (event) => {
+  const gameId = event.params.gameId;
   const before = event.data.before.data();
   const after = event.data.after.data();
 
+  // Debug logging
+  console.log(`onGameEnded triggered for game ${gameId}`);
+  console.log(`  before.gamePhase: ${before?.gamePhase}`);
+  console.log(`  after.gamePhase: ${after?.gamePhase}`);
+
   // Only trigger when phase changes TO 'final' (and wasn't already final)
   if (before.gamePhase === 'final' || after.gamePhase !== 'final') {
+    console.log(`  Condition not met, returning early`);
     return null;
   }
 
-  const gameId = event.params.gameId;
-  console.log(`Game ${gameId} ended! Sending notifications...`);
+  console.log(`  Condition met! Sending notifications...`);
 
   try {
     // Get game details from schedule
@@ -2557,4 +2615,64 @@ exports.simulateSeasonData = onRequest({ timeoutSeconds: 300 }, async (request, 
     console.error('Simulation error:', error);
     response.status(500).json({ success: false, error: error.message });
   }
+});
+
+// Setup test accounts for E2E testing
+// Creates or resets passwords for test accounts
+exports.setupTestAccounts = onRequest({ cors: true }, async (request, response) => {
+  if (setCorsHeaders(request, response)) return;
+
+  // Verify head coach auth
+  const authResult = await verifyAdminAuth(request, { headCoachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ error: authResult.error });
+    return;
+  }
+
+  // Test accounts to create/update
+  const testAccounts = [
+    { email: 'brittany28@aol.com', password: 'LancersTest123!', role: 'parent' },
+    { email: 'maureen.trott@att.net', password: 'LancersView123!', role: 'viewer' }
+  ];
+
+  const results = [];
+
+  for (const account of testAccounts) {
+    try {
+      // Try to get existing user
+      let user;
+      try {
+        user = await auth.getUserByEmail(account.email);
+        // User exists, update password
+        await auth.updateUser(user.uid, { password: account.password });
+        results.push({ email: account.email, status: 'password_updated', uid: user.uid });
+      } catch (e) {
+        if (e.code === 'auth/user-not-found') {
+          // Create new user
+          user = await auth.createUser({
+            email: account.email,
+            password: account.password,
+            emailVerified: true
+          });
+          results.push({ email: account.email, status: 'created', uid: user.uid });
+        } else {
+          throw e;
+        }
+      }
+    } catch (error) {
+      results.push({ email: account.email, status: 'error', error: error.message });
+    }
+  }
+
+  response.json({
+    success: true,
+    message: 'Test accounts configured',
+    accounts: results,
+    testCredentials: {
+      coach: { email: 'lmeltabarger@icloud.com', password: '(existing)' },
+      scorekeeperParent: { email: 'mindy.m.carney@gmail.com', password: '(existing)' },
+      regularParent: { email: 'brittany28@aol.com', password: 'LancersTest123!' },
+      viewer: { email: 'maureen.trott@att.net', password: 'LancersView123!' }
+    }
+  });
 });

@@ -499,6 +499,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/theme.js"></script>
+  <script src="js/notifications.js"></script>
   <script src="js/plays.js"></script>
   <script>
     // Profile menu functions
@@ -1673,6 +1674,7 @@
     document.addEventListener('DOMContentLoaded', function() {
       // Require auth - viewers can't see playbook
       requireAuth({ requireParent: true }).then(async function(userInfo) {
+        if (typeof initNotificationCenter === 'function') initNotificationCenter();
         // Show profile button
         const profileWrapper = document.getElementById('profileBtnWrapper');
         if (profileWrapper) profileWrapper.style.display = 'block';

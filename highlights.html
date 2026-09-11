@@ -491,6 +491,7 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
+  <script src="js/notifications.js"></script>
   <script>
     // Profile menu functions
     function toggleProfileMenu() {
@@ -659,6 +660,7 @@
       requireAuth().then(async function(userInfo) {
         currentUser = auth.currentUser;
         currentUserInfo = userInfo;
+        if (typeof initNotificationCenter === 'function') initNotificationCenter();
 
         if (userInfo.isViewer) hideViewerRestrictedNav();
 
