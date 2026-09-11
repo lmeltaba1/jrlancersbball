@@ -167,21 +167,28 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // User notifications - in-app notification center
-    // Each user has their own notifications subcollection
+    // Team-wide notifications - all users can read, only functions write
+    match /teamNotifications/{notificationId} {
+      allow read: if isAuthenticated();
+      // Only cloud functions can create/update/delete
+      allow write: if false;
+    }
+
+    // Per-user notification status (read/dismissed tracking)
+    match /notificationStatus/{uid} {
+      // Users can only read/write their own status
+      allow read, write: if isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // User notifications - targeted/private notifications (only user can read)
     match /userNotifications/{uid} {
-      // Users can only access their own notifications
       allow read: if isAuthenticated() && request.auth.uid == uid;
 
       match /notifications/{notificationId} {
-        // Read own notifications
         allow read: if isAuthenticated() && request.auth.uid == uid;
-        // Update (mark as read) own notifications
         allow update: if isAuthenticated() && request.auth.uid == uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-        // Users can delete their own notifications
         allow delete: if isAuthenticated() && request.auth.uid == uid;
-        // Only cloud functions can create notifications
         allow create: if false;
       }
     }

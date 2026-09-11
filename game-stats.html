@@ -1556,7 +1556,17 @@
             const oldOnCourt = [...onCourt];
             onCourt = data.onCourt || onCourt;
             // Sync new fields
+            const oldGamePhase = gamePhase;
             gamePhase = data.gamePhase || gamePhase;
+
+            // Redirect viewers when game ends
+            if (viewOnlyMode && data.gamePhase === 'final' && oldGamePhase !== 'final') {
+              showToast('Game ended! Redirecting to game details...', 'info');
+              setTimeout(() => {
+                window.location.href = `game-detail.html?id=${currentGameId}`;
+              }, 2000);
+            }
+
             events = data.events || events;
             timeouts = data.timeouts || timeouts;
             phaseStartedAt = data.phaseStartedAt || phaseStartedAt;

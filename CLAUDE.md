@@ -282,27 +282,61 @@ lancers/
 └── README.md              # Project readme
 ```
 
-## Push Notifications (Cloud Functions)
+## Notifications (Push + In-App)
 
-### Unified Notification System
+### Hybrid Notification System
 
-All notifications use a single `sendNotification(title, body, data, options)` function:
-- `options.emails` - Array of emails to send to (null = everyone)
+All notifications use `sendNotification(title, body, data, options)` which handles both push (FCM) and in-app notifications:
+- `options.emails` - Array of emails for targeted notifications (null = broadcast to everyone)
 - `options.excludeUid` - UID to exclude (for chat - don't notify sender)
 
-Helper: `getHeadCoachEmail()` - Returns head coach email for coach-only notifications
+**Storage (Hybrid Approach for Security):**
+- **Broadcast** (everyone): Stored in `teamNotifications` collection - all authenticated users can read
+- **Targeted** (specific people): Stored in `userNotifications/{uid}` - only that user can read
+- **Read/dismissed tracking**: `notificationStatus/{uid}` for broadcast notifications
+
+### In-App Notification Center
+
+`js/notifications.js` provides a notification bell UI in the header:
+- Subscribes to both `teamNotifications` and `userNotifications/{uid}`
+- Filters broadcast notifications by `excludeUid` (sender doesn't see own chat)
+- Aggregates multiple unread chat messages into single "X new messages" notification
+- Click marks as read and navigates to URL
+- Dismiss (X) and Clear All buttons
+- Modern glassmorphism UI with animations
 
 ### Notification Triggers
 
-| Function | Trigger | Recipients | Message |
-|----------|---------|------------|---------|
-| `onNewMessage` | New chat message | Everyone except sender | "{sender}: {message}" |
-| `onGameStarted` | gamePhase → 'Q1' | Everyone | "Game Started! Lancers vs {opponent} is now LIVE!" |
-| `onGameEnded` | gamePhase → 'final' | Everyone + Head coach only | "Game Over!" + "Add Your Game Commentary" |
-| `sendAttendanceReminders` | Daily 9 AM | Parents missing RSVP | Reminder for games in next 4 days |
-| `sendScorekeeperReminders` | Daily 9 AM | Assigned scorekeepers | Reminder 1-2 days before game |
-| `checkPendingWrapups` | Every 30 min | Head coach | "Wrap-Up Ready for Review" |
-| `approveWrapup` | Manual (coach) | Everyone | "Game Wrap-Up Ready!" |
+| Function | Trigger | Recipients | URL |
+|----------|---------|------------|-----|
+| `onNewMessage` | New chat message | Everyone except sender | `/messages.html` |
+| `onNewPost` | New coach post | Everyone except author | `/messages.html?tab=posts` |
+| `onGameStarted` | gamePhase → 'Q1' | Everyone | `/game-stats.html?game={id}&view=1` |
+| `onGameEnded` | gamePhase → 'final' | Everyone | `/game-detail.html?id={id}` |
+| `sendAttendanceReminders` | Daily 9 AM | Parents missing RSVP (targeted) | `/attendance.html?game={id}` |
+| `sendVolunteerReminders` | Daily 9 AM | Everyone not volunteering (targeted) | `/volunteers.html?game={id}` |
+| `sendVolunteerRemindersGameDay` | Daily 7:30 AM | Everyone not volunteering (targeted) | `/volunteers.html?game={id}` |
+| `sendScorekeeperReminders` | Every 5 min | Scorekeeper + Table Worker (targeted) | `/game-stats.html?game={id}` |
+| `checkPendingWrapups` | Every 30 min | Head coach (targeted) | Game detail page |
+| `approveWrapup` | Manual (coach) | Everyone | Game detail page |
+
+### Scheduled Reminder Details
+
+**Attendance Reminders** (9 AM daily):
+- Games/events within next 4 days
+- Only parents who haven't RSVP'd
+- "RSVP Needed - {event} on {date}"
+
+**Volunteer Reminders** (9 AM for advance, 7:30 AM game day):
+- 2 days before: "Volunteers Needed!"
+- 1 day before: "URGENT: Volunteers Needed Tomorrow!"
+- Game day: "URGENT: Volunteers Needed TODAY!"
+- Only sent if scorekeeper OR table worker position unfilled
+- Excludes people already signed up
+
+**Game Day Volunteer Reminders** (10 min before game, every 5 min check):
+- Scorekeeper: "Game Starting Soon! Please open app to start keeping score."
+- Table Worker: "Game Starting Soon! Please head to the scorer's table."
 
 ### Service Workers
 
@@ -314,7 +348,6 @@ Helper: `getHeadCoachEmail()` - Returns head coach email for coach-only notifica
 **sw.js** (Removed):
 - Was previously used for offline caching but caused loading issues
 - Now contains self-destruct code that unregisters itself and clears caches
-- `firebase-config.js` also actively unregisters it for users who had it installed
 - Can be deleted once all users have visited the app at least once
 
 ## Post-Game Wrap-Up System

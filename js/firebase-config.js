@@ -89,6 +89,24 @@ async function logEmulationEvent(action, targetEmail) {
   }
 }
 
+// Ensure user has a profile document (required for in-app notifications)
+async function ensureUserProfile(uid, email) {
+  if (typeof db === 'undefined' || !db) return;
+  try {
+    const profileRef = db.collection('userProfiles').doc(uid);
+    const doc = await profileRef.get();
+    if (!doc.exists) {
+      await profileRef.set({
+        email: email.toLowerCase(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  } catch (e) {
+    // Non-critical, don't block auth
+    console.error('Could not create user profile:', e);
+  }
+}
+
 function getEffectiveEmail(realEmail) {
   if (!isAdmin(realEmail)) return realEmail;
   const emulated = getEmulatedEmail();
@@ -462,6 +480,10 @@ function requireAuth(options = {}) {
 
         // Store user info globally
         currentUserInfo = userInfo;
+
+        // Ensure user has a profile document (for in-app notifications)
+        ensureUserProfile(user.uid, effectiveEmail);
+
         resolved = true;
         clearTimeout(timeoutId);
         resolve(userInfo);

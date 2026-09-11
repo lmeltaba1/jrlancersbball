@@ -11,7 +11,6 @@ if (typeof escapeHtml === 'undefined') {
   };
 }
 
-let notificationUnsubscribe = null;
 let unreadCount = 0;
 
 // Initialize notification center after auth
@@ -261,31 +260,154 @@ function createNotificationUI() {
   wrapper.insertAdjacentHTML('beforebegin', bellHtml);
 }
 
-// Subscribe to Firestore notifications
+// Track which broadcast notifications user has read/dismissed
+let broadcastReadIds = new Set();
+let broadcastDismissedIds = new Set();
+let currentUserUid = null;
+
+// Store notifications from both sources
+let teamNotifications = [];
+let userNotifications = [];
+let teamUnsubscribe = null;
+let userUnsubscribe = null;
+
+// Subscribe to BOTH collections (hybrid approach)
 function subscribeToNotifications(uid) {
-  if (notificationUnsubscribe) {
-    notificationUnsubscribe();
+  // Cleanup existing subscriptions
+  if (teamUnsubscribe) teamUnsubscribe();
+  if (userUnsubscribe) userUnsubscribe();
+
+  currentUserUid = uid;
+
+  // Load broadcast read/dismissed status first
+  loadBroadcastStatus(uid).then(() => {
+    // 1. Subscribe to teamNotifications (broadcast - everyone)
+    teamUnsubscribe = db.collection('teamNotifications')
+      .orderBy('sentAt', 'desc')
+      .limit(30)
+      .onSnapshot(snapshot => {
+        teamNotifications = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+
+          // Skip if dismissed
+          if (broadcastDismissedIds.has(doc.id)) return;
+
+          // Skip if sender (for chat)
+          if (data.excludeUid && data.excludeUid === currentUserUid) return;
+
+          const isRead = broadcastReadIds.has(doc.id);
+          teamNotifications.push({
+            id: doc.id,
+            source: 'team',
+            ...data,
+            read: isRead
+          });
+        });
+        mergeAndRender();
+      }, err => console.error('Team notifications error:', err));
+
+    // 2. Subscribe to userNotifications (targeted - private)
+    userUnsubscribe = db.collection('userNotifications').doc(uid)
+      .collection('notifications')
+      .orderBy('sentAt', 'desc')
+      .limit(30)
+      .onSnapshot(snapshot => {
+        userNotifications = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          userNotifications.push({
+            id: doc.id,
+            source: 'user',
+            ...data
+            // read field is already in the document
+          });
+        });
+        mergeAndRender();
+      }, err => console.error('User notifications error:', err));
+  });
+}
+
+// Merge both sources and render
+function mergeAndRender() {
+  // Combine and sort by sentAt descending
+  const all = [...teamNotifications, ...userNotifications];
+  all.sort((a, b) => {
+    const timeA = a.sentAt?.toMillis?.() || 0;
+    const timeB = b.sentAt?.toMillis?.() || 0;
+    return timeB - timeA;
+  });
+
+  // Aggregate chat notifications into a single item
+  const chatNotifications = all.filter(n => n.data?.type === 'chat' && !n.read);
+  const otherNotifications = all.filter(n => n.data?.type !== 'chat' || n.read);
+
+  let aggregatedNotifications = [...otherNotifications];
+
+  if (chatNotifications.length > 0) {
+    // Create aggregated chat notification
+    const mostRecent = chatNotifications[0];
+    const aggregatedChat = {
+      id: 'chat_aggregate',
+      source: 'team',
+      title: chatNotifications.length === 1
+        ? mostRecent.title
+        : `${chatNotifications.length} new messages`,
+      body: chatNotifications.length === 1
+        ? mostRecent.body
+        : `Latest from ${mostRecent.title}`,
+      data: { type: 'chat', url: '/messages.html' },
+      sentAt: mostRecent.sentAt,
+      read: false,
+      isAggregate: true,
+      aggregateIds: chatNotifications.map(n => ({ id: n.id, source: n.source }))
+    };
+    aggregatedNotifications.push(aggregatedChat);
   }
 
-  notificationUnsubscribe = db.collection('userNotifications').doc(uid)
-    .collection('notifications')
-    .orderBy('sentAt', 'desc')
-    .limit(20)
-    .onSnapshot(snapshot => {
-      const notifications = [];
-      unreadCount = 0;
+  // Sort again after aggregation
+  aggregatedNotifications.sort((a, b) => {
+    const timeA = a.sentAt?.toMillis?.() || 0;
+    const timeB = b.sentAt?.toMillis?.() || 0;
+    return timeB - timeA;
+  });
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        notifications.push({ id: doc.id, ...data });
-        if (!data.read) unreadCount++;
-      });
+  // Limit to 30 total
+  const notifications = aggregatedNotifications.slice(0, 30);
 
-      renderNotifications(notifications);
-      updateBadge(unreadCount);
-    }, err => {
-      console.error('Notification subscription error:', err);
-    });
+  // Count unread
+  unreadCount = notifications.filter(n => !n.read).length;
+
+  renderNotifications(notifications);
+  updateBadge(unreadCount);
+}
+
+// Load broadcast read/dismissed status
+async function loadBroadcastStatus(uid) {
+  try {
+    const doc = await db.collection('notificationStatus').doc(uid).get();
+    if (doc.exists) {
+      const data = doc.data();
+      broadcastReadIds = new Set(data.readIds || []);
+      broadcastDismissedIds = new Set(data.dismissedIds || []);
+    }
+  } catch (e) {
+    console.error('Error loading notification status:', e);
+  }
+}
+
+// Save broadcast status
+async function saveBroadcastStatus() {
+  if (!currentUserUid) return;
+  try {
+    await db.collection('notificationStatus').doc(currentUserUid).set({
+      readIds: Array.from(broadcastReadIds),
+      dismissedIds: Array.from(broadcastDismissedIds),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (e) {
+    console.error('Error saving notification status:', e);
+  }
 }
 
 // Render notifications in the dropdown
@@ -309,10 +431,15 @@ function renderNotifications(notifications) {
     const icon = getNotificationIcon(n.data?.type || n.title);
     const unreadClass = n.read ? '' : 'unread';
     const url = n.data?.url || '';
+    const source = n.source || 'user';
+    const isAggregate = n.isAggregate ? 'true' : 'false';
+    const aggregateIdsAttr = n.aggregateIds
+      ? `data-aggregate-ids='${JSON.stringify(n.aggregateIds).replace(/'/g, "&#39;")}'`
+      : '';
 
     return `
-      <div class="notification-item ${unreadClass}" style="position: relative;" onclick="handleNotificationClick('${n.id}', '${escapeHtml(url)}')">
-        <button class="dismiss" onclick="event.stopPropagation(); dismissNotification('${n.id}')" aria-label="Dismiss">
+      <div class="notification-item ${unreadClass}" data-id="${n.id}" data-source="${source}" ${aggregateIdsAttr} style="position: relative; transition: opacity 0.2s, transform 0.2s;" onclick="handleNotificationClick('${n.id}', '${source}', '${escapeHtml(url)}', '${isAggregate}')">
+        <button class="dismiss" onclick="event.stopPropagation(); dismissNotification('${n.id}', '${source}')" aria-label="Dismiss">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -335,12 +462,14 @@ function renderNotifications(notifications) {
 function getNotificationIcon(type) {
   if (!type) return '🔔';
   const t = type.toLowerCase();
-  if (t.includes('game') && t.includes('start')) return '🏀';
-  if (t.includes('game') && (t.includes('end') || t.includes('over'))) return '🏁';
-  if (t.includes('message') || t.includes('chat')) return '💬';
+  if (t.includes('gamestarted')) return '🏀';
+  if (t.includes('gameended') || t.includes('game') && t.includes('over')) return '🏁';
+  if (t.includes('chat') || t.includes('message')) return '💬';
+  if (t.includes('newpost') || t.includes('post')) return '📢';
   if (t.includes('wrap') || t.includes('recap')) return '📰';
-  if (t.includes('rsvp') || t.includes('attendance')) return '📋';
-  if (t.includes('volunteer') || t.includes('scorekeeper')) return '✋';
+  if (t.includes('attendance') || t.includes('rsvp')) return '📋';
+  if (t.includes('volunteer')) return '🙋';
+  if (t.includes('scorekeeper')) return '📊';
   if (t.includes('highlight')) return '🎬';
   return '🔔';
 }
@@ -407,18 +536,47 @@ function closeNotificationPanelOnClickOutside(e) {
 }
 
 // Handle notification click - mark as read and navigate
-async function handleNotificationClick(notificationId, url) {
-  const user = auth.currentUser;
-  if (!user) return;
+async function handleNotificationClick(notificationId, source, url, isAggregate) {
+  if (!currentUserUid) return;
 
-  // Mark as read
-  try {
-    await db.collection('userNotifications').doc(user.uid)
-      .collection('notifications').doc(notificationId)
-      .update({ read: true });
-  } catch (e) {
-    console.error('Error marking notification read:', e);
+  // Handle aggregated notifications (like chat)
+  if (isAggregate === 'true' || isAggregate === true) {
+    // Find the aggregate notification and mark all its children as read
+    const item = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
+    const aggregateIdsStr = item?.dataset.aggregateIds;
+    if (aggregateIdsStr) {
+      try {
+        const aggregateIds = JSON.parse(aggregateIdsStr);
+        for (const {id, source: src} of aggregateIds) {
+          if (src === 'team') {
+            broadcastReadIds.add(id);
+          }
+        }
+        await saveBroadcastStatus();
+      } catch (e) {
+        console.error('Error marking aggregate notifications read:', e);
+      }
+    }
+  } else {
+    // Mark single notification as read based on source
+    if (source === 'team') {
+      broadcastReadIds.add(notificationId);
+      await saveBroadcastStatus();
+    } else {
+      // User notification - update directly in Firestore
+      try {
+        await db.collection('userNotifications').doc(currentUserUid)
+          .collection('notifications').doc(notificationId)
+          .update({ read: true });
+      } catch (e) {
+        console.error('Error marking notification read:', e);
+      }
+    }
   }
+
+  // Update UI immediately
+  unreadCount = Math.max(0, unreadCount - 1);
+  updateBadge(unreadCount);
 
   // Close panel
   const panel = document.getElementById('notificationPanel');
@@ -431,66 +589,144 @@ async function handleNotificationClick(notificationId, url) {
 }
 
 // Dismiss a single notification
-async function dismissNotification(notificationId) {
-  const user = auth.currentUser;
-  if (!user) return;
+async function dismissNotification(notificationId, source) {
+  if (!currentUserUid) return;
 
-  try {
-    await db.collection('userNotifications').doc(user.uid)
-      .collection('notifications').doc(notificationId)
-      .delete();
-  } catch (e) {
-    console.error('Error dismissing notification:', e);
+  if (source === 'team') {
+    // Broadcast: track in notificationStatus
+    broadcastDismissedIds.add(notificationId);
+    if (!broadcastReadIds.has(notificationId)) {
+      broadcastReadIds.add(notificationId);
+      unreadCount = Math.max(0, unreadCount - 1);
+      updateBadge(unreadCount);
+    }
+    await saveBroadcastStatus();
+  } else {
+    // User notification: delete from Firestore
+    try {
+      await db.collection('userNotifications').doc(currentUserUid)
+        .collection('notifications').doc(notificationId)
+        .delete();
+    } catch (e) {
+      console.error('Error dismissing notification:', e);
+    }
+  }
+
+  // Remove from UI immediately
+  const item = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
+  if (item) {
+    item.style.opacity = '0';
+    item.style.transform = 'translateX(100%)';
+    setTimeout(() => item.remove(), 200);
   }
 }
 
 // Clear all notifications
 async function clearAllNotifications() {
-  const user = auth.currentUser;
-  if (!user) return;
+  if (!currentUserUid) return;
 
-  try {
-    const snapshot = await db.collection('userNotifications').doc(user.uid)
-      .collection('notifications')
-      .get();
+  const items = document.querySelectorAll('.notification-item[data-id]');
+  const userIdsToDelete = [];
 
+  items.forEach(item => {
+    const id = item.dataset.id;
+    const source = item.dataset.source;
+    if (!id) return;
+
+    if (source === 'team') {
+      broadcastDismissedIds.add(id);
+      broadcastReadIds.add(id);
+    } else {
+      userIdsToDelete.push(id);
+    }
+  });
+
+  // Save broadcast status
+  await saveBroadcastStatus();
+
+  // Delete user notifications
+  if (userIdsToDelete.length > 0) {
     const batch = db.batch();
-    snapshot.docs.forEach(doc => {
-      batch.delete(doc.ref);
+    userIdsToDelete.forEach(id => {
+      const ref = db.collection('userNotifications').doc(currentUserUid)
+        .collection('notifications').doc(id);
+      batch.delete(ref);
     });
+    try {
+      await batch.commit();
+    } catch (e) {
+      console.error('Error clearing user notifications:', e);
+    }
+  }
 
-    await batch.commit();
-  } catch (e) {
-    console.error('Error clearing all notifications:', e);
+  // Clear UI
+  unreadCount = 0;
+  updateBadge(0);
+  const list = document.getElementById('notificationList');
+  if (list) {
+    list.innerHTML = `
+      <div class="notification-empty">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+        <div>No notifications</div>
+      </div>`;
   }
 }
 
 // Mark all notifications as read
 async function markAllNotificationsRead() {
-  const user = auth.currentUser;
-  if (!user) return;
+  if (!currentUserUid) return;
 
-  try {
-    const snapshot = await db.collection('userNotifications').doc(user.uid)
-      .collection('notifications')
-      .where('read', '==', false)
-      .get();
+  const items = document.querySelectorAll('.notification-item.unread[data-id]');
+  const userIdsToUpdate = [];
 
+  items.forEach(item => {
+    const id = item.dataset.id;
+    const source = item.dataset.source;
+    if (!id) return;
+
+    if (source === 'team') {
+      broadcastReadIds.add(id);
+    } else {
+      userIdsToUpdate.push(id);
+    }
+
+    item.classList.remove('unread');
+    const dot = item.querySelector('.dot');
+    if (dot) dot.remove();
+  });
+
+  // Save broadcast status
+  await saveBroadcastStatus();
+
+  // Update user notifications
+  if (userIdsToUpdate.length > 0) {
     const batch = db.batch();
-    snapshot.docs.forEach(doc => {
-      batch.update(doc.ref, { read: true });
+    userIdsToUpdate.forEach(id => {
+      const ref = db.collection('userNotifications').doc(currentUserUid)
+        .collection('notifications').doc(id);
+      batch.update(ref, { read: true });
     });
-
-    await batch.commit();
-  } catch (e) {
-    console.error('Error marking all notifications read:', e);
+    try {
+      await batch.commit();
+    } catch (e) {
+      console.error('Error marking user notifications read:', e);
+    }
   }
+
+  unreadCount = 0;
+  updateBadge(0);
 }
 
 // Cleanup on page unload
 window.addEventListener('pagehide', () => {
-  if (notificationUnsubscribe) {
-    notificationUnsubscribe();
-    notificationUnsubscribe = null;
+  if (teamUnsubscribe) {
+    teamUnsubscribe();
+    teamUnsubscribe = null;
+  }
+  if (userUnsubscribe) {
+    userUnsubscribe();
+    userUnsubscribe = null;
   }
 });

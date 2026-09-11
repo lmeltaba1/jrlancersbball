@@ -130,11 +130,10 @@ async function checkRateLimit(userEmail, action, maxRequests = 10, windowMinutes
 // Single notification function for all use cases
 // options.emails - array of emails to send to (null = everyone)
 // options.excludeUid - uid to exclude (for chat - don't notify sender)
-// Also writes to userNotifications for in-app display
+// Writes to teamNotifications for in-app display (visible to ALL users)
 async function sendNotification(title, body, data = {}, options = {}) {
   const tokensSnapshot = await db.collection('fcmTokens').get();
   const tokens = [];
-  const recipientUids = new Set(); // Track UIDs for in-app notifications
 
   const targetEmails = options.emails?.map(e => e.toLowerCase());
 
@@ -148,32 +147,14 @@ async function sendNotification(title, body, data = {}, options = {}) {
     // Filter by email list if provided
     if (targetEmails && !targetEmails.includes(tokenData.email?.toLowerCase())) return;
 
-    // Collect UID for in-app notifications
-    if (tokenData.uid) recipientUids.add(tokenData.uid);
-
     // Collect token for push notifications (only if valid)
     if (tokenData.token) tokens.push(tokenData.token);
   });
 
-  // Also get ALL users from userProfiles for in-app notifications
-  // This ensures in-app notifications work even if user never enabled push
-  const profilesSnapshot = await db.collection('userProfiles').get();
-  profilesSnapshot.forEach(doc => {
-    const uid = doc.id;
+  // HYBRID APPROACH:
+  // - Broadcast (targetAll) → teamNotifications (everyone can read)
+  // - Targeted (specific emails) → userNotifications/{uid} (private)
 
-    // Exclude sender
-    if (options.excludeUid && uid === options.excludeUid) return;
-
-    // Filter by email if provided
-    if (targetEmails) {
-      const email = doc.data().email?.toLowerCase();
-      if (!email || !targetEmails.includes(email)) return;
-    }
-
-    recipientUids.add(uid);
-  });
-
-  // Write to userNotifications for in-app display
   const notificationData = {
     title,
     body,
@@ -182,11 +163,39 @@ async function sendNotification(title, body, data = {}, options = {}) {
     read: false
   };
 
-  const inAppPromises = Array.from(recipientUids).map(uid =>
-    db.collection('userNotifications').doc(uid)
-      .collection('notifications').add(notificationData)
-      .catch(err => console.error(`Failed to write notification for ${uid}:`, err))
-  );
+  if (!targetEmails) {
+    // BROADCAST: Write to teamNotifications (all authenticated users can read)
+    await db.collection('teamNotifications').add({
+      ...notificationData,
+      excludeUid: options.excludeUid || null // Client filters out sender for chat
+    });
+    console.log(`Notification "${title}": Written to teamNotifications (broadcast)`);
+  } else {
+    // TARGETED: Write to individual userNotifications/{uid} (private)
+    // Look up UIDs from emails via userProfiles
+    const writePromises = [];
+
+    for (const email of targetEmails) {
+      const profileSnapshot = await db.collection('userProfiles')
+        .where('email', '==', email.toLowerCase())
+        .limit(1)
+        .get();
+
+      if (!profileSnapshot.empty) {
+        const uid = profileSnapshot.docs[0].id;
+        writePromises.push(
+          db.collection('userNotifications').doc(uid)
+            .collection('notifications').add(notificationData)
+            .catch(err => console.error(`Failed to write notification for ${uid}:`, err))
+        );
+      } else {
+        console.log(`Notification "${title}": No userProfile found for ${email}`);
+      }
+    }
+
+    await Promise.all(writePromises);
+    console.log(`Notification "${title}": Written to ${writePromises.length} user inboxes (targeted)`);
+  }
 
   // Send push notifications
   let pushResult = { successCount: 0, failureCount: 0 };
@@ -206,11 +215,7 @@ async function sendNotification(title, body, data = {}, options = {}) {
     console.log(`Notification "${title}": No FCM tokens to send to`);
   }
 
-  // Wait for in-app notifications to be written
-  await Promise.all(inAppPromises);
-  console.log(`Notification "${title}": Written to ${recipientUids.size} user inboxes`);
-
-  return { push: pushResult, inApp: recipientUids.size };
+  return { push: pushResult, inApp: 'team' };
 }
 
 // Helper to get head coach email
@@ -232,7 +237,27 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
     message.senderName,
     body,
     { type: 'chat', url: '/messages.html' },
-    { excludeUid: message.uid }
+    { excludeUid: message.senderUid }
+  );
+
+  return null;
+});
+
+// Trigger on new coach post
+exports.onNewPost = onDocumentCreated('posts/{postId}', async (event) => {
+  const post = event.data.data();
+  if (!post.title) return null;
+
+  const preview = post.content?.length > 80
+    ? post.content.substring(0, 80) + '...'
+    : (post.content || '');
+
+  // Notify everyone except the coach who posted
+  await sendNotification(
+    `New Post: ${post.title}`,
+    preview,
+    { type: 'newPost', url: '/messages.html?tab=posts' },
+    { excludeUid: post.authorUid }
   );
 
   return null;
@@ -354,55 +379,220 @@ exports.sendAttendanceReminders = onSchedule({
 
       console.log(`Found ${nonResponders.length} non-responders for ${event.type} ${event.id}`);
 
-      const parentEmails = new Set();
+      const parentEmails = [];
       nonResponders.forEach(player => {
         if (player.parents) {
           player.parents.forEach(parent => {
             if (parent.email) {
-              parentEmails.add(parent.email.toLowerCase());
+              parentEmails.push(parent.email.toLowerCase());
             }
           });
         }
       });
 
-      const tokensSnapshot = await db.collection('fcmTokens').get();
-      const tokensToNotify = [];
-
-      tokensSnapshot.forEach(doc => {
-        const tokenData = doc.data();
-        if (tokenData.token && tokenData.email && parentEmails.has(tokenData.email.toLowerCase())) {
-          tokensToNotify.push(tokenData.token);
-        }
-      });
-
-      if (tokensToNotify.length === 0) {
-        console.log(`No FCM tokens found for non-responders of ${event.type} ${event.id}`);
+      if (parentEmails.length === 0) {
+        console.log(`No parent emails for non-responders of ${event.type} ${event.id}`);
         continue;
       }
 
       const eventDate = new Date(event.date);
       const dateStr = eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      const notificationMessage = {
-        data: {
-          title: 'RSVP Needed',
-          body: `${event.name} on ${dateStr} - Let us know if your player can attend!`,
-          type: 'attendance',
-          url: `/attendance.html?game=${event.id}`
-        },
-        tokens: tokensToNotify
-      };
 
-      try {
-        const response = await messaging.sendEachForMulticast(notificationMessage);
-        console.log(`Sent ${response.successCount} attendance reminders for ${event.type} ${event.id}, ${response.failureCount} failed`);
-      } catch (error) {
-        console.error(`Error sending attendance reminders for ${event.type} ${event.id}:`, error);
-      }
+      // Use sendNotification for both push and in-app (targeted to specific parents)
+      await sendNotification(
+        'RSVP Needed',
+        `${event.name} on ${dateStr} - Let us know if your player can attend!`,
+        { type: 'attendance', url: `/attendance.html?game=${event.id}` },
+        { emails: parentEmails }
+      );
+      console.log(`Sent attendance reminders to ${parentEmails.length} parents for ${event.type} ${event.id}`);
     }
 
     return null;
   } catch (error) {
     console.error('Error in sendAttendanceReminders:', error);
+    return null;
+  }
+});
+
+// Helper function to send volunteer reminder for a specific game
+async function sendVolunteerReminderForGame(game, roster, daysAhead) {
+  console.log(`Processing ${daysAhead}-day volunteer reminder for game ${game.id}: vs ${game.opponent}`);
+
+  // Check if we already sent this specific reminder
+  const reminderKey = `volunteerReminder_${daysAhead}day_${game.id}`;
+  const reminderDoc = await db.collection('notificationsSent').doc(reminderKey).get();
+  if (reminderDoc.exists) {
+    console.log(`Already sent ${daysAhead}-day volunteer reminder for game ${game.id}`);
+    return false;
+  }
+
+  // Get current volunteers for this game
+  const volunteerDoc = await db.collection('volunteers').doc(game.id.toString()).get();
+  const volunteerEmails = new Set();
+  const volunteerData = volunteerDoc.exists ? volunteerDoc.data() : {};
+
+  if (volunteerData.scorekeeper?.email) volunteerEmails.add(volunteerData.scorekeeper.email.toLowerCase());
+  if (volunteerData.tableWorker?.email) volunteerEmails.add(volunteerData.tableWorker.email.toLowerCase());
+
+  // Check what positions are still needed
+  const needsScorekeeper = !volunteerData.scorekeeper;
+  const needsTableWorker = !volunteerData.tableWorker;
+
+  // If all positions filled, no reminder needed
+  if (!needsScorekeeper && !needsTableWorker) {
+    console.log(`Game ${game.id} has all volunteer positions filled`);
+    return false;
+  }
+
+  // Build list of what's needed
+  const needed = [];
+  if (needsScorekeeper) needed.push('scorekeeper');
+  if (needsTableWorker) needed.push('table worker');
+  const neededStr = needed.join(' and ');
+
+  // Get all parent emails (excluding current volunteers)
+  const targetEmails = [];
+  if (roster.players) {
+    roster.players.forEach(player => {
+      if (player.parents) {
+        player.parents.forEach(parent => {
+          if (parent.email && !volunteerEmails.has(parent.email.toLowerCase())) {
+            targetEmails.push(parent.email.toLowerCase());
+          }
+        });
+      }
+    });
+  }
+
+  // Also include coaches
+  if (roster.coaches) {
+    roster.coaches.forEach(coach => {
+      if (coach.email && !volunteerEmails.has(coach.email.toLowerCase())) {
+        targetEmails.push(coach.email.toLowerCase());
+      }
+    });
+  }
+
+  if (targetEmails.length === 0) {
+    console.log(`No emails to notify for game ${game.id}`);
+    return false;
+  }
+
+  const gameDate = new Date(game.date);
+  const dateStr = gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  // Urgency increases as game approaches
+  let title, body;
+  if (daysAhead === 0) {
+    title = 'URGENT: Volunteers Needed TODAY!';
+    body = `We still need a ${neededStr} for TODAY's game vs ${game.opponent}. Please sign up ASAP!`;
+  } else if (daysAhead === 1) {
+    title = 'URGENT: Volunteers Needed Tomorrow!';
+    body = `We still need a ${neededStr} for tomorrow (${dateStr}) vs ${game.opponent}. Can you help?`;
+  } else {
+    title = 'Volunteers Needed!';
+    body = `We still need a ${neededStr} for ${dateStr} vs ${game.opponent}. Can you help?`;
+  }
+
+  // Send notification
+  await sendNotification(
+    title,
+    body,
+    { type: 'volunteerReminder', url: `/volunteers.html?game=${game.id}` },
+    { emails: targetEmails }
+  );
+  console.log(`Sent ${daysAhead}-day volunteer reminder to ${targetEmails.length} people for game ${game.id}`);
+
+  // Mark reminder as sent
+  await db.collection('notificationsSent').doc(reminderKey).set({
+    gameId: game.id,
+    daysAhead: daysAhead,
+    neededPositions: needed,
+    sentAt: Timestamp.now(),
+    recipientCount: targetEmails.length
+  });
+
+  return true;
+}
+
+// Volunteer reminders at 9 AM - for games 2 days and 1 day away
+exports.sendVolunteerReminders = onSchedule({
+  schedule: '0 9 * * *',
+  timeZone: 'America/Chicago'
+}, async (event) => {
+  console.log('Running 9 AM volunteer reminder check (2-day and 1-day)...');
+
+  try {
+    const scheduleDoc = await db.collection('config').doc('schedule').get();
+    const rosterDoc = await db.collection('config').doc('roster').get();
+
+    if (!scheduleDoc.exists || !rosterDoc.exists) {
+      console.log('Schedule or roster config not found');
+      return null;
+    }
+
+    const schedule = scheduleDoc.data();
+    const roster = rosterDoc.data();
+    const games = schedule.games || [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Check games at 2 days and 1 day before
+    for (const daysAhead of [2, 1]) {
+      const targetDate = new Date(today);
+      targetDate.setDate(targetDate.getDate() + daysAhead);
+      const targetDateStr = targetDate.toISOString().split('T')[0];
+
+      const upcomingGames = games.filter(game => !game.result && game.date === targetDateStr);
+
+      for (const game of upcomingGames) {
+        await sendVolunteerReminderForGame(game, roster, daysAhead);
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error in sendVolunteerReminders:', error);
+    return null;
+  }
+});
+
+// Volunteer reminders at 7:30 AM - for games TODAY (game day morning)
+exports.sendVolunteerRemindersGameDay = onSchedule({
+  schedule: '30 7 * * *',
+  timeZone: 'America/Chicago'
+}, async (event) => {
+  console.log('Running 7:30 AM volunteer reminder check (game day)...');
+
+  try {
+    const scheduleDoc = await db.collection('config').doc('schedule').get();
+    const rosterDoc = await db.collection('config').doc('roster').get();
+
+    if (!scheduleDoc.exists || !rosterDoc.exists) {
+      console.log('Schedule or roster config not found');
+      return null;
+    }
+
+    const schedule = scheduleDoc.data();
+    const roster = rosterDoc.data();
+    const games = schedule.games || [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Check games TODAY
+    const todaysGames = games.filter(game => !game.result && game.date === todayStr);
+
+    for (const game of todaysGames) {
+      await sendVolunteerReminderForGame(game, roster, 0);
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error in sendVolunteerRemindersGameDay:', error);
     return null;
   }
 });
@@ -720,7 +910,8 @@ Use this email address (${viewerEmail}) when registering.
   }
 });
 
-// Send scorekeeper reminder 10 minutes before game - runs every 5 minutes
+// Send volunteer reminders 10 minutes before game - runs every 5 minutes
+// Notifies both scorekeeper and table worker
 exports.sendScorekeeperReminders = onSchedule({
   schedule: 'every 5 minutes',
   timeZone: 'America/Chicago'
@@ -759,69 +950,65 @@ exports.sendScorekeeperReminders = onSchedule({
       if (gameStart >= windowStart && gameStart <= windowEnd) {
         console.log(`Game ${game.id} vs ${game.opponent} starts at ${gameStart.toISOString()}`);
 
-        // Get volunteer data to find scorekeeper
+        // Get volunteer data
         const volunteerDoc = await db.collection('volunteers').doc(game.id.toString()).get();
-        if (!volunteerDoc.exists || !volunteerDoc.data().scorekeeper) {
-          console.log(`No scorekeeper assigned for game ${game.id}`);
+        if (!volunteerDoc.exists) {
+          console.log(`No volunteers assigned for game ${game.id}`);
           continue;
         }
 
-        const scorekeeper = volunteerDoc.data().scorekeeper;
-        const scorekeeperEmail = scorekeeper.email?.toLowerCase();
+        const volunteerData = volunteerDoc.data();
 
-        if (!scorekeeperEmail) {
-          console.log(`No scorekeeper email for game ${game.id}`);
-          continue;
+        // Send scorekeeper reminder
+        const scorekeeper = volunteerData.scorekeeper;
+        const scorekeeperEmail = scorekeeper?.email?.toLowerCase();
+        if (scorekeeperEmail) {
+          const reminderKey = `scorekeeperReminder_${game.id}`;
+          const reminderDoc = await db.collection('notificationsSent').doc(reminderKey).get();
+          if (!reminderDoc.exists) {
+            try {
+              await sendNotification(
+                'Game Starting Soon!',
+                `You're scorekeeping vs ${game.opponent} in 10 minutes. Please open app to start keeping score.`,
+                { type: 'scorekeeperReminder', url: `/game-stats.html?game=${game.id}` },
+                { emails: [scorekeeperEmail] }
+              );
+              console.log(`Scorekeeper reminder sent to ${scorekeeperEmail} for game ${game.id}`);
+              await db.collection('notificationsSent').doc(reminderKey).set({
+                gameId: game.id,
+                sentAt: Timestamp.now(),
+                sentTo: scorekeeperEmail
+              });
+            } catch (err) {
+              console.error(`Error sending scorekeeper reminder for game ${game.id}:`, err);
+            }
+          }
         }
 
-        // Check if we already sent a reminder for this game
-        const reminderKey = `scorekeeperReminder_${game.id}`;
-        const reminderDoc = await db.collection('notificationsSent').doc(reminderKey).get();
-        if (reminderDoc.exists) {
-          console.log(`Already sent scorekeeper reminder for game ${game.id}`);
-          continue;
-        }
-
-        // Find FCM token for scorekeeper
-        const tokensSnapshot = await db.collection('fcmTokens')
-          .where('email', '==', scorekeeperEmail)
-          .get();
-
-        if (tokensSnapshot.empty) {
-          console.log(`No FCM token for scorekeeper ${scorekeeperEmail}`);
-          continue;
-        }
-
-        const tokens = [];
-        tokensSnapshot.forEach(doc => {
-          if (doc.data().token) tokens.push(doc.data().token);
-        });
-
-        if (tokens.length === 0) continue;
-
-        // Send notification
-        const message = {
-          data: {
-            title: 'Game Starting Soon!',
-            body: `You're scorekeeping vs ${game.opponent} in 10 minutes`,
-            type: 'scorekeeperReminder',
-            url: `/game-stats.html?game=${game.id}`
-          },
-          tokens: tokens
-        };
-
-        try {
-          const response = await messaging.sendEachForMulticast(message);
-          console.log(`Scorekeeper reminder sent for game ${game.id}: ${response.successCount} success, ${response.failureCount} failed`);
-
-          // Mark reminder as sent
-          await db.collection('notificationsSent').doc(reminderKey).set({
-            gameId: game.id,
-            sentAt: Timestamp.now(),
-            sentTo: scorekeeperEmail
-          });
-        } catch (err) {
-          console.error(`Error sending scorekeeper reminder for game ${game.id}:`, err);
+        // Send table worker reminder
+        const tableWorker = volunteerData.tableWorker;
+        const tableWorkerEmail = tableWorker?.email?.toLowerCase();
+        if (tableWorkerEmail) {
+          const reminderKey = `tableWorkerReminder_${game.id}`;
+          const reminderDoc = await db.collection('notificationsSent').doc(reminderKey).get();
+          if (!reminderDoc.exists) {
+            try {
+              await sendNotification(
+                'Game Starting Soon!',
+                `You're on scorer's table duty vs ${game.opponent} in 10 minutes. Please head to the scorer's table.`,
+                { type: 'tableWorkerReminder', url: `/schedule.html` },
+                { emails: [tableWorkerEmail] }
+              );
+              console.log(`Table worker reminder sent to ${tableWorkerEmail} for game ${game.id}`);
+              await db.collection('notificationsSent').doc(reminderKey).set({
+                gameId: game.id,
+                sentAt: Timestamp.now(),
+                sentTo: tableWorkerEmail
+              });
+            } catch (err) {
+              console.error(`Error sending table worker reminder for game ${game.id}:`, err);
+            }
+          }
         }
       }
     }

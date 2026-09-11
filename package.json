@@ -1,6 +1,29 @@
 {
   "dependencies": {
     "firebase-admin": "^14.3.0",
+    "playwright": "^1.63.0",
     "puppeteer": "^25.10.0"
-  }
+  },
+  "name": "lancers",
+  "version": "1.0.0",
+  "description": "A mobile-first web application for managing a youth basketball team. Built with vanilla JavaScript and Firebase.",
+  "main": "firebase-messaging-sw.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lmeltaba1/jrlancersbball.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/lmeltaba1/jrlancersbball/issues"
+  },
+  "homepage": "https://github.com/lmeltaba1/jrlancersbball#readme"
 }
