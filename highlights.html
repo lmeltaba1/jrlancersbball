@@ -677,7 +677,7 @@
         }
         if (userInfo.isEmulating) { showEmulationBanner(userInfo.emulatedEmail); }
 
-        // Show upload button for all authenticated users (including viewers)
+        // Show upload button for all authenticated users (parents, coaches, viewers)
         document.getElementById('uploadBtn').style.display = 'flex';
 
         loadPageContent();

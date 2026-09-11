@@ -1057,32 +1057,35 @@ exports.generateWrapupReport = onRequest({
     return;
   }
 
-  // Verify Firebase Auth token (optional for scheduled triggers, required for browser requests)
-  let userEmail = null;
+  // Verify Firebase Auth token - required for all requests
   const authHeader = request.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const idToken = authHeader.split('Bearer ')[1];
-    try {
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      userEmail = decodedToken.email?.toLowerCase();
-      // Check if user is the head coach
-      const headCoachDoc = await db.collection('config').doc('headCoach').get();
-      const headCoachEmail = headCoachDoc.exists ? headCoachDoc.data().email : null;
-      if (userEmail !== headCoachEmail) {
-        response.status(403).json({ error: 'Only the head coach can trigger wrap-up generation' });
-        return;
-      }
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    response.status(401).json({ error: 'Authorization required' });
+    return;
+  }
 
-      // Rate limit: 5 requests per hour per user
-      if (await checkRateLimit(userEmail, 'generateWrapup', 5, 60)) {
-        response.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
-        return;
-      }
-    } catch (authError) {
-      console.error('Auth verification failed:', authError);
-      response.status(401).json({ error: 'Invalid authentication token' });
+  let userEmail;
+  const idToken = authHeader.split('Bearer ')[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    userEmail = decodedToken.email?.toLowerCase();
+    // Check if user is the head coach
+    const headCoachDoc = await db.collection('config').doc('headCoach').get();
+    const headCoachEmail = headCoachDoc.exists ? headCoachDoc.data().email : null;
+    if (userEmail !== headCoachEmail) {
+      response.status(403).json({ error: 'Only the head coach can trigger wrap-up generation' });
       return;
     }
+
+    // Rate limit: 5 requests per hour per user
+    if (await checkRateLimit(userEmail, 'generateWrapup', 5, 60)) {
+      response.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
+      return;
+    }
+  } catch (authError) {
+    console.error('Auth verification failed:', authError);
+    response.status(401).json({ error: 'Invalid authentication token' });
+    return;
   }
 
   const gameId = request.body.gameId || request.query.gameId;
@@ -1636,8 +1639,9 @@ exports.triggerWrapupGeneration = onRequest(async (request, response) => {
     });
   }
 
-  // Trigger generation
+  // Trigger generation - pass through the auth token
   const functionUrl = `https://us-central1-lancers-bball.cloudfunctions.net/generateWrapupReport`;
+  const authHeader = request.headers.authorization;
 
   const https = require('https');
   const postData = JSON.stringify({ gameId });
@@ -1646,7 +1650,8 @@ exports.triggerWrapupGeneration = onRequest(async (request, response) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(postData)
+      'Content-Length': Buffer.byteLength(postData),
+      'Authorization': authHeader
     }
   }, (res) => {
     let data = '';

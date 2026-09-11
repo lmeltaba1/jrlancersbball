@@ -16,7 +16,7 @@ The app is fully functional with all core features implemented. **Season simulat
 4. **Game Detail (game-detail.html)** - Individual game info, attendance, volunteers, highlights, play-by-play
 5. **Messages (messages.html)** - 3-tab messaging hub (parents/coaches only):
    - **Group Chat** - Real-time team messaging (default tab)
-   - **Posts** - Coach announcements (coaches can post, all can view)
+   - **Posts** - Head coach announcements only (head coach can post, parents/coaches can view and comment)
    - **Text** - Contact directory with SMS links to parents/coaches
 6. **Playbook (playbook.html)** - Interactive play diagrams with SVG animations (parents/coaches only)
 7. **Highlights (highlights.html)** - Photo/video uploads tagged by player/game
@@ -69,9 +69,9 @@ The app is fully functional with all core features implemented. **Season simulat
 
 | Role | Description | Permissions |
 |------|-------------|-------------|
-| **Coach** | In `roster.json` coaches array | Full access, can edit stats anytime |
-| **Parent** | In player's `parents` array | Full access except stat editing (unless scorekeeper) |
-| **Viewer** | In player's `viewers` array or Firestore | View-only: schedule, roster, stats, highlights |
+| **Coach** | In `roster.json` coaches array | Full access, can edit stats anytime, can delete any highlight |
+| **Parent** | In player's `parents` array | Full access except stat editing (unless scorekeeper), can upload/delete own highlights |
+| **Viewer** | In player's `viewers` array or Firestore | Can view schedule, roster, stats; can upload highlights for any player, delete own highlights; NO access to messages, playbook, attendance, volunteers |
 
 ### Authentication Flow
 
@@ -225,6 +225,15 @@ Key functions in `highlights.html`:
 - Real uploads: `downloadUrl` field (Firebase Storage URL)
 - Simulated: `url` field (fake example.com URLs)
 - Code checks both: `highlight.downloadUrl || highlight.url`
+
+### Highlight Permissions
+
+| Action | Coach | Parent | Viewer |
+|--------|-------|--------|--------|
+| View | Yes | Yes | Yes |
+| Upload (any player) | Yes | Yes | Yes |
+| Delete own | Yes | Yes | Yes |
+| Delete others | Yes | No | No |
 
 ## Navigation
 
@@ -387,9 +396,12 @@ All admin endpoints use Firebase Auth token verification via `verifyAdminAuth()`
 - No more hardcoded API keys
 
 ### Firestore Rules
+- `isAuthenticated()` required for ALL reads (no public access)
+- `isHeadCoach()` helper checks `config/headCoach` document
 - `isCoach()` helper checks `config/coachEmails` document
+- Posts: only head coach can create/update/delete
 - Messages require `senderUid` to match auth UID
-- Highlights require `uploadedBy` to match auth UID
+- Highlights: create requires `uploadedBy` to match auth UID; delete allowed for uploader OR coach
 - FCM tokens restricted to owner only
 - Emulation logs are immutable (no update/delete)
 
