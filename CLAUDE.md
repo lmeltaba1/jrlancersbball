@@ -15,9 +15,10 @@ The app is fully functional with all core features implemented. **Season simulat
 3. **Schedule (schedule.html)** - Season schedule with game cards
 4. **Game Detail (game-detail.html)** - Individual game info, attendance, volunteers, highlights, play-by-play
 5. **Messages (messages.html)** - 3-tab messaging hub (parents/coaches only):
-   - **Group Chat** - Real-time team messaging (default tab)
+   - **Group Chat** - Real-time team messaging (default tab), with timestamp-based ordering to handle offline cache
    - **Posts** - Head coach announcements only (head coach can post, parents/coaches can view and comment)
    - **Text** - Contact directory with SMS links to parents/coaches
+   - **Last-Read Divider** - Shows where user left off, becomes sticky "NEW MESSAGES" banner
 6. **Playbook (playbook.html)** - Interactive play diagrams with SVG animations (parents/coaches only)
 7. **Highlights (highlights.html)** - Photo/video uploads tagged by player/game
 8. **Attendance (attendance.html)** - RSVP tracking for games (parents/coaches only)
@@ -44,6 +45,9 @@ The app is fully functional with all core features implemented. **Season simulat
 - `viewers` - Invited viewers per player (managed by parents, includes blocklist)
 - `chatReadStatus` - Per-user chat read timestamps
 - `fcmTokens` - Push notification tokens
+- `teamNotifications` - Broadcast notifications (all users can read)
+- `userNotifications/{uid}` - Targeted notifications (private per user)
+- `notificationStatus/{uid}` - Tracks read/dismissed state for broadcast notifications
 - `userProfiles` - User profile data
 - `wrapups` - Post-game wrap-up reports (AI-generated narratives, coach notes)
 - `rateLimits` - Rate limiting for cloud functions (per user/action)
@@ -55,6 +59,7 @@ The app is fully functional with all core features implemented. **Season simulat
 |------|---------|
 | `js/firebase-config.js` | Firebase init, auth helpers, `getPlayerFromRoster()`, `requireAuth()`, `isEmailInRoster()`, `loadRosterData()`, `loadAdminEmails()` |
 | `js/app.js` | Shared utilities: `loadRoster()`, `loadSchedule()`, `formatDate()`, `escapeHtml()`, `leagueNames`, `getCurrentDate()` - included in most HTML files |
+| `js/notifications.js` | In-app notification center: bell UI, chat bundling, auto-clear by page |
 | `js/theme.js` | Dark/light mode toggle |
 | `css/athletic.css` | All styles, CSS variables for theming |
 | `sw.js` | Self-destruct stub - unregisters old caching SW (no longer used) |
@@ -361,10 +366,22 @@ All notifications use `sendNotification(title, body, data, options)` which handl
 `js/notifications.js` provides a notification bell UI in the header:
 - Subscribes to both `teamNotifications` and `userNotifications/{uid}`
 - Filters broadcast notifications by `excludeUid` (sender doesn't see own chat)
-- Aggregates multiple unread chat messages into single "X new messages" notification
+- **Chat bundling**: Aggregates multiple unread chat messages into single "X new messages" notification
+- **Auto-clear**: Automatically marks notifications as read when user visits relevant page (e.g., chat notifications cleared on messages.html)
 - Click marks as read and navigates to URL
 - Dismiss (X) and Clear All buttons
 - Modern glassmorphism UI with animations
+
+**Auto-Clear Rules by Page:**
+| Page | Notification Types Cleared |
+|------|---------------------------|
+| messages.html | chat, message |
+| messages.html?tab=posts | newPost, post |
+| game-detail.html | gameStarted, gameEnded, wrapupReady |
+| game-stats.html | gameStarted, scorekeeperReminder |
+| attendance.html | attendance, rsvp |
+| volunteers.html | volunteer, volunteerReminder |
+| highlights.html | highlight |
 
 ### Notification Triggers
 
@@ -484,10 +501,11 @@ Buttons:
 ## Security (Sept 2026 Update)
 
 ### Cloud Functions Authentication
-All admin endpoints use Firebase Auth token verification via `verifyAdminAuth()`:
+All admin endpoints use Firebase Auth token verification via `auth.verifyIdToken()`:
 - `headCoachOnly: true` - Only head coach can access
 - `coachOnly: true` - Any coach can access
 - No more hardcoded API keys
+- Uses modular Firebase Admin SDK imports (not `admin.auth()`)
 
 ### Firestore Rules
 - `isAuthenticated()` required for ALL reads (no public access)
@@ -523,6 +541,7 @@ All admin endpoints use Firebase Auth token verification via `verifyAdminAuth()`
 - **Listener cleanup**: `pagehide` event handler added alongside `beforeunload` for mobile navigation cleanup
 - **Loading timeout feedback**: After 8 seconds, skeleton loading shows "Tap to reload" link
 - **Firestore persistence**: Offline persistence enabled via `enablePersistence({ synchronizeTabs: true })`
+- **Message ordering**: Chat messages insert in correct position by timestamp (handles out-of-order cache data)
 
 ## Accessibility (Sept 2026 Update)
 

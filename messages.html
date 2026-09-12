@@ -748,9 +748,11 @@
           if (change.type === 'added') {
             var m = change.doc.data();
             var messageId = change.doc.id;
+            var msgTimestamp = m.timestamp?.toMillis?.() || 0;
 
             var div = document.createElement('div');
             div.setAttribute('data-message-id', messageId);
+            div.setAttribute('data-timestamp', msgTimestamp);
             var isMine = (m.senderEmail && effectiveEmail &&
                           m.senderEmail.toLowerCase() === effectiveEmail.toLowerCase()) ||
                          (!currentUserInfo.isEmulating && m.uid === currentUser.uid);
@@ -760,7 +762,31 @@
             html += '<div>' + escapeHtml(m.text || '') + '</div>';
             html += '<div class="time">' + formatTime(m.timestamp) + '</div>';
             div.innerHTML = html;
-            container.appendChild(div);
+
+            // Insert in correct position based on timestamp (handles out-of-order cache data)
+            var inserted = false;
+            var children = container.querySelectorAll('.chat-message');
+            for (var i = children.length - 1; i >= 0; i--) {
+              var childTs = parseInt(children[i].getAttribute('data-timestamp') || '0', 10);
+              if (msgTimestamp >= childTs) {
+                // Insert after this element
+                if (children[i].nextSibling) {
+                  container.insertBefore(div, children[i].nextSibling);
+                } else {
+                  container.appendChild(div);
+                }
+                inserted = true;
+                break;
+              }
+            }
+            if (!inserted) {
+              // This message is oldest, insert at beginning
+              if (container.firstChild) {
+                container.insertBefore(div, container.firstChild);
+              } else {
+                container.appendChild(div);
+              }
+            }
           }
         });
 
