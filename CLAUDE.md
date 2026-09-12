@@ -561,6 +561,13 @@ All admin endpoints use Firebase Auth token verification via `auth.verifyIdToken
 
 ## Known Issues / Future Work
 
-None currently blocking. Potential enhancements:
+**Priority Items:**
+- **In-app notifications UI** - Current styling is ugly, needs redesign
+- **PWA push notifications** - Inconsistent delivery, notifications disappear unexpectedly
+- **Shot attempt tracking** - Add 2PT, 3PT, FT attempted stats (we track misses now via long-press)
+- **Shooting percentages** - Calculate and display FG%, 3P%, FT% from made/attempted
+- **Team stats per game** - Aggregate team totals for each game
+
+**Potential Enhancements:**
 - Video compression before upload
 - Multi-player tagging in highlights
