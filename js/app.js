@@ -1,12 +1,12 @@
 // Jr. Lancers Basketball - Main App JavaScript
 // Time functions (loadTime, getCurrentDate, isSimulated) are in firebase-config.js
 
-// Get Firestore timestamp
+// Get Firestore timestamp using simulated time if set
 function getFirestoreTimestamp() {
   if (typeof firebase !== 'undefined' && firebase.firestore) {
-    return _time
-      ? firebase.firestore.Timestamp.fromDate(_time)
-      : firebase.firestore.FieldValue.serverTimestamp();
+    // Use getCurrentDate() which applies time offset if simulation is active
+    var currentDate = typeof getCurrentDate === 'function' ? getCurrentDate() : new Date();
+    return firebase.firestore.Timestamp.fromDate(currentDate);
   }
   return null;
 }

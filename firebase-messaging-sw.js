@@ -15,34 +15,35 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Handle background push messages (data-only messages)
-messaging.onBackgroundMessage((payload) => {
-  console.log('Background message:', payload);
-
-  // Read from data payload (not notification payload to avoid duplicates)
-  const data = payload.data || {};
-  const notificationTitle = data.title || 'Jr. Lancers Basketball';
-  const notificationOptions = {
-    body: data.body || 'New update from the team',
-    icon: '/images/lancers-logo-192.png',
-    badge: '/images/lancers-logo-192.png',
-    vibrate: [100, 50, 100],
-    data: { url: data.url || '/index.html' },
-    tag: 'lancers-' + (data.type || 'notification')
-  };
-
-  return self.registration.showNotification(notificationTitle, notificationOptions);
-});
+// Background message handler removed - notifications now use FCM notification payload
+// which is automatically displayed by the browser (no duplicate handling needed)
 
 // Handle notification click - open URL
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const url = event.notification.data?.url || '/index.html';
+  // Get URL from notification data
+  let url = event.notification.data?.url || '/index.html';
 
-  // Always open the URL - this works reliably on all platforms
+  // Ensure full URL for PWA
+  if (url.startsWith('/')) {
+    url = 'https://lancers-bball.web.app' + url;
+  }
+
+  console.log('Notification clicked, opening:', url);
+
+  // Try to focus existing window first, otherwise open new
   event.waitUntil(
-    clients.openWindow(url)
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      // Check if there's already a window open
+      for (const client of windowClients) {
+        if (client.url.includes('lancers-bball.web.app') && 'focus' in client) {
+          return client.focus().then(() => client.navigate(url));
+        }
+      }
+      // No existing window, open new one
+      return clients.openWindow(url);
+    })
   );
 });
 

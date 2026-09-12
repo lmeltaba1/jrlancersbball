@@ -225,8 +225,32 @@ async function sendNotification(title, body, data = {}, options = {}) {
   if (tokens.length > 0) {
     console.log(`Notification "${title}": Sending to ${tokens.length} devices`);
     try {
+      const baseUrl = 'https://lancers-bball.web.app';
+      const notificationUrl = baseUrl + (data.url || '/index.html');
       const response = await messaging.sendEachForMulticast({
-        data: { title, body, ...data },
+        // Data payload - service worker will display notification
+        data: {
+          title,
+          body,
+          url: data.url || '/index.html',
+          icon: '/images/lancers-logo-192.png',
+          ...data
+        },
+        // Web push configuration with notification for display
+        webpush: {
+          notification: {
+            title,
+            body,
+            icon: baseUrl + '/images/lancers-logo-192.png',
+            badge: baseUrl + '/images/lancers-logo-192.png',
+            data: {
+              url: data.url || '/index.html'
+            }
+          },
+          fcmOptions: {
+            link: notificationUrl
+          }
+        },
         tokens
       });
       pushResult = response;

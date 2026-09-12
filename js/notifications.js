@@ -738,3 +738,101 @@ window.addEventListener('pagehide', () => {
     userUnsubscribe = null;
   }
 });
+
+// Auto-clear notifications when user navigates to the relevant page
+function autoClearNotificationsForCurrentPage() {
+  if (!currentUserUid) return;
+
+  const path = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+  const hash = window.location.hash;
+
+  // Determine which notification types to clear based on current page
+  let typesToClear = [];
+
+  if (path.includes('messages.html')) {
+    if (params.get('tab') === 'posts') {
+      typesToClear = ['newPost', 'post'];
+    } else {
+      typesToClear = ['chat', 'message'];
+    }
+  } else if (path.includes('game-detail.html')) {
+    const gameId = params.get('id');
+    if (hash.includes('wrapup')) {
+      typesToClear = ['wrapupReady', 'wrapupPendingApproval'];
+    } else if (hash.includes('highlights')) {
+      typesToClear = ['gameEnded'];
+    } else if (gameId) {
+      typesToClear = ['gameStarted', 'gameEnded', 'wrapupReady'];
+    }
+  } else if (path.includes('game-stats.html')) {
+    typesToClear = ['gameStarted', 'scorekeeperReminder'];
+  } else if (path.includes('attendance.html')) {
+    typesToClear = ['attendance', 'rsvp'];
+  } else if (path.includes('volunteers.html')) {
+    typesToClear = ['volunteer', 'volunteerReminder'];
+  } else if (path.includes('highlights.html')) {
+    typesToClear = ['highlight'];
+  }
+
+  if (typesToClear.length === 0) return;
+
+  // Mark matching notifications as read
+  let hasChanges = false;
+  const userIdsToUpdate = [];
+
+  // Check team notifications
+  teamNotifications.forEach(n => {
+    const type = n.data?.type || '';
+    if (typesToClear.some(t => type.toLowerCase().includes(t.toLowerCase())) && !n.read) {
+      broadcastReadIds.add(n.id);
+      hasChanges = true;
+    }
+  });
+
+  // Check user notifications
+  userNotifications.forEach(n => {
+    const type = n.data?.type || '';
+    if (typesToClear.some(t => type.toLowerCase().includes(t.toLowerCase())) && !n.read) {
+      userIdsToUpdate.push(n.id);
+      hasChanges = true;
+    }
+  });
+
+  // Save changes
+  if (hasChanges) {
+    console.log('Auto-clearing notifications for page:', path, 'types:', typesToClear);
+    saveBroadcastStatus();
+
+    if (userIdsToUpdate.length > 0) {
+      const batch = db.batch();
+      userIdsToUpdate.forEach(id => {
+        const ref = db.collection('userNotifications').doc(currentUserUid)
+          .collection('notifications').doc(id);
+        batch.update(ref, { read: true });
+      });
+      batch.commit().catch(e => console.error('Error auto-clearing notifications:', e));
+    }
+
+    // Re-render to update UI (use original to avoid recursion)
+    if (typeof originalMergeAndRender === 'function') {
+      originalMergeAndRender();
+    }
+  }
+}
+
+// Call auto-clear after notifications are loaded (runs once per page)
+let autoClearCalled = false;
+const originalMergeAndRender = mergeAndRender;
+mergeAndRender = function() {
+  originalMergeAndRender();
+  // Only auto-clear once after initial load, with delay to ensure data is loaded
+  if (!autoClearCalled) {
+    autoClearCalled = true;
+    setTimeout(() => {
+      if (teamNotifications.length > 0 || userNotifications.length > 0) {
+        autoClearNotificationsForCurrentPage();
+      }
+    }, 1000);
+  }
+};
