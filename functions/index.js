@@ -1366,7 +1366,7 @@ exports.generateWrapupReport = onRequest({
   let userEmail;
   const idToken = authHeader.split('Bearer ')[1];
   try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const decodedToken = await auth.verifyIdToken(idToken);
     userEmail = decodedToken.email?.toLowerCase();
     // Check if user is the head coach
     const headCoachDoc = await db.collection('config').doc('headCoach').get();
@@ -1544,7 +1544,7 @@ exports.approveWrapup = onRequest(async (request, response) => {
   const idToken = authHeader.split('Bearer ')[1];
   let userEmail;
   try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const decodedToken = await auth.verifyIdToken(idToken);
     userEmail = decodedToken.email?.toLowerCase();
     // Check if user is the head coach
     const headCoachDoc = await db.collection('config').doc('headCoach').get();
@@ -2245,7 +2245,7 @@ exports.cleanupPendingWrapups = onRequest(async (request, response) => {
 
   try {
     const idToken = authHeader.split('Bearer ')[1];
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const decodedToken = await auth.verifyIdToken(idToken);
     const userEmail = decodedToken.email?.toLowerCase();
 
     const headCoachDoc = await db.collection('config').doc('headCoach').get();

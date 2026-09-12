@@ -801,7 +801,6 @@ function autoClearNotificationsForCurrentPage() {
 
   // Save changes
   if (hasChanges) {
-    console.log('Auto-clearing notifications for page:', path, 'types:', typesToClear);
     saveBroadcastStatus();
 
     if (userIdsToUpdate.length > 0) {
