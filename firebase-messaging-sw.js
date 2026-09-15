@@ -49,11 +49,13 @@ self.addEventListener('notificationclick', (event) => {
 
 // Install - skip waiting to activate immediately
 self.addEventListener('install', (event) => {
+  console.log('[FCM SW] Installing...');
   self.skipWaiting();
 });
 
 // Activate - clear ALL old caches and claim clients
 self.addEventListener('activate', (event) => {
+  console.log('[FCM SW] Activated');
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
@@ -63,6 +65,17 @@ self.addEventListener('activate', (event) => {
       })
       .then(() => self.clients.claim())
   );
+});
+
+// Log push events for debugging
+self.addEventListener('push', (event) => {
+  console.log('[FCM SW] Push received');
+  try {
+    const data = event.data?.json();
+    console.log('[FCM SW] Push data:', JSON.stringify(data));
+  } catch (e) {
+    console.log('[FCM SW] Push data (text):', event.data?.text());
+  }
 });
 
 // No fetch handler - let browser handle all requests normally (no caching)

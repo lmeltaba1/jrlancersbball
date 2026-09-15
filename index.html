@@ -282,6 +282,43 @@
     if (typeof firebase !== 'undefined' && typeof firebase.messaging === 'function') {
       try {
         messaging = firebase.messaging();
+
+        // Handle token refresh - FCM tokens expire periodically
+        messaging.onTokenRefresh(async () => {
+          if (!auth || !auth.currentUser) return;
+          try {
+            const swRegistration = await navigator.serviceWorker.ready;
+            const newToken = await messaging.getToken({
+              vapidKey: 'BP4liMqNZXn23mOL1sGsutauAN88uEy1lCH3vZ3qs18_47U6zGlToDDsmM7CU0prkvyenA9bf7FIHV84HxSCqWM',
+              serviceWorkerRegistration: swRegistration
+            });
+            if (newToken && db) {
+              await db.collection('fcmTokens').doc(auth.currentUser.uid).set({
+                token: newToken,
+                uid: auth.currentUser.uid,
+                email: auth.currentUser.email,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              console.log('FCM token refreshed');
+            }
+          } catch (e) {
+            console.error('Token refresh failed:', e);
+          }
+        });
+
+        // Handle foreground messages - show notification when app is open
+        messaging.onMessage((payload) => {
+          console.log('Foreground message received:', payload);
+          if (Notification.permission === 'granted') {
+            const title = payload.notification?.title || payload.data?.title || 'Notification';
+            const body = payload.notification?.body || payload.data?.body || '';
+            new Notification(title, {
+              body: body,
+              icon: '/images/lancers-logo-192.png',
+              data: payload.data
+            });
+          }
+        });
       } catch (e) {
         console.log('FCM not available:', e);
       }
@@ -346,7 +383,7 @@
             token: token,
             uid: auth.currentUser.uid,
             email: auth.currentUser.email,
-            updatedAt: getFirestoreTimestamp()
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           console.log('Token saved to Firestore');
         }
@@ -372,21 +409,55 @@
         if (Notification.permission === 'granted') {
           section.style.display = 'none';
           // Auto-register token if permission already granted
-          if (messaging) {
+          if (messaging && db) {
             try {
+              const uid = auth.currentUser.uid;
               const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+
+              // Listen for service worker updates - refresh token when SW updates
+              swRegistration.onupdatefound = () => {
+                const newWorker = swRegistration.installing;
+                if (newWorker) {
+                  newWorker.onstatechange = async () => {
+                    if (newWorker.state === 'activated' && auth.currentUser) {
+                      console.log('Service worker updated, refreshing FCM token');
+                      try {
+                        // Delete old token and get fresh one
+                        await messaging.deleteToken();
+                        const newToken = await messaging.getToken({
+                          vapidKey: 'BP4liMqNZXn23mOL1sGsutauAN88uEy1lCH3vZ3qs18_47U6zGlToDDsmM7CU0prkvyenA9bf7FIHV84HxSCqWM',
+                          serviceWorkerRegistration: swRegistration
+                        });
+                        if (newToken && db) {
+                          await db.collection('fcmTokens').doc(auth.currentUser.uid).set({
+                            token: newToken,
+                            uid: auth.currentUser.uid,
+                            email: auth.currentUser.email,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                          });
+                          console.log('FCM token refreshed after SW update');
+                        }
+                      } catch (e) {
+                        console.error('Failed to refresh token after SW update:', e);
+                      }
+                    }
+                  };
+                }
+              };
+
               const token = await messaging.getToken({
                 vapidKey: 'BP4liMqNZXn23mOL1sGsutauAN88uEy1lCH3vZ3qs18_47U6zGlToDDsmM7CU0prkvyenA9bf7FIHV84HxSCqWM',
                 serviceWorkerRegistration: swRegistration
               });
-              if (token && db) {
-                await db.collection('fcmTokens').doc(auth.currentUser.uid).set({
+
+              if (token) {
+                await db.collection('fcmTokens').doc(uid).set({
                   token: token,
-                  uid: auth.currentUser.uid,
+                  uid: uid,
                   email: auth.currentUser.email,
                   updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                console.log('FCM token auto-registered');
+                console.log('FCM token registered');
               }
             } catch (e) {
               console.log('FCM auto-register failed:', e);

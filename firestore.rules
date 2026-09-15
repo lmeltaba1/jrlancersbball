@@ -157,6 +157,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Pending notifications queue - managed by Cloud Functions only
+    match /pendingNotifications/{docId} {
+      allow read, write: if false;
+    }
+
     // Emulation audit logs - admins can create, head coach can read
     match /emulationLogs/{logId} {
       // Only head coach can read logs for auditing

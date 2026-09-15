@@ -157,6 +157,7 @@ async function checkRateLimit(userEmail, action, maxRequests = 10, windowMinutes
 async function sendNotification(title, body, data = {}, options = {}) {
   const tokensSnapshot = await db.collection('fcmTokens').get();
   const tokens = [];
+  const tokenToUser = {}; // Map token -> {uid, email} for queuing failed notifications
 
   const targetEmails = options.emails?.map(e => e.toLowerCase());
 
@@ -171,7 +172,10 @@ async function sendNotification(title, body, data = {}, options = {}) {
     if (targetEmails && !targetEmails.includes(tokenData.email?.toLowerCase())) return;
 
     // Collect token for push notifications (only if valid)
-    if (tokenData.token) tokens.push(tokenData.token);
+    if (tokenData.token) {
+      tokens.push(tokenData.token);
+      tokenToUser[tokenData.token] = { uid: tokenData.uid, email: tokenData.email };
+    }
   });
 
   // HYBRID APPROACH:
@@ -255,6 +259,62 @@ async function sendNotification(title, body, data = {}, options = {}) {
       });
       pushResult = response;
       console.log(`Notification "${title}": ${response.successCount} sent, ${response.failureCount} failed`);
+
+      // Log individual failures, clean up invalid tokens, and queue notifications for retry
+      if (response.failureCount > 0) {
+        const tokensToRemove = [];
+        const usersToQueue = []; // Users who should receive this notification later
+
+        response.responses.forEach((resp, idx) => {
+          if (!resp.success) {
+            const errorCode = resp.error?.code;
+            const failedToken = tokens[idx];
+            console.error(`FCM failed for token ${idx}: ${errorCode} - ${resp.error?.message}`);
+
+            // These error codes indicate the token should be removed
+            if (errorCode === 'messaging/invalid-registration-token' ||
+                errorCode === 'messaging/registration-token-not-registered') {
+              tokensToRemove.push(failedToken);
+              // Queue notification for this user
+              const userInfo = tokenToUser[failedToken];
+              if (userInfo?.uid) {
+                usersToQueue.push(userInfo);
+              }
+            }
+          }
+        });
+
+        // Delete invalid tokens from Firestore
+        if (tokensToRemove.length > 0) {
+          const tokenSnapshot = await db.collection('fcmTokens').get();
+          const deletePromises = [];
+          tokenSnapshot.forEach(doc => {
+            if (tokensToRemove.includes(doc.data().token)) {
+              deletePromises.push(doc.ref.delete());
+              console.log(`Removed invalid FCM token for ${doc.data().email}`);
+            }
+          });
+          await Promise.all(deletePromises);
+          console.log(`Cleaned up ${deletePromises.length} invalid FCM tokens`);
+        }
+
+        // Queue notifications for users with failed tokens (24-hour TTL)
+        if (usersToQueue.length > 0) {
+          const queuePromises = usersToQueue.map(user =>
+            db.collection('pendingNotifications').add({
+              uid: user.uid,
+              email: user.email,
+              title,
+              body,
+              data,
+              createdAt: FieldValue.serverTimestamp(),
+              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
+            })
+          );
+          await Promise.all(queuePromises);
+          console.log(`Queued ${usersToQueue.length} notifications for retry on token refresh`);
+        }
+      }
     } catch (error) {
       console.error(`Notification "${title}": Error -`, error.message);
     }
@@ -307,6 +367,73 @@ exports.onNewPost = onDocumentCreated('posts/{postId}', async (event) => {
     { excludeUid: post.authorUid }
   );
 
+  return null;
+});
+
+// Trigger when FCM token is registered/updated - send any pending notifications
+exports.onTokenRegistered = onDocumentWritten('fcmTokens/{uid}', async (event) => {
+  const afterData = event.data.after.data();
+
+  // Only process if token exists (not a deletion)
+  if (!afterData?.token) return null;
+
+  const uid = event.params.uid;
+  const token = afterData.token;
+
+  // Check for pending notifications for this user (within 24-hour TTL)
+  const now = new Date();
+  const pendingSnapshot = await db.collection('pendingNotifications')
+    .where('uid', '==', uid)
+    .get();
+
+  if (pendingSnapshot.empty) return null;
+
+  console.log(`Found ${pendingSnapshot.size} pending notifications for ${afterData.email}`);
+
+  const baseUrl = 'https://lancers-bball.web.app';
+  let sent = 0;
+  let expired = 0;
+
+  for (const doc of pendingSnapshot.docs) {
+    const notif = doc.data();
+
+    // Check if notification has expired (24-hour TTL)
+    const expiresAt = notif.expiresAt?.toDate?.() || notif.expiresAt;
+    if (expiresAt && expiresAt < now) {
+      await doc.ref.delete();
+      expired++;
+      continue;
+    }
+
+    // Send the pending notification
+    try {
+      const notificationUrl = baseUrl + (notif.data?.url || '/index.html');
+      await messaging.send({
+        token: token,
+        webpush: {
+          notification: {
+            title: notif.title,
+            body: notif.body,
+            icon: baseUrl + '/images/lancers-logo-192.png',
+            badge: baseUrl + '/images/lancers-logo-192.png',
+            data: { url: notif.data?.url || '/index.html' }
+          },
+          fcmOptions: { link: notificationUrl }
+        }
+      });
+      sent++;
+      await doc.ref.delete();
+    } catch (err) {
+      console.error(`Failed to send pending notification: ${err.code} - ${err.message}`);
+      // If token is invalid again, just delete the pending notification
+      if (err.code === 'messaging/invalid-registration-token' ||
+          err.code === 'messaging/registration-token-not-registered') {
+        await doc.ref.delete();
+      }
+    }
+  }
+
+  console.log(`Pending notifications for ${afterData.email}: ${sent} sent, ${expired} expired`);
   return null;
 });
 

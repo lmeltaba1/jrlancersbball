@@ -52,6 +52,7 @@ The app is fully functional with all core features implemented. **Season simulat
 - `wrapups` - Post-game wrap-up reports (AI-generated narratives, coach notes)
 - `rateLimits` - Rate limiting for cloud functions (per user/action)
 - `emulationLogs` - Audit trail for admin user emulation (immutable)
+- `pendingNotifications` - Queue for failed push notifications (24hr TTL, sent on token refresh)
 
 ### Key Files
 
@@ -397,6 +398,7 @@ All notifications use `sendNotification(title, body, data, options)` which handl
 | `sendScorekeeperReminders` | Every 5 min | Scorekeeper + Table Worker (targeted) | `/game-stats.html?game={id}` |
 | `checkPendingWrapups` | Every 30 min | Head coach (targeted) | Game detail page |
 | `approveWrapup` | Manual (coach) | Everyone | Game detail page |
+| `onTokenRegistered` | FCM token write | User with pending notifications | Various (queued) |
 
 ### Scheduled Reminder Details
 
@@ -427,6 +429,31 @@ All notifications use `sendNotification(title, body, data, options)` which handl
 - Was previously used for offline caching but caused loading issues
 - Now contains self-destruct code that unregisters itself and clears caches
 - Can be deleted once all users have visited the app at least once
+
+### Push Notification Reliability
+
+FCM tokens can become stale (especially after service worker updates), causing push notifications to fail silently. The following mechanisms ensure reliability:
+
+**Token Refresh on SW Update:**
+- `swRegistration.onupdatefound` detects when service worker updates (after deploys)
+- Automatically deletes old token and registers fresh one
+- Prevents stale tokens after code deployments
+
+**Notification Queue (`pendingNotifications` collection):**
+- When FCM rejects a token (`invalid-registration-token` or `registration-token-not-registered`), the notification is queued
+- Stores: uid, title, body, data, expiresAt (24-hour TTL)
+- `onTokenRegistered` Cloud Function triggers when user registers new token
+- Sends all pending notifications immediately, deletes expired ones
+
+**Invalid Token Cleanup:**
+- `sendNotification()` tracks which token belongs to which user
+- On FCM failure, bad tokens are deleted from `fcmTokens` collection
+- Prevents repeated failures to same dead token
+
+**Other Handlers:**
+- `onTokenRefresh()` - Catches FCM-initiated token refreshes
+- `onMessage()` - Shows notifications when app is in foreground (browser Notification API)
+- Token saved to Firestore on every page load (catches any changes)
 
 ## Post-Game Wrap-Up System
 
@@ -592,9 +619,10 @@ Shows aggregate team stats with made-attempted AND percentage for shooting stats
 ## Known Issues / Future Work
 
 **Priority Items:**
-- **PWA push notifications** - Inconsistent delivery, notifications disappear unexpectedly
+- None currently
 
 **Completed (Sept 2026):**
+- **Push notification reliability** - SW update token refresh, notification queue for failed sends, invalid token cleanup, foreground message handling
 - **NBA-style stat layouts** - Consistent made-attempted + percentage format across all stat views
 - **Quarter-by-quarter scoring** - Shows breakdown by quarter in game detail
 - **Edit stats after game** - Coach can now edit stats for completed games; stats panel enabled, tap on stat values to directly enter numbers
