@@ -559,14 +559,48 @@ All admin endpoints use Firebase Auth token verification via `auth.verifyIdToken
 - DST handled via `Intl.DateTimeFormat` API (not hardcoded offset)
 - `parseSimGameTime()` in functions/index.js converts local time to UTC correctly
 
+## Stat Display System
+
+All stat views use consistent NBA-style layouts with made-attempted format and percentages.
+
+### Box Score Table (game-detail.html, stats-view.html)
+
+Uses `.box-score-table` CSS class with:
+- Sticky player column (left)
+- Horizontal scroll for additional columns
+- Team totals row at bottom
+
+**Column Order:** Player, PTS, FG, FG%, 3PT, 3P%, FT, FT%, REB, AST, STL, BLK, TO, PF
+
+### Quarter-by-Quarter Scoring (game-detail.html)
+
+Shows scores per quarter for both teams using `.quarter-scores` grid.
+
+### Team Stats Card (game-detail.html)
+
+Shows aggregate team stats with made-attempted AND percentage for shooting stats:
+- Row 1: PTS, FG (with %), 3PT (with %), FT (with %)
+- Row 2: REB, AST, STL, TO
+
+### Player Profile Stats (roster.html modal)
+
+- Row 1: PTS, REB, AST, GP
+- Row 2: FG (made-att + %), 3PT (made-att + %), FT (made-att + %)
+- Row 3: STL, BLK, TO, PF
+- Toggle: Totals / Per Game
+
 ## Known Issues / Future Work
 
 **Priority Items:**
-- **In-app notifications UI** - Current styling is ugly, needs redesign
 - **PWA push notifications** - Inconsistent delivery, notifications disappear unexpectedly
-- **Shot attempt tracking** - Add 2PT, 3PT, FT attempted stats (we track misses now via long-press)
-- **Shooting percentages** - Calculate and display FG%, 3P%, FT% from made/attempted
-- **Team stats per game** - Aggregate team totals for each game
+
+**Completed (Sept 2026):**
+- **NBA-style stat layouts** - Consistent made-attempted + percentage format across all stat views
+- **Quarter-by-quarter scoring** - Shows breakdown by quarter in game detail
+- **Edit stats after game** - Coach can now edit stats for completed games; stats panel enabled, tap on stat values to directly enter numbers
+- **Shot attempt tracking** - Tracking 2PT/3PT/FT made and missed (via long-press for misses)
+- **Shooting percentages** - FG%, 3P%, FT% displayed in stats-view.html and game-detail.html box score
+- **Team stats per game** - Team totals row with aggregated stats and percentages
 
 **Potential Enhancements:**
 - Video compression before upload

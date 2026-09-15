@@ -79,155 +79,146 @@ function createNotificationUI() {
       }
       #notificationPanel {
         display: none;
-        position: absolute;
-        top: 52px;
-        right: -8px;
+        position: fixed;
+        top: 60px;
+        right: 12px;
+        left: 12px;
+        margin: 0 auto;
         background: var(--bg-card);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 20px;
-        width: 360px;
-        max-width: calc(100vw - 24px);
-        box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+        border: 2px solid var(--lancers-gold);
+        border-radius: 16px;
+        width: auto;
+        max-width: 400px;
+        box-shadow: 0 12px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
         z-index: 1001;
-        max-height: 480px;
+        max-height: 70vh;
         overflow: hidden;
         opacity: 0;
-        transform: translateY(-10px) scale(0.95);
+        transform: translateY(-10px);
         transition: opacity 0.2s ease, transform 0.2s ease;
       }
       #notificationPanel.show {
         display: block;
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateY(0);
       }
       .notification-header {
-        padding: 18px 20px;
+        padding: 14px 18px;
         border-bottom: 1px solid var(--border-color);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: linear-gradient(180deg, var(--bg-elevated) 0%, transparent 100%);
+        background: linear-gradient(135deg, var(--lancers-gold) 0%, #d4a530 100%);
       }
       .notification-header h3 {
         font-weight: 700;
-        color: var(--text-primary);
-        font-size: 1.15rem;
+        color: #000;
+        font-size: 1.1rem;
         margin: 0;
+        text-shadow: none;
       }
       .notification-header button {
-        background: none;
+        background: rgba(0,0,0,0.15);
         border: none;
-        color: var(--accent-color);
-        font-size: 0.85rem;
+        color: #000;
+        font-size: 0.8rem;
         cursor: pointer;
         font-weight: 600;
-        padding: 6px 12px;
-        border-radius: 8px;
+        padding: 6px 10px;
+        border-radius: 6px;
         transition: background 0.15s;
       }
       .notification-header button:hover {
-        background: rgba(99, 102, 241, 0.15);
+        background: rgba(0,0,0,0.25);
       }
       .notification-actions {
         display: flex;
-        gap: 8px;
+        gap: 6px;
       }
       .notification-actions .clear-all {
-        color: #EF4444;
+        color: #7f1d1d;
       }
       .notification-actions .clear-all:hover {
-        background: rgba(239, 68, 68, 0.15);
+        background: rgba(127, 29, 29, 0.2);
       }
       .notification-item {
-        padding: 18px 20px;
-        padding-right: 48px;
+        padding: 14px 16px;
+        padding-right: 44px;
         border-bottom: 1px solid var(--border-color);
         cursor: pointer;
-        transition: all 0.15s ease;
+        transition: background 0.15s ease;
         position: relative;
-        min-height: 70px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        background: var(--bg-body);
       }
       .notification-item:last-child {
         border-bottom: none;
       }
       .notification-item:hover, .notification-item:active {
-        background: var(--bg-hover);
+        background: var(--bg-elevated);
       }
       .notification-item.unread {
-        background: linear-gradient(90deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
-        border-left: 4px solid var(--lancers-gold);
-      }
-      .notification-item.unread .title {
-        color: #fff;
+        background: var(--bg-elevated);
+        border-left: 3px solid var(--lancers-gold);
       }
       .notification-item .icon {
-        font-size: 28px;
+        font-size: 24px;
         line-height: 1;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
       }
       .notification-item .title {
-        font-weight: 700;
+        font-weight: 600;
         color: var(--text-primary);
-        font-size: 1rem;
-        margin-bottom: 6px;
-        line-height: 1.4;
+        font-size: 0.95rem;
+        margin-bottom: 4px;
+        line-height: 1.3;
       }
       .notification-item .body {
-        color: rgba(255, 255, 255, 0.85);
-        font-size: 0.9rem;
-        line-height: 1.5;
-        margin-bottom: 8px;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        line-height: 1.4;
+        margin-bottom: 6px;
       }
       .notification-item .time {
-        color: rgba(255, 255, 255, 0.5);
-        font-size: 0.8rem;
+        color: var(--text-muted);
+        font-size: 0.75rem;
         font-weight: 500;
       }
       .notification-item .dot {
-        width: 12px;
-        height: 12px;
+        width: 8px;
+        height: 8px;
         background: var(--lancers-gold);
         border-radius: 50%;
         flex-shrink: 0;
-        box-shadow: 0 0 10px var(--lancers-gold);
       }
       .notification-item .dismiss {
         position: absolute;
         top: 50%;
-        right: 12px;
+        right: 10px;
         transform: translateY(-50%);
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         border: none;
-        background: rgba(239, 68, 68, 0.2);
-        color: #EF4444;
+        background: transparent;
+        color: var(--text-muted);
         cursor: pointer;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
-        font-weight: bold;
         transition: all 0.15s;
       }
       .notification-item .dismiss:hover, .notification-item .dismiss:active {
-        background: rgba(239, 68, 68, 0.4);
-        transform: translateY(-50%) scale(1.1);
+        background: rgba(239, 68, 68, 0.15);
+        color: #EF4444;
       }
       .notification-empty {
-        padding: 48px 24px;
+        padding: 40px 20px;
         text-align: center;
         color: var(--text-muted);
       }
       .notification-empty svg {
-        width: 48px;
-        height: 48px;
-        margin-bottom: 12px;
+        width: 40px;
+        height: 40px;
+        margin-bottom: 10px;
         opacity: 0.4;
       }
     `;
@@ -749,6 +740,7 @@ function autoClearNotificationsForCurrentPage() {
 
   // Determine which notification types to clear based on current page
   let typesToClear = [];
+  let gameIdFilter = null; // Optional: only clear notifications for this specific game
 
   if (path.includes('messages.html')) {
     if (params.get('tab') === 'posts') {
@@ -768,14 +760,35 @@ function autoClearNotificationsForCurrentPage() {
   } else if (path.includes('game-stats.html')) {
     typesToClear = ['gameStarted', 'scorekeeperReminder'];
   } else if (path.includes('attendance.html')) {
-    typesToClear = ['attendance', 'rsvp'];
+    // Only clear attendance notifications for the specific game being viewed
+    const attendanceGameId = params.get('game');
+    if (attendanceGameId) {
+      typesToClear = ['attendance', 'rsvp'];
+      // Filter to only clear notifications matching this game
+      gameIdFilter = attendanceGameId;
+    }
+    // If no game param, don't auto-clear (user might just be browsing)
   } else if (path.includes('volunteers.html')) {
-    typesToClear = ['volunteer', 'volunteerReminder'];
+    // Only clear volunteer notifications for the specific game being viewed
+    const volunteerGameId = params.get('game');
+    if (volunteerGameId) {
+      typesToClear = ['volunteer', 'volunteerReminder'];
+      gameIdFilter = volunteerGameId;
+    }
   } else if (path.includes('highlights.html')) {
     typesToClear = ['highlight'];
   }
 
   if (typesToClear.length === 0) return;
+
+  // Helper to check if notification matches the game filter
+  function matchesGameFilter(notification) {
+    if (!gameIdFilter) return true; // No filter, match all
+    const url = notification.data?.url || '';
+    // URL looks like /attendance.html?game=5, extract the game param
+    const match = url.match(/[?&]game=(\d+)/);
+    return match && match[1] === gameIdFilter;
+  }
 
   // Mark matching notifications as read
   let hasChanges = false;
@@ -784,7 +797,7 @@ function autoClearNotificationsForCurrentPage() {
   // Check team notifications
   teamNotifications.forEach(n => {
     const type = n.data?.type || '';
-    if (typesToClear.some(t => type.toLowerCase().includes(t.toLowerCase())) && !n.read) {
+    if (typesToClear.some(t => type.toLowerCase().includes(t.toLowerCase())) && !n.read && matchesGameFilter(n)) {
       broadcastReadIds.add(n.id);
       hasChanges = true;
     }
@@ -793,7 +806,7 @@ function autoClearNotificationsForCurrentPage() {
   // Check user notifications
   userNotifications.forEach(n => {
     const type = n.data?.type || '';
-    if (typesToClear.some(t => type.toLowerCase().includes(t.toLowerCase())) && !n.read) {
+    if (typesToClear.some(t => type.toLowerCase().includes(t.toLowerCase())) && !n.read && matchesGameFilter(n)) {
       userIdsToUpdate.push(n.id);
       hasChanges = true;
     }

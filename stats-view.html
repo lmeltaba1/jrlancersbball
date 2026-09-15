@@ -201,23 +201,26 @@
       <div id="game-header" class="card" style="display: none;"></div>
 
       <!-- Stats Table -->
-      <div class="card" style="padding: 0; overflow: hidden;">
-        <div class="table-scroll">
-          <table class="stats-table" id="stats-table">
+      <div class="card" style="padding: 8px;">
+        <div class="box-score-wrapper">
+          <table class="box-score-table" id="stats-table">
             <thead>
               <tr>
                 <th>Player</th>
                 <th>GP</th>
                 <th>PTS</th>
+                <th>FG</th>
+                <th>FG%</th>
+                <th>3PT</th>
+                <th>3P%</th>
+                <th>FT</th>
+                <th>FT%</th>
                 <th>REB</th>
                 <th>AST</th>
                 <th>STL</th>
                 <th>BLK</th>
                 <th>TO</th>
-                <th>FLS</th>
-                <th>2PT</th>
-                <th>3PT</th>
-                <th>FT</th>
+                <th>PF</th>
               </tr>
             </thead>
             <tbody id="stats-body"></tbody>
@@ -793,33 +796,59 @@
         return ptsB - ptsA;
       });
 
+      // Helper to calculate shooting percentage
+      function calcPct(made, missed) {
+        const attempts = (made || 0) + (missed || 0);
+        if (attempts === 0) return '-';
+        return Math.round((made || 0) / attempts * 100) + '%';
+      }
+
+      // Helper for made-attempted format
+      function madeAtt(made, missed) {
+        return `${made || 0}-${(made || 0) + (missed || 0)}`;
+      }
+
       tbody.innerHTML = playersToShow.map(player => {
         const s = stats[player.id] || {};
         const gp = gamesPlayed[player.id] || 0;
 
         if (gp === 0 && !isGameView) return '';
 
+        // Calculate shooting stats
+        const fgMade = (s.twoPointersMade || 0) + (s.threePointersMade || 0);
+        const fgMissed = (s.twoPointersMissed || 0) + (s.threePointersMissed || 0);
+        const threeMade = s.threePointersMade || 0;
+        const threeMissed = s.threePointersMissed || 0;
+        const ftMade = s.freeThrowsMade || 0;
+        const ftMissed = s.freeThrowsMissed || 0;
+
         return `
           <tr>
-            <td class="player-name-cell">#${player.number} ${player.firstName} ${player.lastName.charAt(0)}.</td>
+            <td>#${player.number} ${player.firstName} ${player.lastName.charAt(0)}.</td>
             <td>${gp}</td>
-            <td class="stat-highlight">${s.points || 0}</td>
+            <td class="pts-col">${s.points || 0}</td>
+            <td class="stat-made-att">${madeAtt(fgMade, fgMissed)}</td>
+            <td>${calcPct(fgMade, fgMissed)}</td>
+            <td class="stat-made-att">${madeAtt(threeMade, threeMissed)}</td>
+            <td>${calcPct(threeMade, threeMissed)}</td>
+            <td class="stat-made-att">${madeAtt(ftMade, ftMissed)}</td>
+            <td>${calcPct(ftMade, ftMissed)}</td>
             <td>${s.rebounds || 0}</td>
             <td>${s.assists || 0}</td>
             <td>${s.steals || 0}</td>
             <td>${s.blocks || 0}</td>
             <td>${s.turnovers || 0}</td>
             <td>${s.fouls || 0}</td>
-            <td>${s.twoPointersMade || 0}</td>
-            <td>${s.threePointersMade || 0}</td>
-            <td>${s.freeThrowsMade || 0}</td>
           </tr>
         `;
       }).filter(Boolean).join('');
 
       // Add totals row for season/game view
       if (!singlePlayer && playersToShow.length > 0) {
-        let totals = { points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0, turnovers: 0, fouls: 0, twos: 0, threes: 0, ft: 0 };
+        let totals = {
+          points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0, turnovers: 0, fouls: 0,
+          twosMade: 0, twosMissed: 0, threesMade: 0, threesMissed: 0, ftMade: 0, ftMissed: 0
+        };
         playersToShow.forEach(p => {
           const s = stats[p.id] || {};
           totals.points += s.points || 0;
@@ -829,25 +858,35 @@
           totals.blocks += s.blocks || 0;
           totals.turnovers += s.turnovers || 0;
           totals.fouls += s.fouls || 0;
-          totals.twos += s.twoPointersMade || 0;
-          totals.threes += s.threePointersMade || 0;
-          totals.ft += s.freeThrowsMade || 0;
+          totals.twosMade += s.twoPointersMade || 0;
+          totals.twosMissed += s.twoPointersMissed || 0;
+          totals.threesMade += s.threePointersMade || 0;
+          totals.threesMissed += s.threePointersMissed || 0;
+          totals.ftMade += s.freeThrowsMade || 0;
+          totals.ftMissed += s.freeThrowsMissed || 0;
         });
 
+        // Calculate team stats
+        const teamFgMade = totals.twosMade + totals.threesMade;
+        const teamFgMissed = totals.twosMissed + totals.threesMissed;
+
         tbody.innerHTML += `
-          <tr style="font-weight: 700; background: var(--bg-elevated);">
-            <td class="player-name-cell">TEAM</td>
+          <tr class="team-totals">
+            <td>TEAM</td>
             <td>-</td>
-            <td class="stat-highlight">${totals.points}</td>
+            <td class="pts-col">${totals.points}</td>
+            <td class="stat-made-att">${madeAtt(teamFgMade, teamFgMissed)}</td>
+            <td>${calcPct(teamFgMade, teamFgMissed)}</td>
+            <td class="stat-made-att">${madeAtt(totals.threesMade, totals.threesMissed)}</td>
+            <td>${calcPct(totals.threesMade, totals.threesMissed)}</td>
+            <td class="stat-made-att">${madeAtt(totals.ftMade, totals.ftMissed)}</td>
+            <td>${calcPct(totals.ftMade, totals.ftMissed)}</td>
             <td>${totals.rebounds}</td>
             <td>${totals.assists}</td>
             <td>${totals.steals}</td>
             <td>${totals.blocks}</td>
             <td>${totals.turnovers}</td>
             <td>${totals.fouls}</td>
-            <td>${totals.twos}</td>
-            <td>${totals.threes}</td>
-            <td>${totals.ft}</td>
           </tr>
         `;
       }

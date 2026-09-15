@@ -108,7 +108,13 @@
       <!-- Volunteer Card (for upcoming games) -->
       <div class="card" id="volunteer-card" style="display: none;"></div>
 
-      <!-- Stats Card (for completed games) -->
+      <!-- Quarter Scores Card (for completed games) -->
+      <div class="card" id="quarter-scores-card" style="display: none; padding: 12px;"></div>
+
+      <!-- Team Stats Card (for completed games) -->
+      <div class="card" id="team-stats-card" style="display: none;"></div>
+
+      <!-- Box Score Card (for completed games) -->
       <div class="card" id="stats-card" style="display: none;"></div>
 
       <!-- Coach Notes Card (for coaches during 3-hour window) -->
@@ -833,6 +839,8 @@
 
       // Stats Card (for completed games) - Show inline box score
       if (isCompleted) {
+        const quarterScoresCard = document.getElementById('quarter-scores-card');
+        const teamStatsCard = document.getElementById('team-stats-card');
         const statsCard = document.getElementById('stats-card');
         statsCard.style.display = 'block';
 
@@ -841,37 +849,203 @@
           .map(([id, stats]) => ({ id: parseInt(id), ...stats }))
           .sort((a, b) => (b.points || 0) - (a.points || 0));
 
+        // Helper to calculate shooting percentage
+        function calcPct(made, missed) {
+          const attempts = (made || 0) + (missed || 0);
+          if (attempts === 0) return '-';
+          return Math.round((made || 0) / attempts * 100) + '%';
+        }
+
+        // Helper for made-attempted format
+        function madeAtt(made, missed) {
+          return `${made || 0}-${(made || 0) + (missed || 0)}`;
+        }
+
+        // Calculate team totals
+        const teamTotals = {
+          points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0, turnovers: 0, fouls: 0,
+          twosMade: 0, twosMissed: 0, threesMade: 0, threesMissed: 0, ftMade: 0, ftMissed: 0
+        };
+        statsList.forEach(s => {
+          teamTotals.points += s.points || 0;
+          teamTotals.rebounds += s.rebounds || 0;
+          teamTotals.assists += s.assists || 0;
+          teamTotals.steals += s.steals || 0;
+          teamTotals.blocks += s.blocks || 0;
+          teamTotals.turnovers += s.turnovers || 0;
+          teamTotals.fouls += s.fouls || 0;
+          teamTotals.twosMade += s.twoPointersMade || 0;
+          teamTotals.twosMissed += s.twoPointersMissed || 0;
+          teamTotals.threesMade += s.threePointersMade || 0;
+          teamTotals.threesMissed += s.threePointersMissed || 0;
+          teamTotals.ftMade += s.freeThrowsMade || 0;
+          teamTotals.ftMissed += s.freeThrowsMissed || 0;
+        });
+
+        const teamFgMade = teamTotals.twosMade + teamTotals.threesMade;
+        const teamFgMissed = teamTotals.twosMissed + teamTotals.threesMissed;
+        const teamFgPct = calcPct(teamFgMade, teamFgMissed);
+        const team3pPct = calcPct(teamTotals.threesMade, teamTotals.threesMissed);
+        const teamFtPct = calcPct(teamTotals.ftMade, teamTotals.ftMissed);
+
+        // Calculate quarter scores from events
+        if (gameEvents.length > 0) {
+          const quarters = { Q1: { lancers: 0, opp: 0 }, Q2: { lancers: 0, opp: 0 }, Q3: { lancers: 0, opp: 0 }, Q4: { lancers: 0, opp: 0 } };
+          gameEvents.forEach(event => {
+            const phase = event.gamePhase;
+            if (phase && quarters[phase] && event.stat === 'points' && event.value) {
+              if (event.team === 'lancers') {
+                quarters[phase].lancers += event.value;
+              } else if (event.team === 'opponent') {
+                quarters[phase].opp += event.value;
+              }
+            }
+          });
+
+          const finalLancers = game.lancersScore || teamTotals.points;
+          const finalOpp = game.opponentScore || 0;
+
+          quarterScoresCard.style.display = 'block';
+          quarterScoresCard.innerHTML = `
+            <div class="quarter-scores">
+              <div class="header-cell"></div>
+              <div class="header-cell">Q1</div>
+              <div class="header-cell">Q2</div>
+              <div class="header-cell">Q3</div>
+              <div class="header-cell">Q4</div>
+              <div class="header-cell">Final</div>
+
+              <div class="team-cell lancers-row">Lancers</div>
+              <div class="score-cell lancers-row">${quarters.Q1.lancers}</div>
+              <div class="score-cell lancers-row">${quarters.Q2.lancers}</div>
+              <div class="score-cell lancers-row">${quarters.Q3.lancers}</div>
+              <div class="score-cell lancers-row">${quarters.Q4.lancers}</div>
+              <div class="score-cell final-cell lancers-row">${finalLancers}</div>
+
+              <div class="team-cell">${escapeHtml(game.opponent)}</div>
+              <div class="score-cell">${quarters.Q1.opp}</div>
+              <div class="score-cell">${quarters.Q2.opp}</div>
+              <div class="score-cell">${quarters.Q3.opp}</div>
+              <div class="score-cell">${quarters.Q4.opp}</div>
+              <div class="score-cell final-cell">${finalOpp}</div>
+            </div>
+          `;
+        }
+
+        // Show team stats card
         if (statsList.length > 0) {
+          teamStatsCard.style.display = 'block';
+          teamStatsCard.innerHTML = `
+            <div class="card-title">Team Stats</div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center;">
+              <div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--lancers-gold);">${teamTotals.points}</div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary);">PTS</div>
+              </div>
+              <div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">${madeAtt(teamFgMade, teamFgMissed)}</div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--lancers-gold);">${teamFgPct}</div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary);">FG</div>
+              </div>
+              <div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">${madeAtt(teamTotals.threesMade, teamTotals.threesMissed)}</div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--lancers-gold);">${team3pPct}</div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary);">3PT</div>
+              </div>
+              <div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">${madeAtt(teamTotals.ftMade, teamTotals.ftMissed)}</div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--lancers-gold);">${teamFtPct}</div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary);">FT</div>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+              <div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-primary);">${teamTotals.rebounds}</div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary);">REB</div>
+              </div>
+              <div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-primary);">${teamTotals.assists}</div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary);">AST</div>
+              </div>
+              <div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-primary);">${teamTotals.steals}</div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary);">STL</div>
+              </div>
+              <div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-primary);">${teamTotals.turnovers}</div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary);">TO</div>
+              </div>
+            </div>
+          `;
+
+          // Box score with made-attempted and percentages
           statsCard.innerHTML = `
             <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
               <span>Box Score</span>
-              <a href="stats-view.html?game=${game.id}" style="font-size: 0.75rem; color: var(--lancers-gold); text-decoration: none;">Edit</a>
+              <a href="stats-view.html?game=${game.id}" style="font-size: 0.75rem; color: var(--lancers-gold); text-decoration: none;">Full Stats →</a>
             </div>
-            <div style="overflow-x: auto;">
-              <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+            <div class="box-score-wrapper">
+              <table class="box-score-table">
                 <thead>
-                  <tr style="border-bottom: 2px solid var(--lancers-gold);">
-                    <th style="text-align: left; padding: 8px 4px; color: var(--text-secondary);">Player</th>
-                    <th style="text-align: center; padding: 8px 4px; color: var(--lancers-gold); font-weight: 800;">PTS</th>
-                    <th style="text-align: center; padding: 8px 4px; color: var(--text-secondary);">REB</th>
-                    <th style="text-align: center; padding: 8px 4px; color: var(--text-secondary);">AST</th>
-                    <th style="text-align: center; padding: 8px 4px; color: var(--text-secondary);">STL</th>
-                    <th style="text-align: center; padding: 8px 4px; color: var(--text-secondary);">TO</th>
-                    <th style="text-align: center; padding: 8px 4px; color: var(--text-secondary);">F</th>
+                  <tr>
+                    <th>Player</th>
+                    <th>PTS</th>
+                    <th>FG</th>
+                    <th>FG%</th>
+                    <th>3PT</th>
+                    <th>3P%</th>
+                    <th>FT</th>
+                    <th>FT%</th>
+                    <th>REB</th>
+                    <th>AST</th>
+                    <th>STL</th>
+                    <th>BLK</th>
+                    <th>TO</th>
+                    <th>PF</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${statsList.map(s => `
-                    <tr style="border-bottom: 1px solid var(--border-subtle);">
-                      <td style="padding: 8px 4px; font-weight: 600;">${s.name || 'Player ' + s.id}</td>
-                      <td style="text-align: center; padding: 8px 4px; font-weight: 800; color: var(--lancers-gold);">${s.points || 0}</td>
-                      <td style="text-align: center; padding: 8px 4px;">${s.rebounds || 0}</td>
-                      <td style="text-align: center; padding: 8px 4px;">${s.assists || 0}</td>
-                      <td style="text-align: center; padding: 8px 4px;">${s.steals || 0}</td>
-                      <td style="text-align: center; padding: 8px 4px;">${s.turnovers || 0}</td>
-                      <td style="text-align: center; padding: 8px 4px;">${s.fouls || 0}</td>
+                  ${statsList.map(s => {
+                    const fgMade = (s.twoPointersMade || 0) + (s.threePointersMade || 0);
+                    const fgMissed = (s.twoPointersMissed || 0) + (s.threePointersMissed || 0);
+                    const threeMade = s.threePointersMade || 0;
+                    const threeMissed = s.threePointersMissed || 0;
+                    const ftMade = s.freeThrowsMade || 0;
+                    const ftMissed = s.freeThrowsMissed || 0;
+                    return `
+                    <tr>
+                      <td>${s.name || 'Player ' + s.id}</td>
+                      <td class="pts-col">${s.points || 0}</td>
+                      <td class="stat-made-att">${madeAtt(fgMade, fgMissed)}</td>
+                      <td>${calcPct(fgMade, fgMissed)}</td>
+                      <td class="stat-made-att">${madeAtt(threeMade, threeMissed)}</td>
+                      <td>${calcPct(threeMade, threeMissed)}</td>
+                      <td class="stat-made-att">${madeAtt(ftMade, ftMissed)}</td>
+                      <td>${calcPct(ftMade, ftMissed)}</td>
+                      <td>${s.rebounds || 0}</td>
+                      <td>${s.assists || 0}</td>
+                      <td>${s.steals || 0}</td>
+                      <td>${s.blocks || 0}</td>
+                      <td>${s.turnovers || 0}</td>
+                      <td>${s.fouls || 0}</td>
                     </tr>
-                  `).join('')}
+                  `;}).join('')}
+                  <tr class="team-totals">
+                    <td>TEAM</td>
+                    <td class="pts-col">${teamTotals.points}</td>
+                    <td class="stat-made-att">${madeAtt(teamFgMade, teamFgMissed)}</td>
+                    <td>${teamFgPct}</td>
+                    <td class="stat-made-att">${madeAtt(teamTotals.threesMade, teamTotals.threesMissed)}</td>
+                    <td>${team3pPct}</td>
+                    <td class="stat-made-att">${madeAtt(teamTotals.ftMade, teamTotals.ftMissed)}</td>
+                    <td>${teamFtPct}</td>
+                    <td>${teamTotals.rebounds}</td>
+                    <td>${teamTotals.assists}</td>
+                    <td>${teamTotals.steals}</td>
+                    <td>${teamTotals.blocks}</td>
+                    <td>${teamTotals.turnovers}</td>
+                    <td>${teamTotals.fouls}</td>
+                  </tr>
                 </tbody>
               </table>
             </div>

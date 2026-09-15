@@ -351,13 +351,30 @@
           <div class="stat-box"><div class="stat-value" id="stat-pts">-</div><div class="stat-label">PTS</div></div>
           <div class="stat-box"><div class="stat-value" id="stat-reb">-</div><div class="stat-label">REB</div></div>
           <div class="stat-box"><div class="stat-value" id="stat-ast">-</div><div class="stat-label">AST</div></div>
-          <div class="stat-box"><div class="stat-value" id="stat-stl">-</div><div class="stat-label">STL</div></div>
+          <div class="stat-box"><div class="stat-value" id="stat-games">-</div><div class="stat-label">GP</div></div>
         </div>
-        <div class="stat-grid" id="season-stats-2">
+        <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: 6px;" id="season-stats-shooting">
+          <div class="stat-box">
+            <div class="stat-value" id="stat-fg-att" style="font-size: 0.9rem;">-</div>
+            <div style="font-size: 0.7rem; color: var(--lancers-gold); font-weight: 700;" id="stat-fg-pct">-</div>
+            <div class="stat-label">FG</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-3p-att" style="font-size: 0.9rem;">-</div>
+            <div style="font-size: 0.7rem; color: var(--lancers-gold); font-weight: 700;" id="stat-3p-pct">-</div>
+            <div class="stat-label">3PT</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-ft-att" style="font-size: 0.9rem;">-</div>
+            <div style="font-size: 0.7rem; color: var(--lancers-gold); font-weight: 700;" id="stat-ft-pct">-</div>
+            <div class="stat-label">FT</div>
+          </div>
+        </div>
+        <div class="stat-grid" style="margin-top: 6px;" id="season-stats-2">
+          <div class="stat-box"><div class="stat-value" id="stat-stl">-</div><div class="stat-label">STL</div></div>
           <div class="stat-box"><div class="stat-value" id="stat-blk">-</div><div class="stat-label">BLK</div></div>
           <div class="stat-box"><div class="stat-value" id="stat-to">-</div><div class="stat-label">TO</div></div>
-          <div class="stat-box"><div class="stat-value" id="stat-fls">-</div><div class="stat-label">FLS</div></div>
-          <div class="stat-box"><div class="stat-value" id="stat-games">-</div><div class="stat-label">Games</div></div>
+          <div class="stat-box"><div class="stat-value" id="stat-fls">-</div><div class="stat-label">PF</div></div>
         </div>
       </div>
 
@@ -730,6 +747,7 @@
         document.getElementById('stat-to').textContent = currentSeasonTotals.turnovers;
         document.getElementById('stat-fls').textContent = currentSeasonTotals.fouls;
         document.getElementById('stat-games').textContent = currentSeasonTotals.games;
+        updateShootingStats();
       }
     }
 
@@ -746,7 +764,44 @@
         document.getElementById('stat-to').textContent = (currentSeasonTotals.turnovers / g).toFixed(1);
         document.getElementById('stat-fls').textContent = (currentSeasonTotals.fouls / g).toFixed(1);
         document.getElementById('stat-games').textContent = currentSeasonTotals.games;
+        // FG, 3PT, FT per-game averages
+        const fgMade = currentSeasonTotals.twosMade + currentSeasonTotals.threesMade;
+        const fgMissed = currentSeasonTotals.twosMissed + currentSeasonTotals.threesMissed;
+        document.getElementById('stat-fg-att').textContent = `${(fgMade/g).toFixed(1)}-${((fgMade + fgMissed)/g).toFixed(1)}`;
+        document.getElementById('stat-3p-att').textContent = `${(currentSeasonTotals.threesMade/g).toFixed(1)}-${((currentSeasonTotals.threesMade + currentSeasonTotals.threesMissed)/g).toFixed(1)}`;
+        document.getElementById('stat-ft-att').textContent = `${(currentSeasonTotals.ftMade/g).toFixed(1)}-${((currentSeasonTotals.ftMade + currentSeasonTotals.ftMissed)/g).toFixed(1)}`;
+        // Percentages stay the same (season totals)
+        document.getElementById('stat-fg-pct').textContent = calcPct(fgMade, fgMissed);
+        document.getElementById('stat-3p-pct').textContent = calcPct(currentSeasonTotals.threesMade, currentSeasonTotals.threesMissed);
+        document.getElementById('stat-ft-pct').textContent = calcPct(currentSeasonTotals.ftMade, currentSeasonTotals.ftMissed);
       }
+    }
+
+    // Helper to calculate shooting percentage
+    function calcPct(made, missed) {
+      const attempts = (made || 0) + (missed || 0);
+      if (attempts === 0) return '-';
+      return Math.round((made || 0) / attempts * 100) + '%';
+    }
+
+    function madeAtt(made, missed) {
+      return `${made || 0}-${(made || 0) + (missed || 0)}`;
+    }
+
+    function updateShootingStats() {
+      if (!currentSeasonTotals) return;
+      const fgMade = currentSeasonTotals.twosMade + currentSeasonTotals.threesMade;
+      const fgMissed = currentSeasonTotals.twosMissed + currentSeasonTotals.threesMissed;
+
+      // Made-attempted format
+      document.getElementById('stat-fg-att').textContent = madeAtt(fgMade, fgMissed);
+      document.getElementById('stat-3p-att').textContent = madeAtt(currentSeasonTotals.threesMade, currentSeasonTotals.threesMissed);
+      document.getElementById('stat-ft-att').textContent = madeAtt(currentSeasonTotals.ftMade, currentSeasonTotals.ftMissed);
+
+      // Percentages
+      document.getElementById('stat-fg-pct').textContent = calcPct(fgMade, fgMissed);
+      document.getElementById('stat-3p-pct').textContent = calcPct(currentSeasonTotals.threesMade, currentSeasonTotals.threesMissed);
+      document.getElementById('stat-ft-pct').textContent = calcPct(currentSeasonTotals.ftMade, currentSeasonTotals.ftMissed);
     }
 
     function showPlayerStats(playerId) {
@@ -763,7 +818,8 @@
       // Calculate season totals
       currentSeasonTotals = {
         points: 0, rebounds: 0, assists: 0, steals: 0,
-        blocks: 0, turnovers: 0, fouls: 0, games: 0
+        blocks: 0, turnovers: 0, fouls: 0, games: 0,
+        twosMade: 0, twosMissed: 0, threesMade: 0, threesMissed: 0, ftMade: 0, ftMissed: 0
       };
 
       const gameByGameData = [];
@@ -784,6 +840,13 @@
           currentSeasonTotals.turnovers += ps.turnovers || 0;
           currentSeasonTotals.fouls += ps.fouls || 0;
           currentSeasonTotals.games++;
+          // Shooting stats
+          currentSeasonTotals.twosMade += ps.twoPointersMade || 0;
+          currentSeasonTotals.twosMissed += ps.twoPointersMissed || 0;
+          currentSeasonTotals.threesMade += ps.threePointersMade || 0;
+          currentSeasonTotals.threesMissed += ps.threePointersMissed || 0;
+          currentSeasonTotals.ftMade += ps.freeThrowsMade || 0;
+          currentSeasonTotals.ftMissed += ps.freeThrowsMissed || 0;
 
           // Determine result from scores
           const result = gameStats.ourScore > gameStats.opponentScore ? 'W' : 'L';
@@ -800,14 +863,21 @@
       // Update season stats display (totals by default)
       document.querySelectorAll('.stat-toggle button').forEach(b => b.classList.remove('active'));
       document.querySelector('.stat-toggle button:first-child').classList.add('active');
+
+      // Row 1: PTS, REB, AST, GP
       document.getElementById('stat-pts').textContent = currentSeasonTotals.points;
       document.getElementById('stat-reb').textContent = currentSeasonTotals.rebounds;
       document.getElementById('stat-ast').textContent = currentSeasonTotals.assists;
+      document.getElementById('stat-games').textContent = currentSeasonTotals.games;
+
+      // Row 3: STL, BLK, TO, PF
       document.getElementById('stat-stl').textContent = currentSeasonTotals.steals;
       document.getElementById('stat-blk').textContent = currentSeasonTotals.blocks;
       document.getElementById('stat-to').textContent = currentSeasonTotals.turnovers;
       document.getElementById('stat-fls').textContent = currentSeasonTotals.fouls;
-      document.getElementById('stat-games').textContent = currentSeasonTotals.games;
+
+      // Update shooting made-attempted and percentages (Row 2)
+      updateShootingStats();
 
       // Update game by game display
       if (gameByGameData.length === 0) {
