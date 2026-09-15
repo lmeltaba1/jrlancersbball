@@ -605,3 +605,5 @@ Shows aggregate team stats with made-attempted AND percentage for shooting stats
 **Potential Enhancements:**
 - Video compression before upload
 - Multi-player tagging in highlights
+- **Dark mode default** - Ensure dark mode is default for all users regardless of system settings
+- **Light mode redesign** - Current light mode styling needs significant improvement
