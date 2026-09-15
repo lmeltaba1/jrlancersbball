@@ -427,33 +427,31 @@ exports.sendAttendanceReminders = onSchedule({
 
       console.log(`Found ${nonResponders.length} non-responders for ${event.type} ${event.id}`);
 
-      const parentEmails = [];
-      nonResponders.forEach(player => {
-        if (player.parents) {
-          player.parents.forEach(parent => {
-            if (parent.email) {
-              parentEmails.push(parent.email.toLowerCase());
-            }
-          });
-        }
-      });
-
-      if (parentEmails.length === 0) {
-        console.log(`No parent emails for non-responders of ${event.type} ${event.id}`);
-        continue;
-      }
-
       const eventDate = new Date(event.date);
       const dateStr = eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-      // Use sendNotification for both push and in-app (targeted to specific parents)
-      await sendNotification(
-        'RSVP Needed',
-        `${event.name} on ${dateStr} - Let us know if your player can attend!`,
-        { type: 'attendance', url: `/attendance.html?game=${event.id}` },
-        { emails: parentEmails }
-      );
-      console.log(`Sent attendance reminders to ${parentEmails.length} parents for ${event.type} ${event.id}`);
+      // Send per-player notifications so parents with multiple kids know which one needs RSVP
+      let notificationsSent = 0;
+      for (const player of nonResponders) {
+        if (!player.parents || player.parents.length === 0) continue;
+
+        const parentEmails = player.parents
+          .filter(p => p.email)
+          .map(p => p.email.toLowerCase());
+
+        if (parentEmails.length === 0) continue;
+
+        const playerName = player.firstName || player.name || 'your player';
+
+        await sendNotification(
+          'RSVP Needed',
+          `${event.name} on ${dateStr} - Let us know if ${playerName} can attend!`,
+          { type: 'attendance', url: `/attendance.html?game=${event.id}`, playerId: player.id },
+          { emails: parentEmails }
+        );
+        notificationsSent++;
+      }
+      console.log(`Sent ${notificationsSent} attendance reminders for ${event.type} ${event.id}`);
     }
 
     return null;
@@ -499,14 +497,14 @@ async function sendVolunteerReminderForGame(game, roster, daysAhead) {
   if (needsTableWorker) needed.push('table worker');
   const neededStr = needed.join(' and ');
 
-  // Get all parent emails (excluding current volunteers)
-  const targetEmails = [];
+  // Get all parent emails (excluding current volunteers) - deduplicated
+  const targetEmailsSet = new Set();
   if (roster.players) {
     roster.players.forEach(player => {
       if (player.parents) {
         player.parents.forEach(parent => {
           if (parent.email && !volunteerEmails.has(parent.email.toLowerCase())) {
-            targetEmails.push(parent.email.toLowerCase());
+            targetEmailsSet.add(parent.email.toLowerCase());
           }
         });
       }
@@ -517,10 +515,11 @@ async function sendVolunteerReminderForGame(game, roster, daysAhead) {
   if (roster.coaches) {
     roster.coaches.forEach(coach => {
       if (coach.email && !volunteerEmails.has(coach.email.toLowerCase())) {
-        targetEmails.push(coach.email.toLowerCase());
+        targetEmailsSet.add(coach.email.toLowerCase());
       }
     });
   }
+  const targetEmails = [...targetEmailsSet];
 
   if (targetEmails.length === 0) {
     console.log(`No emails to notify for game ${game.id}`);
