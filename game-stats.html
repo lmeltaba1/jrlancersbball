@@ -1991,8 +1991,9 @@
       missAlreadyRegistered = false;
       const btn = e.currentTarget;
       activeBtn = btn;
-      // Store original text on the button itself to avoid race conditions
+      // Store original text and pts on the button itself to avoid race conditions
       btn.dataset.originalText = btn.textContent;
+      btn.dataset.pts = pts;
 
       // After 150ms, show floating indicator above finger
       pressingTimer = setTimeout(() => {
@@ -2013,7 +2014,7 @@
           missShot(playerId, pts);
           setTimeout(() => {
             btn.classList.remove('missed');
-            btn.textContent = btn.dataset.originalText || '+?';
+            btn.textContent = btn.dataset.originalText || `+${pts}`;
             hideFloatIndicator();
             activeBtn = null;
           }, 400);
@@ -2048,7 +2049,7 @@
 
       // Reset visual state
       btn.classList.remove('pressing');
-      btn.textContent = btn.dataset.originalText || '+?';
+      btn.textContent = btn.dataset.originalText || `+${pts}`;
 
       // If miss was already registered by timer, just clean up
       if (missAlreadyRegistered) {
@@ -2084,12 +2085,19 @@
       if (e.type === 'mouseleave' && isTouchActive) return;
 
       const btn = e.currentTarget;
+
+      // Only process if this button was actually being pressed
+      if (activeBtn !== btn) return;
+
       clearTimeout(longPressTimer);
       clearTimeout(pressingTimer);
       longPressTimer = null;
       pressingTimer = null;
       btn.classList.remove('pressing', 'missed');
-      btn.textContent = btn.dataset.originalText || '+?';
+      // Restore original text - use stored values from handleShotStart
+      if (btn.dataset.originalText) {
+        btn.textContent = btn.dataset.originalText;
+      }
       hideFloatIndicator();
       missAlreadyRegistered = false;
       activeBtn = null;
