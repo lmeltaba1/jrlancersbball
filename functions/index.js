@@ -2290,6 +2290,15 @@ exports.checkPendingWrapups = onSchedule({
 
   for (const doc of pendingSnapshot.docs) {
     const gameId = doc.id;
+    const wrapupData = doc.data();
+
+    // Only auto-generate if coach has added notes
+    // If no notes, wait for coach to add them (they can add anytime)
+    if (!wrapupData.coachNotes) {
+      console.log(`Game ${gameId}: No coach notes yet, waiting for coach input`);
+      continue;
+    }
+
     console.log(`Triggering wrap-up generation for game ${gameId}`);
 
     // Call the generate function directly
@@ -2347,6 +2356,102 @@ exports.checkPendingWrapups = onSchedule({
         updatedAt: Timestamp.now()
       });
     }
+  }
+
+  return null;
+});
+
+// Trigger wrap-up when coach adds notes after the coach window has ended
+exports.onCoachNotesAdded = onDocumentUpdated('wrapups/{gameId}', async (event) => {
+  const before = event.data.before.data();
+  const after = event.data.after.data();
+  const gameId = event.params.gameId;
+
+  // Only proceed if:
+  // 1. coachNotes was just added (before was null/missing, after has value)
+  // 2. Status is still 'pending'
+  // 3. Coach window has ended
+  const hadNotesBefore = before?.coachNotes && (before.coachNotes.commentary || before.coachNotes.playerShoutouts?.length || before.coachNotes.gameHighlight);
+  const hasNotesAfter = after?.coachNotes && (after.coachNotes.commentary || after.coachNotes.playerShoutouts?.length || after.coachNotes.gameHighlight);
+
+  if (hadNotesBefore || !hasNotesAfter) {
+    // Notes weren't just added
+    return null;
+  }
+
+  if (after.status !== 'pending') {
+    // Already generating or complete
+    return null;
+  }
+
+  const now = await getServerNow();
+  const windowEnds = after.coachWindowEndsAt?.toDate?.() || after.coachWindowEndsAt;
+
+  if (!windowEnds || now.toDate() < windowEnds) {
+    // Still within coach window - let the scheduled job handle it
+    console.log(`Game ${gameId}: Coach added notes within window, will generate at window end`);
+    return null;
+  }
+
+  console.log(`Game ${gameId}: Coach added notes after window ended, triggering immediate generation`);
+
+  try {
+    const gameStatsDoc = await db.collection('gameStats').doc(gameId).get();
+    const highlightsSnapshot = await db.collection('highlights')
+      .where('gameId', '==', parseInt(gameId))
+      .get();
+    const scheduleDoc = await db.collection('config').doc('schedule').get();
+
+    if (!gameStatsDoc.exists) {
+      console.log(`Game stats not found for ${gameId}`);
+      return null;
+    }
+
+    const gameStats = gameStatsDoc.data();
+    const games = scheduleDoc.exists ? scheduleDoc.data().games || [] : [];
+    const game = games.find(g => g.id.toString() === gameId);
+    const opponentName = game ? game.opponent : after.opponent || 'Opponent';
+
+    // Update status
+    await event.data.after.ref.update({ status: 'generating', updatedAt: Timestamp.now() });
+
+    // Generate narrative
+    const narrative = await generateNarrativeWithClaude(gameStats, after, opponentName);
+
+    // Get highlights
+    const highlights = [];
+    highlightsSnapshot.forEach(hdoc => highlights.push({ id: hdoc.id, ...hdoc.data() }));
+
+    // Save results - pending coach approval
+    await event.data.after.ref.update({
+      status: 'pendingApproval',
+      report: narrative,
+      highlightCount: highlights.length,
+      approvalNotificationSentAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    });
+
+    // Send notification to head coach for approval
+    const headCoachDoc = await db.collection('config').doc('headCoach').get();
+    const headCoachEmail = headCoachDoc.exists ? headCoachDoc.data().email : null;
+
+    if (headCoachEmail) {
+      await sendNotification(
+        'Wrap-Up Ready for Review',
+        `${opponentName} game wrap-up is ready for approval`,
+        { type: 'wrapupReady', gameId: gameId, url: `/game-detail.html?id=${gameId}` },
+        { emails: [headCoachEmail] }
+      );
+    }
+
+    console.log(`Game ${gameId}: Wrap-up generated and sent for approval`);
+  } catch (error) {
+    console.error(`Error generating wrap-up for game ${gameId}:`, error);
+    await event.data.after.ref.update({
+      status: 'error',
+      error: error.message,
+      updatedAt: Timestamp.now()
+    });
   }
 
   return null;

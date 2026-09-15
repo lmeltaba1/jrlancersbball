@@ -1191,8 +1191,23 @@
           const remaining = Math.ceil((windowEnds - now) / (1000 * 60));
           document.getElementById('wrapup-pending-subtitle').textContent = `Game report will generate in ${formatTimeRemaining(windowEnds - now)}`;
 
+        } else if (!wrapupData.coachNotes && isCoach) {
+          // Window ended but coach hasn't added notes yet - let them add notes
+          coachNotesCard.style.display = 'block';
+          // Pre-fill existing notes if any (shouldn't be any here, but just in case)
+          document.getElementById('coach-commentary').value = '';
+          // Hide timer since window ended
+          const timerEl = document.getElementById('coach-window-timer');
+          if (timerEl) timerEl.textContent = 'Add your commentary to generate the game report';
+
+        } else if (!wrapupData.coachNotes) {
+          // Window ended, no coach notes, non-coach user - waiting for coach
+          pendingCard.style.display = 'block';
+          document.getElementById('wrapup-pending-title').textContent = 'Waiting for Coach';
+          document.getElementById('wrapup-pending-subtitle').textContent = 'Game report will generate after coach adds commentary';
+
         } else {
-          // Window ended but not yet generating
+          // Window ended, coach notes exist, waiting for generation
           pendingCard.style.display = 'block';
           document.getElementById('wrapup-pending-title').textContent = 'Report Queued';
           document.getElementById('wrapup-pending-subtitle').textContent = 'Game report will generate shortly...';

@@ -103,11 +103,18 @@
       padding: 8px 0;
     }
     .chat-message { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 0.9rem; }
-    .chat-message.sent { align-self: flex-end; background: white; color: black; }
-    .chat-message.received { align-self: flex-start; background: var(--bg-elevated); color: var(--text-primary); }
-    .chat-message .sender { font-weight: 700; font-size: 0.75rem; margin-bottom: 4px; color: var(--lancers-gold); }
-    .chat-message.sent .sender { color: rgba(0,0,0,0.6); }
+    /* Dark mode: blue sent (like iPhone), grey received */
+    .chat-message.sent { align-self: flex-end; background: #0b84fe; color: #fff; }
+    .chat-message.received { align-self: flex-start; background: #3a3a3c; color: #fff; }
+    .chat-message .sender { font-weight: 700; font-size: 0.75rem; margin-bottom: 4px; color: #FFD700; }
+    .chat-message.sent .sender { display: none; }
     .chat-message .time { font-size: 0.7rem; margin-top: 4px; opacity: 0.6; }
+    /* Light mode: blue sent, light grey received */
+    html.light-mode .chat-message.sent { background: #0b84fe; color: #fff; }
+    html.light-mode .chat-message.received { background: #e5e5ea; color: #111; }
+    html.light-mode .chat-message .sender { color: #111; }
+    html.light-mode .chat-message.sent .sender { display: none; }
+    html.light-mode .chat-message.sent .time { opacity: 0.85; }
     .chat-input-fixed {
       position: fixed;
       bottom: calc(70px + env(safe-area-inset-bottom, 0px));
@@ -837,11 +844,18 @@
 
             // After 1 second, make it a sticky banner at bottom of screen
             setTimeout(function() {
+              // Remember if user was already caught up
+              var wasCaughtUp = dividerDiv.textContent === 'LAST READ';
               // Move to body so position:fixed works properly
               document.body.appendChild(dividerDiv);
               dividerDiv.classList.add('sticky-banner');
               dividerDiv.style.cssText = ''; // Remove inline styles, use CSS class
-              dividerDiv.textContent = 'NEW MESSAGES';
+              // Set appropriate text based on state
+              if (wasCaughtUp || isAtBottom()) {
+                dividerDiv.textContent = 'ALL CAUGHT UP';
+              } else {
+                dividerDiv.textContent = 'NEW MESSAGES';
+              }
               // Start listening for scroll to detect when at bottom
               startScrollListener();
             }, 1000);

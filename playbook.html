@@ -186,6 +186,12 @@
       box-shadow: inset 0 2px 20px rgba(0, 0, 0, 0.3);
     }
 
+    /* Light mode - lighter wood tone */
+    html.light-mode .court-container {
+      background: linear-gradient(180deg, #D4A54A 0%, #B8923E 100%);
+      box-shadow: inset 0 2px 20px rgba(0, 0, 0, 0.15);
+    }
+
     .court-svg {
       width: 100%;
       height: 100%;
@@ -600,14 +606,8 @@
             </marker>
           </defs>
 
-          <!-- Court background - muted wood tone -->
-          <rect x="0" y="0" width="400" height="420" fill="url(#courtGradient)" />
-          <defs>
-            <linearGradient id="courtGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style="stop-color:#7A5C1E" />
-              <stop offset="100%" style="stop-color:#5C4516" />
-            </linearGradient>
-          </defs>
+          <!-- Court background - transparent to use container background -->
+          <rect class="court-bg" x="0" y="0" width="400" height="420" fill="transparent" />
 
           <!-- Court lines group -->
           <g class="court-lines">

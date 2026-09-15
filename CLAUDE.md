@@ -481,8 +481,11 @@ AI-generated game recaps with coach commentary, triggered after games end.
 ### Wrap-Up Flow
 
 1. **Game Ends** → `onGameEnded` creates wrap-up doc with 2-hour coach window
-2. **Coach Window** → Coach can add notes via game-detail.html
-3. **Window Ends** → `checkPendingWrapups` (every 30 min) triggers generation
+2. **Coach Window** → Coach can add notes via game-detail.html (can also add after window ends)
+3. **Generation Triggers**:
+   - If coach adds notes within window → `checkPendingWrapups` generates at window end
+   - If coach adds notes after window → `onCoachNotesAdded` generates immediately
+   - If no notes after window → system waits for coach input
 4. **Generation** → `generateWrapupReport` calls Claude API for narrative
 5. **Approval** → Head coach reviews, clicks approve
 6. **Published** → `approveWrapup` sends notification to everyone
@@ -517,7 +520,8 @@ AI-generated game recaps with coach commentary, triggered after games end.
 
 **Wrap-Up Functions:**
 - `generateWrapupReport` - HTTP endpoint, calls Claude API (claude-sonnet-4-20250514)
-- `checkPendingWrapups` - Scheduled every 30 min, auto-triggers pending wrap-ups
+- `checkPendingWrapups` - Scheduled every 30 min, auto-triggers pending wrap-ups (only if coachNotes exist)
+- `onCoachNotesAdded` - Firestore trigger, generates wrap-up immediately when coach adds notes after window ends
 - `approveWrapup` - HTTP endpoint, marks complete and notifies everyone
 - `triggerWrapupGeneration` - Manual trigger for testing
 - `cleanupPendingWrapups` - HTTP endpoint (head coach only), deletes all pending/generating wrap-ups

@@ -71,36 +71,68 @@
 /* ========== LIGHT MODE ========== */
 html.light-mode,
 html.light-mode body {
-  --bg-body: #f8f9fa;
-  --bg-card: rgba(255, 255, 255, 0.9);
-  --bg-elevated: rgba(255, 255, 255, 0.95);
-  --bg-hover: rgba(248, 249, 250, 0.9);
-  --bg-glass: rgba(255, 255, 255, 0.8);
+  --bg-body: #f5f5f5;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-hover: #f0f0f0;
+  --bg-glass: rgba(255, 255, 255, 0.95);
 
   --text-primary: #111111;
   --text-secondary: #555555;
   --text-muted: #888888;
 
-  --border-color: rgba(0, 0, 0, 0.06);
-  --border-accent: rgba(0, 0, 0, 0.08);
+  /* Use black for text instead of gold - gold unreadable on white */
+  --lancers-gold: #111111;
+  --gold: #111111;
+  --gold-dark: #111111;
+  --gold-light: #333333;
+
+  --border-color: #e0e0e0;
+  --border-accent: #d0d0d0;
   --border-glow: rgba(184, 134, 11, 0.3);
 
-  --gold-gradient-subtle: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,165,0,0.02) 100%);
+  --gold-gradient-subtle: linear-gradient(135deg, rgba(184,134,11,0.08) 0%, rgba(184,134,11,0.02) 100%);
 
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06);
-  --shadow-card: 0 4px 20px rgba(0,0,0,0.06);
-  --shadow-elevated: 0 8px 30px rgba(0,0,0,0.1);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.1);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-elevated: 0 4px 16px rgba(0,0,0,0.12);
 }
 
 html.light-mode body {
   background: var(--bg-body);
 }
 
+/* Light header to match light theme */
 html.light-mode .header {
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  backdrop-filter: none;
+}
+
+html.light-mode .header .logo-text,
+html.light-mode .header h1 {
+  color: #111;
+}
+
+html.light-mode .header .back-btn {
+  color: #333;
+}
+
+html.light-mode .header .back-btn:hover {
+  color: #111;
+}
+
+/* Override inline white color on header elements */
+html.light-mode .header a,
+html.light-mode .header h1 a,
+html.light-mode .header svg {
+  color: #111 !important;
+}
+
+html.light-mode .header a:hover {
+  color: #333 !important;
 }
 
 html.light-mode .bottom-nav {
@@ -356,6 +388,237 @@ body::before {
 .theme-toggle .moon-icon { display: block; }
 html.light-mode .theme-toggle .sun-icon { display: block; }
 html.light-mode .theme-toggle .moon-icon { display: none; }
+
+/* ========== LIGHT MODE - PAGE SPECIFIC FIXES ========== */
+
+/* Messages - Chat bubbles need contrast */
+html.light-mode .chat-message.received {
+  background: #f0f0f0;
+  border: 1px solid #e0e0e0;
+}
+
+html.light-mode .chat-message.sent {
+  background: #111;
+  color: #fff;
+}
+
+html.light-mode .chat-message.sent .sender {
+  color: rgba(255,255,255,0.7);
+}
+
+html.light-mode .chat-message.sent .time {
+  color: rgba(255,255,255,0.5);
+}
+
+/* Highlights - Video placeholders */
+html.light-mode .highlight-card .media-container,
+html.light-mode .highlight-thumb {
+  background: #e8e8e8;
+}
+
+/* Playbook - Court needs lighter wood tone */
+html.light-mode .court-svg rect[fill="url(#courtGradient)"] {
+  fill: #C4A05A;
+}
+
+/* Generic input fields */
+html.light-mode input[type="text"],
+html.light-mode input[type="email"],
+html.light-mode input[type="password"],
+html.light-mode textarea,
+html.light-mode select {
+  background: #fff;
+  border-color: #ddd;
+  color: #111;
+}
+
+html.light-mode input::placeholder {
+  color: #999;
+}
+
+/* Dropdowns/selects */
+html.light-mode .filter-select,
+html.light-mode select {
+  background: #fff;
+  border: 1px solid #ddd;
+  color: #111;
+}
+
+/* Tables */
+html.light-mode table {
+  background: #fff;
+}
+
+html.light-mode th {
+  background: #f5f5f5;
+  color: #333;
+}
+
+html.light-mode td {
+  border-color: #eee;
+}
+
+html.light-mode tr:hover {
+  background: #fafafa;
+}
+
+/* Box score specific */
+html.light-mode .box-score-table {
+  background: #fff;
+}
+
+html.light-mode .box-score-table th {
+  background: #f0f0f0;
+  color: #333;
+}
+
+/* Modals */
+html.light-mode .modal-content,
+html.light-mode .stat-modal {
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+html.light-mode .modal-header,
+html.light-mode .stat-modal-header {
+  border-bottom-color: #eee;
+}
+
+html.light-mode .modal-footer,
+html.light-mode .stat-modal-footer {
+  border-top-color: #eee;
+}
+
+/* Player cards in roster */
+html.light-mode .player-row {
+  border-color: #eee;
+}
+
+html.light-mode .player-row:hover {
+  background: #fafafa;
+}
+
+/* Skeleton loading - light mode */
+html.light-mode .skeleton {
+  background: #e8e8e8;
+}
+
+html.light-mode .skeleton::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+}
+
+/* Schedule cards - clean white cards with border */
+html.light-mode .game-card,
+html.light-mode .schedule-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+html.light-mode .game-card:hover,
+html.light-mode .schedule-card:hover {
+  border-color: #ccc;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+}
+
+/* Header logo - invert for light background */
+html.light-mode .header .logo-img {
+  filter: invert(1) brightness(0.2);
+}
+
+/* Notification bell */
+html.light-mode .notification-bell {
+  color: #333;
+}
+
+html.light-mode .notification-bell:hover {
+  color: #111;
+}
+
+/* Profile button */
+html.light-mode .profile-btn {
+  color: #333;
+}
+
+/* Theme toggle in light mode */
+html.light-mode .theme-toggle {
+  color: #333;
+}
+
+/* Badges and pills */
+html.light-mode .badge,
+html.light-mode .league-badge {
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+/* Game result badges */
+html.light-mode .result-badge.win {
+  background: #22c55e;
+  color: #fff;
+}
+
+html.light-mode .result-badge.loss {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* Volunteer needed badges */
+html.light-mode .volunteer-badge {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+/* Volunteer slots on schedule cards */
+html.light-mode .volunteer-slot.filled {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+html.light-mode .volunteer-slot.empty {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+/* Game card header - light mode */
+html.light-mode .game-card-header {
+  background: #fafafa;
+  border-bottom: 1px solid #eee;
+}
+
+html.light-mode .game-card-header.parkrock {
+  background: linear-gradient(90deg, rgba(184, 134, 11, 0.1) 0%, #fafafa 30%);
+}
+
+html.light-mode .game-card-header.cnr {
+  background: linear-gradient(90deg, rgba(128, 128, 128, 0.1) 0%, #fafafa 30%);
+}
+
+html.light-mode .game-card-header.practice {
+  background: linear-gradient(90deg, rgba(100, 100, 100, 0.08) 0%, #fafafa 30%);
+}
+
+/* Remove dark shine overlay in light mode */
+html.light-mode .game-card::before {
+  display: none;
+}
+
+/* Team name - black in light mode */
+html.light-mode .team-name:first-child {
+  color: #111;
+  text-shadow: none;
+}
+
+/* VS badge - clean light style */
+html.light-mode .vs-badge {
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  color: #666;
+}
 
 /* ========== BOTTOM NAV ========== */
 .bottom-nav {
