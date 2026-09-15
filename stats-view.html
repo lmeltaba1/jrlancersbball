@@ -537,8 +537,10 @@
       players.forEach(p => {
         seasonTotals[p.id] = {
           points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0,
-          turnovers: 0, fouls: 0, twoPointersMade: 0, threePointersMade: 0,
-          freeThrowsMade: 0
+          turnovers: 0, fouls: 0,
+          twoPointersMade: 0, twoPointersMissed: 0,
+          threePointersMade: 0, threePointersMissed: 0,
+          freeThrowsMade: 0, freeThrowsMissed: 0
         };
         gamesPlayed[p.id] = 0;
       });

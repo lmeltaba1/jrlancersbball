@@ -278,17 +278,30 @@ function generatePlayerStats(isWin) {
     const pts = Math.min(maxPts, pointsLeft);
     pointsLeft = Math.max(0, pointsLeft - pts);
 
+    // Calculate shooting stats with realistic percentages
+    // 2PT: ~45% shooting, 3PT: ~30% shooting, FT: ~65% shooting
+    const twosMade = Math.floor(pts * 0.5 / 2);
+    const twosMissed = Math.floor(twosMade * (Math.random() * 0.6 + 0.8)); // 80-140% of makes = ~40-55% shooting
+    const threesMade = Math.floor(pts * 0.25 / 3);
+    const threesMissed = Math.floor(threesMade * (Math.random() * 1.0 + 1.5)); // 150-250% of makes = ~28-40% shooting
+    const ftMade = randomInt(0, 4);
+    const ftMissed = Math.floor(ftMade * (Math.random() * 0.4 + 0.3)); // 30-70% of makes = ~60-75% shooting
+
     stats[player.id] = {
       name: player.firstName + ' ' + player.lastName.charAt(0) + '.',
       points: pts,
       rebounds: randomInt(0, 7),
       assists: randomInt(0, 5),
       steals: randomInt(0, 4),
+      blocks: randomInt(0, 2),
       turnovers: randomInt(0, 3),
       fouls: randomInt(0, 4),
-      twoPointersMade: Math.floor(pts * 0.6 / 2),
-      threePointersMade: Math.floor(pts * 0.2 / 3),
-      freeThrowsMade: pts % 2
+      twoPointersMade: twosMade,
+      twoPointersMissed: twosMissed,
+      threePointersMade: threesMade,
+      threePointersMissed: threesMissed,
+      freeThrowsMade: ftMade,
+      freeThrowsMissed: ftMissed
     };
   }
   return stats;
