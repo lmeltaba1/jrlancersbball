@@ -67,15 +67,38 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Log push events for debugging
+// Handle push events - MUST show notification when listener is present
 self.addEventListener('push', (event) => {
   console.log('[FCM SW] Push received');
+
+  let data = {};
   try {
-    const data = event.data?.json();
+    data = event.data?.json() || {};
     console.log('[FCM SW] Push data:', JSON.stringify(data));
   } catch (e) {
-    console.log('[FCM SW] Push data (text):', event.data?.text());
+    console.log('[FCM SW] Push data parse error:', e);
   }
+
+  // Extract notification details from FCM payload
+  const notification = data.notification || {};
+  const fcmData = data.data || {};
+
+  const title = notification.title || fcmData.title || 'Jr. Lancers';
+  const options = {
+    body: notification.body || fcmData.body || '',
+    icon: notification.icon || fcmData.icon || '/images/lancers-logo-192.png',
+    badge: '/images/lancers-logo-192.png',
+    data: {
+      url: fcmData.url || notification.click_action || '/index.html',
+      ...fcmData
+    }
+  };
+
+  console.log('[FCM SW] Showing notification:', title, options);
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
 });
 
 // No fetch handler - let browser handle all requests normally (no caching)

@@ -18,7 +18,7 @@ The app is fully functional with all core features implemented. **Season simulat
    - **Group Chat** - Real-time team messaging (default tab), with timestamp-based ordering to handle offline cache
    - **Posts** - Head coach announcements only (head coach can post, parents/coaches can view and comment)
    - **Text** - Contact directory with SMS links to parents/coaches
-   - **Last-Read Divider** - Shows where user left off, becomes sticky "NEW MESSAGES" banner
+   - **Last-Read Divider** - Shows where user left off, becomes sticky banner ("NEW MESSAGES" or "ALL CAUGHT UP"). Uses Set-based deduplication to prevent false triggers from Firestore cache sync.
 6. **Playbook (playbook.html)** - Interactive play diagrams with SVG animations (parents/coaches only)
 7. **Highlights (highlights.html)** - Photo/video uploads tagged by player/game
 8. **Attendance (attendance.html)** - RSVP tracking for games (parents/coaches only)
@@ -440,7 +440,8 @@ All notifications use `sendNotification(title, body, data, options)` which handl
 ### Service Workers
 
 **firebase-messaging-sw.js** (Push Notifications):
-- Handles background push messages (data-only payloads)
+- Handles background push messages via `push` event listener
+- Explicitly calls `showNotification()` to display notifications (required when push listener is present)
 - Notification click opens URL via `clients.openWindow(url)`
 - No caching - dedicated to FCM only
 

@@ -697,15 +697,19 @@
       return (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 50);
     }
 
+    // Track if user has reached bottom (caught up) - once true, stays true until new messages arrive
+    var userIsCaughtUp = false;
+
     // Start listening for scroll to update banner
     function startScrollListener() {
-      // Small delay before listening to avoid immediate "caught up" on page load
+      // Small delay before listening to avoid immediate changes on page load
       setTimeout(function() {
         window.addEventListener('scroll', function() {
           var divider = document.getElementById('unreadDivider');
           if (!divider) return;
 
           if (isAtBottom()) {
+            userIsCaughtUp = true;
             divider.textContent = 'ALL CAUGHT UP';
             // Save the last message as read
             var container = document.getElementById('chatMessages');
@@ -714,9 +718,9 @@
               var messageId = lastMsg.getAttribute('data-message-id');
               if (messageId) saveLastReadMessageId(messageId);
             }
-          } else {
-            divider.textContent = 'NEW MESSAGES';
           }
+          // Only show NEW MESSAGES if user hasn't caught up yet
+          // Once caught up, keep showing ALL CAUGHT UP even when scrolling up
         });
       }, 500);
     }
@@ -750,15 +754,23 @@
       // Load last read ID first (fast Firestore read), then start messages
       lastReadMessageId = await getLastReadMessageId();
       var isFirstSnapshot = true;
+      var seenMessageIds = new Set(); // Track messages we've already processed
 
       unsubscribeMessages = db.collection('messages').orderBy('timestamp', 'asc').onSnapshot(function(snap) {
         var container = document.getElementById('chatMessages');
+        var actuallyNewMessages = 0; // Count truly new messages in this snapshot
 
         snap.docChanges().forEach(function(change) {
           if (change.type === 'added') {
             var m = change.doc.data();
             var messageId = change.doc.id;
             var msgTimestamp = m.timestamp?.toMillis?.() || 0;
+
+            // Skip if we've already processed this message
+            if (seenMessageIds.has(messageId)) {
+              return;
+            }
+            seenMessageIds.add(messageId);
 
             var div = document.createElement('div');
             div.setAttribute('data-message-id', messageId);
@@ -796,6 +808,11 @@
               } else {
                 container.appendChild(div);
               }
+            }
+
+            // Track new messages that arrive after initial load
+            if (!isFirstSnapshot) {
+              actuallyNewMessages++;
             }
           }
         });
@@ -850,10 +867,12 @@
               document.body.appendChild(dividerDiv);
               dividerDiv.classList.add('sticky-banner');
               dividerDiv.style.cssText = ''; // Remove inline styles, use CSS class
-              // Set appropriate text based on state
+              // Set appropriate text and track caught-up state
               if (wasCaughtUp || isAtBottom()) {
+                userIsCaughtUp = true;
                 dividerDiv.textContent = 'ALL CAUGHT UP';
               } else {
+                userIsCaughtUp = false;
                 dividerDiv.textContent = 'NEW MESSAGES';
               }
               // Start listening for scroll to detect when at bottom
@@ -861,27 +880,34 @@
             }, 1000);
           }
         } else {
-          // New message after initial load - ensure divider exists and observe new messages
+          // Subsequent snapshot - only process if there are actually new messages
+          if (actuallyNewMessages === 0) {
+            return; // No new messages, don't change anything
+          }
+
           var container = document.getElementById('chatMessages');
           var divider = ensureDividerExists(container);
 
-          // New messages should be AFTER the divider (they're unread)
-          var newMessages = document.querySelectorAll('.chat-message[data-message-id]:not([data-observed])');
-          newMessages.forEach(function(msg) {
+          // Mark new messages as observed
+          var unobservedMessages = document.querySelectorAll('.chat-message[data-message-id]:not([data-observed])');
+          unobservedMessages.forEach(function(msg) {
             msg.setAttribute('data-observed', 'true');
-            // Make sure message is after divider
-            if (divider.compareDocumentPosition(msg) & Node.DOCUMENT_POSITION_PRECEDING) {
-              // Message is before divider, move it after
-              container.appendChild(msg);
-            }
             // Observer will track when user scrolls to see this message
             if (messageObserver) messageObserver.observe(msg);
           });
 
-          // Scroll to show new message
-          setTimeout(function() {
-            window.scrollTo(0, document.body.scrollHeight);
-          }, 50);
+          // Handle new messages based on scroll position
+          if (isAtBottom()) {
+            // User at bottom - auto-scroll and keep them caught up
+            setTimeout(function() {
+              window.scrollTo(0, document.body.scrollHeight);
+            }, 50);
+          } else {
+            // New messages arrived while user is scrolled up - show NEW MESSAGES
+            userIsCaughtUp = false;
+            var bannerDiv = document.getElementById('unreadDivider');
+            if (bannerDiv) bannerDiv.textContent = 'NEW MESSAGES';
+          }
         }
       }, function(error) {
         // Error callback - show user feedback instead of silent failure
