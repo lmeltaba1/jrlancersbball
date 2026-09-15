@@ -484,8 +484,18 @@
       }
     }
 
-    function handleLogout() {
-      if (auth) {
+    async function handleLogout() {
+      if (auth && auth.currentUser) {
+        const uid = auth.currentUser.uid;
+        // Delete FCM token before signing out to prevent cross-user notifications
+        if (db) {
+          try {
+            await db.collection('fcmTokens').doc(uid).delete();
+            console.log('FCM token deleted for user:', uid);
+          } catch (error) {
+            console.error('Error deleting FCM token:', error);
+          }
+        }
         auth.signOut().then(function() {
           window.location.href = 'index.html';
         }).catch(function(error) {

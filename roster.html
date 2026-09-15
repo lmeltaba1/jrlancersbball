@@ -510,7 +510,10 @@
       menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
     }
 
-    function handleLogout() {
+    async function handleLogout() {
+      if (auth && auth.currentUser && db) {
+        try { await db.collection('fcmTokens').doc(auth.currentUser.uid).delete(); } catch (e) {}
+      }
       auth.signOut().then(() => {
         window.location.href = 'login.html';
       });
