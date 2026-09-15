@@ -231,14 +231,20 @@ async function sendNotification(title, body, data = {}, options = {}) {
     try {
       const baseUrl = 'https://lancers-bball.web.app';
       const notificationUrl = baseUrl + (data.url || '/index.html');
+      // Convert data values to strings (FCM data payload requires string values only)
+      const stringData = {};
+      for (const [key, value] of Object.entries(data)) {
+        stringData[key] = typeof value === 'string' ? value : JSON.stringify(value);
+      }
+
       const response = await messaging.sendEachForMulticast({
-        // Data payload - service worker will display notification
+        // Data payload - service worker will display notification (all values must be strings)
         data: {
           title,
           body,
           url: data.url || '/index.html',
           icon: '/images/lancers-logo-192.png',
-          ...data
+          ...stringData
         },
         // Web push configuration with notification for display
         webpush: {

@@ -1562,6 +1562,17 @@
         // Update header for coach edit mode after loading gamePhase
         if (!viewOnlyMode && currentUserInfo && currentUserInfo.isCoach && gamePhase === 'final') {
           document.querySelector('header h1 a[href="index.html"]').innerHTML = '<img src="images/lancers-logo.jpg" alt="Lancers" class="header-logo" width="36" height="36">Edit Stats';
+          // Hide scorekeeper controls for completed games - coach uses direct stat editing
+          document.querySelector('.opponent-row').style.display = 'none';
+          document.querySelector('.timeout-row').style.display = 'none';
+          document.querySelector('.bottom-actions').style.display = 'none';
+          // Make opponent score editable by tapping on it
+          const oppScoreEl = document.getElementById('opp-score');
+          if (oppScoreEl) {
+            oppScoreEl.style.cursor = 'pointer';
+            oppScoreEl.style.borderBottom = '1px dashed var(--text-muted)';
+            oppScoreEl.onclick = () => directEditOpponentScore();
+          }
         }
 
         // Real-time sync - but skip re-render if we just saved (prevents blink)
@@ -1677,14 +1688,55 @@
         return;
       }
 
-      // Edit mode: show only on-court players with buttons
+      // Coach can directly edit stat values by tapping on them
+      const isCoachEditing = !viewOnlyMode && currentUserInfo && currentUserInfo.isCoach;
+      // Hide scorekeeper buttons for completed games - coach uses direct stat editing instead
+      const showScorekeeperButtons = !viewOnlyMode && gamePhase !== 'final';
+
+      // For completed games, show ALL players with full stat editing
+      if (gamePhase === 'final' && isCoachEditing) {
+        const allPlayersSorted = [...players].sort((a, b) => getPositionOrder(a) - getPositionOrder(b));
+        container.innerHTML = allPlayersSorted.map(p => {
+          const playerId = p.id;
+          const s = playerStats[playerId] || {};
+          const fouls = s.fouls || 0;
+          const foulClass = fouls >= 5 ? 'fouled-out' : (fouls >= 4 ? 'foul-warning' : '');
+
+          // Calculate attempted from made + missed
+          const twoAtt = (s.twoPointersMade || 0) + (s.twoPointersMissed || 0);
+          const threeAtt = (s.threePointersMade || 0) + (s.threePointersMissed || 0);
+          const ftAtt = (s.freeThrowsMade || 0) + (s.freeThrowsMissed || 0);
+
+          return `
+            <div class="player-card ${foulClass}" data-player-id="${playerId}" style="margin-bottom: 4px;">
+              <div style="display: flex; align-items: center; padding: 8px 10px; gap: 10px;">
+                <div style="min-width: 90px; display: flex; align-items: center; gap: 6px;">
+                  <span class="player-num">#${p.number}</span>
+                  <span class="player-name" style="font-size: 0.9rem;">${p.firstName}</span>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; flex: 1;">
+                  <div class="stat-item editable" onclick="directEditStat(${playerId},'twoPointersMade',${s.twoPointersMade || 0})" style="min-width: 45px;"><span class="val">${s.twoPointersMade || 0}</span>-${twoAtt} <span style="font-size:0.55rem;opacity:0.7">2P</span></div>
+                  <div class="stat-item editable" onclick="directEditStat(${playerId},'threePointersMade',${s.threePointersMade || 0})" style="min-width: 45px;"><span class="val">${s.threePointersMade || 0}</span>-${threeAtt} <span style="font-size:0.55rem;opacity:0.7">3P</span></div>
+                  <div class="stat-item editable" onclick="directEditStat(${playerId},'freeThrowsMade',${s.freeThrowsMade || 0})" style="min-width: 45px;"><span class="val">${s.freeThrowsMade || 0}</span>-${ftAtt} <span style="font-size:0.55rem;opacity:0.7">FT</span></div>
+                  <div class="stat-item editable" onclick="directEditStat(${playerId},'rebounds',${s.rebounds || 0})"><span class="val">${s.rebounds || 0}</span><span style="font-size:0.55rem;opacity:0.7">R</span></div>
+                  <div class="stat-item editable" onclick="directEditStat(${playerId},'assists',${s.assists || 0})"><span class="val">${s.assists || 0}</span><span style="font-size:0.55rem;opacity:0.7">A</span></div>
+                  <div class="stat-item editable" onclick="directEditStat(${playerId},'steals',${s.steals || 0})"><span class="val">${s.steals || 0}</span><span style="font-size:0.55rem;opacity:0.7">S</span></div>
+                  <div class="stat-item editable" onclick="directEditStat(${playerId},'blocks',${s.blocks || 0})"><span class="val">${s.blocks || 0}</span><span style="font-size:0.55rem;opacity:0.7">B</span></div>
+                  <div class="stat-item editable" onclick="directEditStat(${playerId},'turnovers',${s.turnovers || 0})"><span class="val">${s.turnovers || 0}</span><span style="font-size:0.55rem;opacity:0.7">TO</span></div>
+                  <div class="stat-item editable ${fouls >= 5 ? 'foul-out' : (fouls >= 4 ? 'foul-warn' : '')}" onclick="directEditStat(${playerId},'fouls',${fouls})"><span class="val">${fouls}</span><span style="font-size:0.55rem;opacity:0.7">PF</span></div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        return;
+      }
+
+      // Edit mode during live game: show only on-court players with buttons
       const courtPlayersList = onCourt
         .map(id => players.find(pl => pl.id === id))
         .filter(p => p)
         .sort((a, b) => getPositionOrder(a) - getPositionOrder(b));
-
-      // Coach can directly edit stat values by tapping on them
-      const isCoachEditing = !viewOnlyMode && currentUserInfo && currentUserInfo.isCoach;
 
       container.innerHTML = courtPlayersList.map(p => {
         const playerId = p.id;
@@ -1716,6 +1768,7 @@
                 `}
               </div>
             </div>
+            ${showScorekeeperButtons ? `
             <div class="player-row-2">
               ${isEditing ? `
                 <div class="btn-group points">
@@ -1745,6 +1798,7 @@
                 <button class="edit-btn" onclick="toggleEdit(${playerId})">✎</button>
               `}
             </div>
+            ` : ''}
           </div>
         `;
       }).join('');
@@ -1755,21 +1809,33 @@
       renderCourtPlayers();
     }
 
-    // Direct stat edit for coaches - tap on stat value to enter new number
-    async function directEditStat(playerId, stat, currentValue) {
-      const statLabels = {
-        points: 'Points',
-        rebounds: 'Rebounds',
-        assists: 'Assists',
-        steals: 'Steals',
-        turnovers: 'Turnovers',
-        fouls: 'Fouls'
-      };
-      const label = statLabels[stat] || stat;
+    // Direct stat edit for coaches - tap on stat value to open edit modal
+    function directEditStat(playerId, stat, currentValue) {
       const player = players.find(p => p.id === playerId);
       const playerName = player ? player.firstName : 'Player';
 
-      const newValue = prompt(`${playerName} - ${label}:`, currentValue);
+      // Initialize player stats if needed
+      if (!playerStats[playerId]) {
+        playerStats[playerId] = { name: playerName, points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0, turnovers: 0, fouls: 0 };
+      }
+      const s = playerStats[playerId];
+
+      // For shooting stats, pass made and missed values
+      if (stat === 'twoPointersMade' || stat === 'threePointersMade' || stat === 'freeThrowsMade') {
+        const madeKey = stat;
+        const missedKey = stat.replace('Made', 'Missed');
+        openStatModal(playerId, stat, playerName, {
+          made: s[madeKey] || 0,
+          missed: s[missedKey] || 0
+        });
+      } else {
+        openStatModal(playerId, stat, playerName, { value: currentValue });
+      }
+    }
+
+    // Direct opponent score edit for coaches on completed games
+    async function directEditOpponentScore() {
+      const newValue = prompt('Opponent Score:', opponentScore);
       if (newValue === null) return; // Cancelled
 
       const parsed = parseInt(newValue, 10);
@@ -1778,15 +1844,8 @@
         return;
       }
 
-      // Update the stat
-      if (!playerStats[playerId]) {
-        playerStats[playerId] = { name: playerName, points: 0, rebounds: 0, assists: 0, steals: 0, turnovers: 0, fouls: 0 };
-      }
-      playerStats[playerId][stat] = parsed;
-
-      // Save and re-render
+      opponentScore = parsed;
       await saveGameStats();
-      renderCourtPlayers();
       updateScoreboard();
     }
 
@@ -2453,6 +2512,249 @@
     // Cleanup listener on page unload to prevent memory leaks
     window.addEventListener('beforeunload', () => {
       if (unsubscribe) unsubscribe();
+    });
+  </script>
+
+  <!-- Stat Edit Modal -->
+  <div id="stat-edit-modal" class="stat-modal-overlay" style="display: none;">
+    <div class="stat-modal">
+      <div class="stat-modal-header">
+        <span id="stat-modal-title">Edit Stat</span>
+        <button class="stat-modal-close" onclick="closeStatModal()">&times;</button>
+      </div>
+      <div class="stat-modal-body" id="stat-modal-body">
+        <!-- Dynamic content -->
+      </div>
+      <div class="stat-modal-footer">
+        <button class="stat-modal-btn cancel" onclick="closeStatModal()">Cancel</button>
+        <button class="stat-modal-btn save" onclick="saveStatEdit()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .stat-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .stat-modal {
+      background: var(--bg-secondary, #1a1a1a);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 320px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .stat-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color, #333);
+    }
+    .stat-modal-header span {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--text-primary, #fff);
+    }
+    .stat-modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--text-secondary, #888);
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+    .stat-modal-body {
+      padding: 20px 16px;
+    }
+    .stat-input-group {
+      margin-bottom: 16px;
+    }
+    .stat-input-group:last-child {
+      margin-bottom: 0;
+    }
+    .stat-input-label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-secondary, #888);
+      margin-bottom: 8px;
+    }
+    .stat-input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 1.5rem;
+      font-weight: 600;
+      text-align: center;
+      background: var(--bg-primary, #111);
+      border: 2px solid var(--border-color, #333);
+      border-radius: 8px;
+      color: var(--text-primary, #fff);
+      -webkit-appearance: none;
+      -moz-appearance: textfield;
+    }
+    .stat-input:focus {
+      outline: none;
+      border-color: var(--accent-color, #D4AF37);
+    }
+    .stat-input::-webkit-inner-spin-button,
+    .stat-input::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .stat-modal-footer {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      border-top: 1px solid var(--border-color, #333);
+    }
+    .stat-modal-btn {
+      flex: 1;
+      padding: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .stat-modal-btn.cancel {
+      background: var(--bg-primary, #111);
+      color: var(--text-secondary, #888);
+    }
+    .stat-modal-btn.save {
+      background: var(--accent-color, #D4AF37);
+      color: #000;
+    }
+  </style>
+
+  <script>
+    // Stat edit modal state
+    let statEditState = null;
+
+    function openStatModal(playerId, stat, playerName, values) {
+      statEditState = { playerId, stat, playerName };
+      const modal = document.getElementById('stat-edit-modal');
+      const title = document.getElementById('stat-modal-title');
+      const body = document.getElementById('stat-modal-body');
+
+      title.textContent = playerName;
+
+      if (stat === 'twoPointersMade' || stat === 'threePointersMade' || stat === 'freeThrowsMade') {
+        const shotType = stat === 'twoPointersMade' ? '2-Pointers' : (stat === 'threePointersMade' ? '3-Pointers' : 'Free Throws');
+        body.innerHTML = `
+          <div class="stat-input-group">
+            <label class="stat-input-label">${shotType} Made</label>
+            <input type="number" class="stat-input" id="stat-input-made" value="${values.made}" min="0" inputmode="numeric" pattern="[0-9]*">
+          </div>
+          <div class="stat-input-group">
+            <label class="stat-input-label">${shotType} Missed</label>
+            <input type="number" class="stat-input" id="stat-input-missed" value="${values.missed}" min="0" inputmode="numeric" pattern="[0-9]*">
+          </div>
+        `;
+        statEditState.isShootingStat = true;
+      } else {
+        const statLabels = {
+          points: 'Points',
+          rebounds: 'Rebounds',
+          assists: 'Assists',
+          steals: 'Steals',
+          blocks: 'Blocks',
+          turnovers: 'Turnovers',
+          fouls: 'Fouls'
+        };
+        body.innerHTML = `
+          <div class="stat-input-group">
+            <label class="stat-input-label">${statLabels[stat] || stat}</label>
+            <input type="number" class="stat-input" id="stat-input-value" value="${values.value}" min="0" inputmode="numeric" pattern="[0-9]*">
+          </div>
+        `;
+        statEditState.isShootingStat = false;
+      }
+
+      modal.style.display = 'flex';
+      // Focus and select the first input
+      setTimeout(() => {
+        const firstInput = body.querySelector('input');
+        if (firstInput) {
+          firstInput.focus();
+          firstInput.select();
+        }
+      }, 50);
+    }
+
+    function closeStatModal() {
+      document.getElementById('stat-edit-modal').style.display = 'none';
+      statEditState = null;
+    }
+
+    async function saveStatEdit() {
+      if (!statEditState) return;
+
+      const { playerId, stat, isShootingStat } = statEditState;
+      const player = players.find(p => p.id === playerId);
+      const playerName = player ? player.firstName : 'Player';
+
+      if (!playerStats[playerId]) {
+        playerStats[playerId] = { name: playerName, points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0, turnovers: 0, fouls: 0 };
+      }
+      const s = playerStats[playerId];
+
+      if (isShootingStat) {
+        const madeInput = document.getElementById('stat-input-made');
+        const missedInput = document.getElementById('stat-input-missed');
+        const made = parseInt(madeInput.value, 10);
+        const missed = parseInt(missedInput.value, 10);
+
+        if (isNaN(made) || made < 0 || isNaN(missed) || missed < 0) {
+          alert('Please enter valid numbers (0 or greater)');
+          return;
+        }
+
+        const madeKey = stat;
+        const missedKey = stat.replace('Made', 'Missed');
+        s[madeKey] = made;
+        s[missedKey] = missed;
+      } else {
+        const valueInput = document.getElementById('stat-input-value');
+        const value = parseInt(valueInput.value, 10);
+
+        if (isNaN(value) || value < 0) {
+          alert('Please enter a valid number (0 or greater)');
+          return;
+        }
+        s[stat] = value;
+      }
+
+      // Recalculate points from shooting stats
+      s.points = ((s.twoPointersMade || 0) * 2) + ((s.threePointersMade || 0) * 3) + (s.freeThrowsMade || 0);
+
+      closeStatModal();
+      await saveGameStats();
+      renderCourtPlayers();
+      updateScoreboard();
+    }
+
+    // Close modal on overlay click
+    document.getElementById('stat-edit-modal').addEventListener('click', (e) => {
+      if (e.target.classList.contains('stat-modal-overlay')) {
+        closeStatModal();
+      }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && statEditState) {
+        closeStatModal();
+      }
     });
   </script>
 </body>

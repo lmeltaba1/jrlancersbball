@@ -227,6 +227,25 @@ Every stat action during live tracking logs an event to `gameStats/{gameId}.even
 }
 ```
 
+### Coach Edit Mode (Completed Games)
+
+For completed games (`gamePhase === 'final'`), coaches see a different view:
+- **All players shown** (not just on-court) sorted by position
+- **No scorekeeper buttons** (+2, +3, +1, R, A, S, etc.)
+- **Direct stat editing** via tap on any stat value
+- **Edit modal** with clean UI for entering values
+
+**Stat Display Format:** `made-attempted` (e.g., "2-5 2P" means 2 made out of 5 attempted)
+- Attempted = Made + Missed (stored separately in Firestore)
+- Points auto-calculated from shooting stats
+
+**Edit Modal Features:**
+- Player name in header
+- For shooting stats: separate Made and Missed input fields
+- For other stats: single value input
+- Large touch-friendly number inputs with `inputmode="numeric"`
+- Cancel/Save buttons, click outside or Escape to close
+
 ## Game Detail Features (game-detail.html)
 
 ### Play-by-Play Section
