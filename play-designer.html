@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Play Designer - Jr. Lancers</title>
+  <link rel="stylesheet" href="css/athletic.css">
+  <link rel="stylesheet" href="css/play-designer.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="images/lancers-logo-192.png">
+</head>
+<body>
+  <!-- Skip to main content for accessibility -->
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <button class="back-btn" onclick="goBack()" tabindex="0" aria-label="Go back">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <h1><a href="index.html" style="color: white; text-decoration: none;">Play Designer</a></h1>
+      <div id="profileBtnWrapper">
+        <button id="profileBtn" onclick="toggleProfileMenu()" aria-label="User menu">
+          <span id="profileInitial">?</span>
+        </button>
+        <div id="profileMenu" style="display: none;">
+          <div id="profileName">Loading...</div>
+          <div id="profileEmail" style="font-size: 0.8rem; color: var(--text-secondary);"></div>
+          <hr style="border: none; border-top: 1px solid var(--border-color); margin: 10px 0;">
+          <button onclick="handleSignOut()">Sign Out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main id="main" class="designer-main" role="main" aria-live="polite">
+    <!-- Loading State -->
+    <div id="loadingState" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading designer...</p>
+    </div>
+
+    <!-- Auth Required Message -->
+    <div id="authRequired" style="display: none; text-align: center; padding: 60px 20px;">
+      <h2>Coach Access Only</h2>
+      <p style="color: var(--text-secondary); margin-top: 10px;">Only coaches can access the play designer.</p>
+      <a href="playbook.html" class="btn btn-primary" style="margin-top: 20px; display: inline-block;">View Playbook</a>
+    </div>
+
+    <!-- Designer Container (hidden until loaded) -->
+    <div id="designerContainer" style="display: none;">
+      <!-- Top Toolbar (Hoops Geek style) -->
+      <div class="designer-toolbar hoops-toolbar">
+        <div class="toolbar-left">
+          <button class="toolbar-btn close-btn" onclick="goBack()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Close
+          </button>
+          <button class="toolbar-btn mode-btn active" id="drawModeBtn" onclick="setMode('draw')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Draw
+          </button>
+          <button class="toolbar-btn mode-btn" id="animateModeBtn" onclick="setMode('animate')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+            </svg>
+            Animate
+          </button>
+        </div>
+        <div class="toolbar-center">
+          <input type="text" id="playName" placeholder="Untitled Play" class="play-name-input" maxlength="50">
+        </div>
+        <div class="toolbar-right">
+          <button id="saveBtn" class="btn btn-save" onclick="savePlay()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+            </svg>
+            Save
+          </button>
+        </div>
+      </div>
+
+      <!-- Three Column Layout -->
+      <div class="designer-layout">
+        <!-- Left: Phases/Objects Sidebar -->
+        <div class="designer-phases">
+          <!-- Tabs -->
+          <div class="sidebar-tabs">
+            <button class="sidebar-tab active" id="phasesTab" onclick="switchSidebarTab('phases')">Phases</button>
+            <button class="sidebar-tab" id="objectsTab" onclick="switchSidebarTab('objects')">Objects</button>
+          </div>
+
+          <!-- Phases Content -->
+          <div id="phasesContent" class="sidebar-content">
+            <!-- Phase Counter -->
+            <div class="phase-counter" id="phaseCounter">PHASE 1/1</div>
+
+            <!-- Phase Actions -->
+            <div class="phase-actions">
+              <button class="phase-action-btn" onclick="generateNextPhase()" title="Generate next phase based on actions">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+                Next
+              </button>
+              <button class="phase-action-btn" onclick="clonePhase()" title="Clone this phase">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Clone
+              </button>
+              <button class="phase-action-btn" onclick="addEmptyPhase()" title="Add empty phase">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Empty
+              </button>
+              <button class="phase-action-btn" onclick="showPhaseMenu(event)" title="More options">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+                More
+              </button>
+            </div>
+
+            <!-- Phase List -->
+            <div id="phaseList" class="phase-list">
+              <!-- Phase thumbnails will be rendered here -->
+            </div>
+          </div>
+
+          <!-- Objects Content (hidden by default) -->
+          <div id="objectsContent" class="sidebar-content" style="display: none;">
+            <div class="objects-list" id="objectsList">
+              <!-- Objects list will be rendered here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Center: Court -->
+        <div class="designer-court">
+          <div class="court-container" id="courtContainer">
+            <svg id="courtSvg" class="court-svg" viewBox="-28 -3 56 50" preserveAspectRatio="xMidYMid meet">
+              <!-- Arrow markers -->
+              <defs>
+                <marker id="arrowhead" markerWidth="7" markerHeight="8" refX="6" refY="4" orient="auto">
+                  <polygon points="0 0, 7 4, 0 8, 0.5 4" fill="#333"/>
+                </marker>
+                <marker id="arrowhead-reverse" markerWidth="7" markerHeight="8" refX="1" refY="4" orient="auto">
+                  <polygon points="7 0, 0 4, 7 8, 6.5 4" fill="#333"/>
+                </marker>
+              </defs>
+
+              <!-- Court background -->
+              <rect x="-28" y="-3" width="56" height="50" fill="#dbc097"/>
+
+              <!-- Court lines - copied exactly from Hoops Geek -->
+              <g fill="none" stroke="#fff" stroke-width="0.3" stroke-linecap="square">
+                <!-- Baseline (top) -->
+                <line x1="-25" y1="0" x2="25" y2="0"/>
+                <!-- Left sideline -->
+                <line x1="-25" y1="0" x2="-25" y2="47"/>
+                <!-- Right sideline -->
+                <line x1="25" y1="0" x2="25" y2="47"/>
+
+                <!-- Paint/Key -->
+                <path d="M -6 0 L -6 19 L 6 19 L 6 0"/>
+
+                <!-- Free throw circle (bottom half) -->
+                <path d="M -6 19 A 6 6 0 0 0 6 19"/>
+
+                <!-- 3-point line -->
+                <path d="M -21.65 0 L -21.65 9.95 A 22.15 22.15 0 0 0 21.65 9.95 L 21.65 0"/>
+
+                <!-- Half court line -->
+                <path d="M -25 47 L 25 47"/>
+
+                <!-- Half court circle (top half) -->
+                <path d="M 6 47 A 6 6 0 0 0 -6 47"/>
+
+                <!-- Restricted area arc -->
+                <path d="M -4 5.25 A 4 4 0 0 0 4 5.25"/>
+
+                <!-- Lane tick marks (left) -->
+                <line x1="-6" y1="18" x2="-6.5" y2="18"/>
+                <line x1="-6" y1="15" x2="-6.5" y2="15"/>
+                <line x1="-6" y1="12" x2="-6.5" y2="12"/>
+                <rect x="-6.5" y="8" width="0.5" height="1" fill="#fff"/>
+
+                <!-- Lane tick marks (right) -->
+                <line x1="6" y1="18" x2="6.5" y2="18"/>
+                <line x1="6" y1="15" x2="6.5" y2="15"/>
+                <line x1="6" y1="12" x2="6.5" y2="12"/>
+                <rect x="6" y="8" width="0.5" height="1" fill="#fff"/>
+
+                <!-- Backboard -->
+                <line x1="-3" y1="4" x2="3" y2="4"/>
+
+                <!-- Rim -->
+                <circle cx="0" cy="5.25" r="0.75"/>
+              </g>
+
+              <!-- Actions layer -->
+              <g id="actionsLayer" class="actions-layer"></g>
+
+              <!-- Players layer -->
+              <g id="playersLayer" class="players-layer"></g>
+
+              <!-- Defenders layer -->
+              <g id="defendersLayer" class="defenders-layer"></g>
+            </svg>
+          </div>
+
+          <!-- Animation Controls -->
+          <div class="animation-controls">
+            <button class="btn btn-secondary" onclick="playPhase()" title="Play current phase">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Play Phase
+            </button>
+            <button class="btn btn-secondary" onclick="playFull()" title="Play full animation">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z" />
+              </svg>
+              Play All
+            </button>
+            <button class="btn btn-secondary" onclick="resetPositions()" title="Reset to start">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Tools Panel (mode-specific) -->
+        <div class="designer-tools">
+          <!-- DRAW MODE PANEL -->
+          <div id="drawModePanel" class="mode-panel">
+            <!-- Selected Item Properties (shown when something is selected) -->
+            <div id="itemPropertiesPanel" class="tool-section" style="display: none;">
+              <div class="panel-header">
+                <span id="itemPropertiesTitle">PROPERTIES</span>
+                <button class="panel-close" onclick="deselectItem()" title="Close">&times;</button>
+              </div>
+              <div class="item-properties" id="itemPropertiesContent">
+                <!-- Dynamic properties based on selected item type -->
+              </div>
+            </div>
+
+            <!-- Add Actions -->
+            <div class="tool-section">
+              <div class="panel-header">
+                ADD ACTIONS
+                <span class="help-icon" title="Click to add action to court, then drag handles to position">?</span>
+              </div>
+              <div class="action-buttons hoops-buttons">
+                <button class="action-btn hoops-btn" onclick="addAction('dribble')" title="Dribble">
+                  <svg viewBox="0 0 40 20" width="32" height="16">
+                    <path d="M4,10 Q10,4 16,10 Q22,16 28,10 L36,10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M32,6 L36,10 L32,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span>Dribble</span>
+                </button>
+                <button class="action-btn hoops-btn" onclick="addAction('pass')" title="Pass">
+                  <svg viewBox="0 0 40 20" width="32" height="16">
+                    <line x1="4" y1="10" x2="36" y2="10" stroke="currentColor" stroke-width="2" stroke-dasharray="4,2" stroke-linecap="round"/>
+                    <path d="M32,6 L36,10 L32,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span>Pass</span>
+                </button>
+                <button class="action-btn hoops-btn" onclick="addAction('cut')" title="Cut">
+                  <svg viewBox="0 0 40 20" width="32" height="16">
+                    <line x1="4" y1="10" x2="36" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M32,6 L36,10 L32,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span>Cut</span>
+                </button>
+                <button class="action-btn hoops-btn" onclick="addAction('screen')" title="Screen">
+                  <svg viewBox="0 0 40 20" width="32" height="16">
+                    <line x1="4" y1="10" x2="28" y2="10" stroke="currentColor" stroke-width="2" stroke-dasharray="3,2" stroke-linecap="round"/>
+                    <line x1="32" y1="4" x2="32" y2="16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                  </svg>
+                  <span>Screen</span>
+                </button>
+                <button class="action-btn hoops-btn" onclick="addAction('shot')" title="Shot">
+                  <svg viewBox="0 0 40 20" width="32" height="16">
+                    <path d="M4,16 Q16,0 32,6" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3,2"/>
+                    <circle cx="34" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <line x1="34" y1="5" x2="34" y2="11" stroke="currentColor" stroke-width="1"/>
+                    <line x1="31" y1="8" x2="37" y2="8" stroke="currentColor" stroke-width="1"/>
+                  </svg>
+                  <span>Shot</span>
+                </button>
+                <button class="action-btn hoops-btn" onclick="addAction('handoff')" title="Handoff">
+                  <svg viewBox="0 0 40 20" width="32" height="16">
+                    <line x1="8" y1="10" x2="32" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M28,6 L32,10 L28,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M12,6 L8,10 L12,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  <span>Handoff</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Add Players -->
+            <div class="tool-section">
+              <div class="panel-header">
+                ADD PLAYERS
+                <span class="help-icon" title="First row: player with ball. Second row: player without ball. Third row: defenders.">?</span>
+              </div>
+              <!-- Players with ball (circled) -->
+              <div class="player-row hoops-player-row">
+                <button class="player-btn hoops-player has-ball" onclick="addPlayer(1, true)" title="Player 1 with ball">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="currentColor">1</text>
+                  </svg>
+                </button>
+                <button class="player-btn hoops-player has-ball" onclick="addPlayer(2, true)" title="Player 2 with ball">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="currentColor">2</text>
+                  </svg>
+                </button>
+                <button class="player-btn hoops-player has-ball" onclick="addPlayer(3, true)" title="Player 3 with ball">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="currentColor">3</text>
+                  </svg>
+                </button>
+                <button class="player-btn hoops-player has-ball" onclick="addPlayer(4, true)" title="Player 4 with ball">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="currentColor">4</text>
+                  </svg>
+                </button>
+                <button class="player-btn hoops-player has-ball" onclick="addPlayer(5, true)" title="Player 5 with ball">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="currentColor">5</text>
+                  </svg>
+                </button>
+                <button class="player-btn hoops-player has-ball" onclick="addPlayer('?', true)" title="Unknown player with ball">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="currentColor">?</text>
+                  </svg>
+                </button>
+              </div>
+              <!-- Players without ball -->
+              <div class="player-row hoops-player-row">
+                <button class="player-btn hoops-player" onclick="addPlayer(1, false)" title="Player 1">1</button>
+                <button class="player-btn hoops-player" onclick="addPlayer(2, false)" title="Player 2">2</button>
+                <button class="player-btn hoops-player" onclick="addPlayer(3, false)" title="Player 3">3</button>
+                <button class="player-btn hoops-player" onclick="addPlayer(4, false)" title="Player 4">4</button>
+                <button class="player-btn hoops-player" onclick="addPlayer(5, false)" title="Player 5">5</button>
+                <button class="player-btn hoops-player" onclick="addPlayer('?', false)" title="Unknown player">?</button>
+              </div>
+              <!-- Defenders -->
+              <div class="player-row hoops-player-row">
+                <button class="defender-btn hoops-defender" onclick="addDefender(1)" title="Defender X1">X1</button>
+                <button class="defender-btn hoops-defender" onclick="addDefender(2)" title="Defender X2">X2</button>
+                <button class="defender-btn hoops-defender" onclick="addDefender(3)" title="Defender X3">X3</button>
+                <button class="defender-btn hoops-defender" onclick="addDefender(4)" title="Defender X4">X4</button>
+                <button class="defender-btn hoops-defender" onclick="addDefender(5)" title="Defender X5">X5</button>
+                <button class="defender-btn hoops-defender" onclick="addDefender('?')" title="Unknown defender">X?</button>
+              </div>
+            </div>
+
+            <!-- Add Misc -->
+            <div class="tool-section">
+              <div class="panel-header">ADD MISC</div>
+              <div class="misc-buttons">
+                <button class="misc-btn" onclick="addMisc('hoop')" title="Hoop marker">
+                  <svg viewBox="0 0 24 24" width="20" height="20">
+                    <circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <line x1="12" y1="6" x2="12" y2="18" stroke="currentColor" stroke-width="1"/>
+                    <line x1="6" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="1"/>
+                  </svg>
+                </button>
+                <button class="misc-btn" onclick="addMisc('cone')" title="Cone">
+                  <svg viewBox="0 0 24 24" width="20" height="20">
+                    <polygon points="12,4 20,20 4,20" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                  </svg>
+                </button>
+                <button class="misc-btn" onclick="addMisc('text')" title="Text">T</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ANIMATE MODE PANEL -->
+          <div id="animateModePanel" class="mode-panel" style="display: none;">
+            <!-- Phase Title -->
+            <div class="animate-phase-header">
+              <h3 id="animatePhaseTitle">Phase 1</h3>
+              <label class="checkbox-label">
+                <input type="checkbox" id="showTitleInAnimation" onchange="toggleShowTitle()">
+                Show Title in Animation
+                <span class="help-icon" title="Display phase title during animation playback">?</span>
+              </label>
+            </div>
+
+            <!-- Action Timeline -->
+            <div class="tool-section animate-timeline-section">
+              <div class="panel-header">
+                Action Timeline
+                <span class="help-icon" title="Reorder Actions using Drag & Drop">?</span>
+              </div>
+              <div id="actionTimeline" class="action-timeline hoops-timeline">
+                <div class="timeline-empty">No actions in this phase</div>
+              </div>
+            </div>
+
+            <!-- Play Full Animation Button -->
+            <button class="btn btn-animation hoops-play-btn" onclick="openAnimationModal()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" width="18" height="18">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              Play Full Animation
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Template Picker Modal -->
+  <div id="templateModal" class="modal">
+    <div class="modal-content template-modal">
+      <div class="modal-header">
+        <h2>Pick a Template</h2>
+        <button class="modal-close" onclick="closeTemplateModal()">&times;</button>
+      </div>
+      <div class="template-grid" id="templateGrid">
+        <!-- Templates will be rendered here -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeTemplateModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="startWithTemplate()" id="startTemplateBtn" disabled>Start Drawing</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Animation Modal -->
+  <div id="animationModal" class="modal animation-modal">
+    <div class="animation-modal-content">
+      <div class="animation-header">
+        <span id="animationTitle">Animation</span>
+        <button class="modal-close" onclick="closeAnimationModal()">&times;</button>
+      </div>
+      <div class="animation-court-container">
+        <svg id="animationCourtSvg" class="animation-court-svg" viewBox="-28 -3 56 50" preserveAspectRatio="xMidYMid meet">
+          <!-- Arrow markers -->
+          <defs>
+            <marker id="anim-arrowhead" markerWidth="7" markerHeight="8" refX="6" refY="4" orient="auto">
+              <polygon points="0 0, 7 4, 0 8, 0.5 4" fill="#333"/>
+            </marker>
+          </defs>
+
+          <!-- Court background -->
+          <rect x="-28" y="-3" width="56" height="50" fill="#dbc097"/>
+
+          <!-- Court lines -->
+          <g fill="none" stroke="#fff" stroke-width="0.3" stroke-linecap="square">
+            <line x1="-25" y1="0" x2="25" y2="0"/>
+            <line x1="-25" y1="0" x2="-25" y2="47"/>
+            <line x1="25" y1="0" x2="25" y2="47"/>
+            <path d="M -6 0 L -6 19 L 6 19 L 6 0"/>
+            <path d="M -6 19 A 6 6 0 0 0 6 19"/>
+            <path d="M -21.65 0 L -21.65 9.95 A 22.15 22.15 0 0 0 21.65 9.95 L 21.65 0"/>
+            <path d="M -25 47 L 25 47"/>
+            <path d="M 6 47 A 6 6 0 0 0 -6 47"/>
+            <path d="M -4 5.25 A 4 4 0 0 0 4 5.25"/>
+            <line x1="-3" y1="4" x2="3" y2="4"/>
+            <circle cx="0" cy="5.25" r="0.75"/>
+          </g>
+
+          <!-- Animation layers -->
+          <g id="animActionsLayer" class="actions-layer"></g>
+          <g id="animPlayersLayer" class="players-layer"></g>
+        </svg>
+      </div>
+      <div class="animation-controls">
+        <button class="anim-btn" onclick="restartAnimation()" title="Restart">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 4v6h6M23 20v-6h-6"/>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+          </svg>
+        </button>
+        <button class="anim-btn play-pause" id="playPauseBtn" onclick="togglePlayPause()">
+          <svg id="playIcon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <svg id="pauseIcon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style="display:none">
+            <rect x="6" y="4" width="4" height="16"/>
+            <rect x="14" y="4" width="4" height="16"/>
+          </svg>
+        </button>
+        <button class="anim-btn" onclick="stepAnimation()" title="Step forward">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M6 6h2v12H6zM9.5 12l8.5 6V6z"/>
+          </svg>
+        </button>
+        <div class="anim-speed">
+          <label>Speed:</label>
+          <select id="animSpeed" onchange="setAnimationSpeed()">
+            <option value="0.5">0.5x</option>
+            <option value="1" selected>1x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+          </select>
+        </div>
+      </div>
+      <div class="animation-phase-indicator">
+        <span id="animPhaseLabel">Phase 1</span>
+        <div class="phase-dots" id="phaseDots">
+          <!-- Dots generated dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drafts List (shown when no play is being edited) -->
+  <div id="draftsSection" style="display: none;">
+    <div class="drafts-header">
+      <h2>My Drafts</h2>
+      <button class="btn btn-primary" onclick="showTemplateModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        New Play
+      </button>
+    </div>
+    <div id="draftsList" class="drafts-list">
+      <!-- Drafts will be rendered here -->
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <a href="index.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      <span>Home</span>
+    </a>
+    <a href="roster.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+      <span>Roster</span>
+    </a>
+    <a href="schedule.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <span>Schedule</span>
+    </a>
+    <a href="messages.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+      <span>Messages</span>
+    </a>
+    <a href="playbook.html" class="nav-item active">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+      </svg>
+      <span>Plays</span>
+    </a>
+    <a href="game-stats.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span>Stats</span>
+    </a>
+    <a href="highlights.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+      <span>Highlights</span>
+    </a>
+  </nav>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/play-designer.js"></script>
+
+  <script>
+    // Auth check and initialization
+    auth.onAuthStateChanged(async function(user) {
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      // Update profile UI
+      document.getElementById('profileInitial').textContent = (user.email || '?')[0].toUpperCase();
+      document.getElementById('profileName').textContent = user.displayName || user.email;
+      document.getElementById('profileEmail').textContent = user.email;
+
+      // Check if user is a coach
+      const playerInfo = await getPlayerFromRoster(user.email);
+      if (!playerInfo || !playerInfo.isCoach) {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('authRequired').style.display = 'block';
+        return;
+      }
+
+      // Initialize the designer
+      initDesigner(user, playerInfo);
+    });
+
+    function goBack() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = 'playbook.html';
+      }
+    }
+
+    function toggleProfileMenu() {
+      const menu = document.getElementById('profileMenu');
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function handleSignOut() {
+      auth.signOut().then(() => {
+        window.location.href = 'login.html';
+      });
+    }
+
+    // Close profile menu when clicking outside
+    document.addEventListener('click', function(e) {
+      const wrapper = document.getElementById('profileBtnWrapper');
+      const menu = document.getElementById('profileMenu');
+      if (wrapper && menu && !wrapper.contains(e.target)) {
+        menu.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
