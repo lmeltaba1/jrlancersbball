@@ -442,7 +442,8 @@ function generateNextPhase() {
   const newPhase = {
     players: newPositions,
     defenders: JSON.parse(JSON.stringify(currentPhase.defenders || {})),
-    actions: []
+    actions: [],
+    description: ''
   };
 
   currentPlay.phases.push(newPhase);
@@ -458,7 +459,8 @@ function clonePhase() {
   const newPhase = {
     players: JSON.parse(JSON.stringify(currentPhase.players)),
     defenders: JSON.parse(JSON.stringify(currentPhase.defenders || {})),
-    actions: JSON.parse(JSON.stringify(currentPhase.actions || []))
+    actions: JSON.parse(JSON.stringify(currentPhase.actions || [])),
+    description: currentPhase.description || ''
   };
 
   currentPlay.phases.splice(currentPhaseIndex + 1, 0, newPhase);
@@ -475,7 +477,8 @@ function addEmptyPhase() {
   const newPhase = {
     players: JSON.parse(JSON.stringify(lastPhase.players)),
     defenders: JSON.parse(JSON.stringify(lastPhase.defenders || {})),
-    actions: []
+    actions: [],
+    description: ''
   };
 
   currentPlay.phases.push(newPhase);
@@ -758,7 +761,8 @@ function startWithTemplate() {
     phases: [{
       players: JSON.parse(JSON.stringify(template.positions || {})),
       defenders: JSON.parse(JSON.stringify(template.defenders || {})),
-      actions: []
+      actions: [],
+      description: ''
     }]
   };
 
@@ -1422,6 +1426,13 @@ function renderPhases() {
     counter.textContent = `PHASE ${currentPhaseIndex + 1}/${currentPlay.phases.length}`;
   }
 
+  // Update phase description textarea
+  const descInput = document.getElementById('phaseDescription');
+  if (descInput) {
+    const phase = currentPlay.phases[currentPhaseIndex];
+    descInput.value = phase?.description || '';
+  }
+
   currentPlay.phases.forEach((phase, index) => {
     const item = document.createElement('div');
     item.className = `phase-item ${index === currentPhaseIndex ? 'active' : ''}`;
@@ -1453,6 +1464,15 @@ function switchPhase(index) {
   renderAll();
 }
 
+function updatePhaseDescription(value) {
+  if (!currentPlay) return;
+  const phase = currentPlay.phases[currentPhaseIndex];
+  if (phase) {
+    phase.description = value;
+    isDirty = true;
+  }
+}
+
 function addPhase() {
   if (!currentPlay) return;
 
@@ -1460,7 +1480,8 @@ function addPhase() {
   const newPhase = {
     players: JSON.parse(JSON.stringify(lastPhase.players)),
     defenders: JSON.parse(JSON.stringify(lastPhase.defenders || {})),
-    actions: []
+    actions: [],
+    description: ''
   };
 
   currentPlay.phases.push(newPhase);

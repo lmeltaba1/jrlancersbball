@@ -97,6 +97,7 @@
         </div>
         <div class="toolbar-center">
           <input type="text" id="playName" placeholder="Untitled Play" class="play-name-input" maxlength="50">
+          <input type="text" id="playDescription" placeholder="Add a description..." class="play-desc-input" maxlength="200">
         </div>
         <div class="toolbar-right">
           <button id="saveBtn" class="btn btn-save" onclick="savePlay()">
@@ -122,6 +123,11 @@
           <div id="phasesContent" class="sidebar-content">
             <!-- Phase Counter -->
             <div class="phase-counter" id="phaseCounter">PHASE 1/1</div>
+
+            <!-- Phase Description -->
+            <div class="phase-description-wrapper">
+              <textarea id="phaseDescription" class="phase-description-input" placeholder="Describe this phase..." maxlength="300" rows="2" oninput="updatePhaseDescription(this.value)"></textarea>
+            </div>
 
             <!-- Phase Actions -->
             <div class="phase-actions">
