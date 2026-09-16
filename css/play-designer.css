@@ -1293,6 +1293,36 @@ html.dark .template-name {
   color: var(--text-primary);
 }
 
+/* Template status badges */
+.template-status {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.template-status.published {
+  background: #4a9f6e;
+  color: white;
+}
+
+.template-status.draft {
+  background: #2196F3;
+  color: white;
+}
+
+/* Template loading and empty states */
+.template-loading,
+.template-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
 .modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -1788,6 +1818,53 @@ html.dark .misc-btn {
 .misc-btn svg {
   width: 28px;
   height: 28px;
+}
+
+/* ============================================================================
+   PLAY TOOLS
+   ============================================================================ */
+
+.play-tools-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.play-tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #333;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+html.dark .play-tool-btn {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.play-tool-btn:hover {
+  background: #f0f0f0;
+  border-color: #4a9f6e;
+  color: #4a9f6e;
+}
+
+html.dark .play-tool-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: #4a9f6e;
+  color: #4a9f6e;
+}
+
+.play-tool-btn svg {
+  flex-shrink: 0;
 }
 
 /* ============================================================================

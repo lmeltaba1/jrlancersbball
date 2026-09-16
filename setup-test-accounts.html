@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Setup Test Accounts</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 20px; max-width: 700px; margin: 0 auto; background: #111; color: #fff; }
+    h1 { color: #FFD700; }
+    .card { background: #1a1a1a; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .account { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #333; }
+    .account:last-child { border-bottom: none; }
+    .role { color: #FFD700; font-size: 0.8rem; text-transform: uppercase; }
+    .email { color: #fff; }
+    .password { color: #888; font-family: monospace; }
+    button { background: #FFD700; color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+    button:hover { background: #e6c200; }
+    button:disabled { background: #555; color: #888; cursor: not-allowed; }
+    #status { margin-top: 20px; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; }
+    .success { background: #1a3d1a; border: 1px solid #22c55e; }
+    .error { background: #3d1a1a; border: 1px solid #ef4444; }
+    .warning { background: #3d3d1a; border: 1px solid #eab308; }
+  </style>
+  <link rel="icon" type="image/png" href="images/lancers-logo-192.png">
+</head>
+<body>
+  <h1>🧪 Setup Test Accounts</h1>
+  <p>This will create or reset passwords for test accounts used in the E2E simulation.</p>
+
+  <div class="card">
+    <h3 style="margin-top: 0; color: #888;">Test Accounts</h3>
+
+    <div class="account">
+      <div>
+        <div class="role">Coach</div>
+        <div class="email">lmeltabarger@icloud.com</div>
+      </div>
+      <div class="password">(existing password)</div>
+    </div>
+
+    <div class="account">
+      <div>
+        <div class="role">Scorekeeper Parent</div>
+        <div class="email">mindy.m.carney@gmail.com</div>
+      </div>
+      <div class="password">(existing password)</div>
+    </div>
+
+    <div class="account">
+      <div>
+        <div class="role">Regular Parent</div>
+        <div class="email">brittany28@aol.com</div>
+      </div>
+      <div class="password">LancersTest123!</div>
+    </div>
+
+    <div class="account">
+      <div>
+        <div class="role">Viewer</div>
+        <div class="email">maureen.trott@att.net</div>
+      </div>
+      <div class="password">LancersView123!</div>
+    </div>
+  </div>
+
+  <button id="setupBtn" onclick="setupAccounts()">Setup Test Accounts</button>
+
+  <div id="status"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+  const statusEl = document.getElementById('status');
+  const setupBtn = document.getElementById('setupBtn');
+
+  function showStatus(message, type) {
+    statusEl.className = type;
+    statusEl.textContent = message;
+    statusEl.style.display = 'block';
+  }
+
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      showStatus('Please log in as head coach first at login.html', 'warning');
+      setupBtn.disabled = true;
+    } else {
+      showStatus(`Logged in as ${user.email}. Ready to setup test accounts.`, 'success');
+      setupBtn.disabled = false;
+    }
+  });
+
+  async function setupAccounts() {
+    setupBtn.disabled = true;
+    setupBtn.textContent = 'Setting up...';
+
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not logged in');
+
+      const token = await user.getIdToken();
+
+      const response = await fetch('https://us-central1-lancers-bball.cloudfunctions.net/setupTestAccounts', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        let statusText = 'Test accounts configured!\n\n';
+        data.accounts.forEach(a => {
+          statusText += `${a.email}: ${a.status}\n`;
+        });
+        showStatus(statusText, 'success');
+      } else {
+        showStatus('Error: ' + (data.error || 'Unknown error'), 'error');
+      }
+    } catch (e) {
+      showStatus('Error: ' + e.message, 'error');
+    }
+
+    setupBtn.disabled = false;
+    setupBtn.textContent = 'Setup Test Accounts';
+  }
+</script>
+</body>
+</html>

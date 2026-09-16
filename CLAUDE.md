@@ -53,6 +53,7 @@ The app is fully functional with all core features implemented. **Season simulat
 - `rateLimits` - Rate limiting for cloud functions (per user/action)
 - `emulationLogs` - Audit trail for admin user emulation (immutable)
 - `pendingNotifications` - Queue for failed push notifications (24hr TTL, sent on token refresh)
+- `customPlays` - Coach-created plays with phases, actions, and animations (draft/published status)
 
 ### Key Files
 
@@ -274,14 +275,42 @@ For completed games (`gamePhase === 'final'`), coaches see a different view:
 - **Team Spirit Leaderboard**: Gamification with points for volunteering (10 pts) and highlights (1 pt)
 - Season record
 
-## Playbook System
+## Playbook & Play Designer System
 
-Plays are defined in `playbook.html` as JavaScript objects with:
-- `positions` - Starting positions for each player (1-5)
-- `steps` - Array of animation steps with movements, passes, screens, shots
-- SVG rendering with smooth CSS transitions
+### Playbook (playbook.html)
+- Displays plays organized by chapter (VS MAN, VS ZONE, INBOUND, DRAFTS)
+- Custom plays from Firestore rendered with `PlayViewer` module (`js/play-viewer.js`)
+- Static preview shows all phases stacked; animation plays phase-by-phase
+- Phase descriptions displayed below court as numbered steps
+- Coaches can publish/edit/delete custom plays
 
-Recent plays added: Box, Stack, Triangle, Dub (inbound plays)
+### Play Designer (play-designer.html)
+Interactive visual editor for creating basketball plays. Coaches only.
+
+**Features:**
+- **Templates**: Half court, horizontal/vertical full court formations (Traditional, 5-Out, Box, Horns, etc.)
+- **Existing Plays as Templates**: Clone any draft or published play
+- **Actions**: Dribble (wavy), Pass (dashed), Cut (solid), Screen (T-bar), Shot (crosshair), Handoff
+- **Multi-phase plays**: Each phase has positions, actions, and description
+- **Mirror Play**: Flips entire play horizontally, swaps players (2↔3, 4↔5), updates descriptions
+- **Animation preview**: Step-by-step playback with ball movement
+
+**Data Model** (`customPlays/{playId}`):
+```javascript
+{
+  name: "Corner Lob",
+  description: "Lob pass to post",
+  status: "draft" | "published",
+  chapter: "man" | "zone" | "inbound",
+  courtType: "halfCourt" | "fullCourtH" | "fullCourtV",
+  phases: [{
+    players: { 1: {x, y, hasBall}, 2: {x, y}, ... },
+    defenders: { 1: {x, y}, ... },
+    actions: [{ type, start: {x,y}, end: {x,y}, mid: {x,y}, color }],
+    description: "1 dribbles to wing, passes to 3"
+  }]
+}
+```
 
 ## Highlights System
 

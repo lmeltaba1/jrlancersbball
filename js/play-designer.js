@@ -589,6 +589,102 @@ function addEmptyPhase() {
   renderAll();
 }
 
+// Mirror the ENTIRE PLAY:
+// 1. Flip all X coordinates (right wing → left wing)
+// 2. Swap player assignments (2↔3, 4↔5, 1 stays)
+function mirrorPlay() {
+  if (!currentPlay || !currentPlay.phases || currentPlay.phases.length === 0) return;
+
+  // Check if there are any actions in any phase
+  const hasActions = currentPlay.phases.some(p => p.actions && p.actions.length > 0);
+  if (!hasActions) {
+    alert('No actions to mirror in this play');
+    return;
+  }
+
+  // Player swap mapping: 2↔3, 4↔5, 1 stays
+  const swapMap = {
+    2: 3, 3: 2,
+    4: 5, 5: 4,
+    1: 1
+  };
+
+  // Mirror X coordinate (court center is at x=0)
+  function mirrorX(x) {
+    return -x;
+  }
+
+  // Process each phase
+  currentPlay.phases.forEach(phase => {
+    // Mirror all action coordinates
+    if (phase.actions) {
+      phase.actions.forEach(action => {
+        // Mirror start point
+        action.start.x = mirrorX(action.start.x);
+
+        // Mirror end point
+        action.end.x = mirrorX(action.end.x);
+
+        // Mirror mid control point if exists
+        if (action.mid) {
+          action.mid.x = mirrorX(action.mid.x);
+        }
+      });
+    }
+
+    // Mirror all player positions and swap assignments
+    const newPlayers = {};
+    Object.entries(phase.players).forEach(([num, pos]) => {
+      const playerNum = parseInt(num);
+      const swappedNum = swapMap[playerNum] || playerNum;
+      newPlayers[swappedNum] = {
+        x: mirrorX(pos.x),
+        y: pos.y,
+        hasBall: pos.hasBall
+      };
+    });
+    phase.players = newPlayers;
+
+    // Mirror all defender positions and swap assignments
+    if (phase.defenders) {
+      const newDefenders = {};
+      Object.entries(phase.defenders).forEach(([num, pos]) => {
+        const defNum = parseInt(num);
+        const swappedNum = swapMap[defNum] || defNum;
+        newDefenders[swappedNum] = {
+          x: mirrorX(pos.x),
+          y: pos.y
+        };
+      });
+      phase.defenders = newDefenders;
+    }
+
+    // Update phase description - swap player numbers
+    if (phase.description) {
+      let desc = phase.description;
+      // Use placeholders to avoid double-swapping
+      desc = desc.replace(/\b2\b/g, '___TWO___');
+      desc = desc.replace(/\b3\b/g, '___THREE___');
+      desc = desc.replace(/\b4\b/g, '___FOUR___');
+      desc = desc.replace(/\b5\b/g, '___FIVE___');
+      // Now replace placeholders with swapped numbers
+      desc = desc.replace(/___TWO___/g, '3');
+      desc = desc.replace(/___THREE___/g, '2');
+      desc = desc.replace(/___FOUR___/g, '5');
+      desc = desc.replace(/___FIVE___/g, '4');
+      // Also swap left/right
+      desc = desc.replace(/\bright\b/gi, '___RIGHT___');
+      desc = desc.replace(/\bleft\b/gi, '___LEFT___');
+      desc = desc.replace(/___RIGHT___/g, 'left');
+      desc = desc.replace(/___LEFT___/g, 'right');
+      phase.description = desc;
+    }
+  });
+
+  isDirty = true;
+  renderAll();
+}
+
 function showPhaseMenu(event) {
   event.stopPropagation();
 
@@ -684,10 +780,58 @@ function selectCourtType(courtType) {
   document.getElementById('startTemplateBtn').disabled = true;
 }
 
-function renderTemplateGrid() {
+// Store loaded existing plays for use in startWithTemplate
+let existingPlaysCache = {};
+
+async function renderTemplateGrid() {
   const grid = document.getElementById('templateGrid');
   grid.innerHTML = '';
 
+  // Handle existing plays - query Firestore
+  if (selectedCourtType === 'existingPlays') {
+    grid.innerHTML = '<div class="template-loading">Loading plays...</div>';
+
+    try {
+      const snapshot = await db.collection('customPlays').get();
+      grid.innerHTML = '';
+
+      if (snapshot.empty) {
+        grid.innerHTML = '<div class="template-empty">No existing plays yet</div>';
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        const play = { ...doc.data(), id: doc.id };
+        existingPlaysCache[doc.id] = play;
+
+        const card = document.createElement('div');
+        card.className = 'template-card';
+        card.dataset.template = `existing:${doc.id}`;
+        card.onclick = () => selectTemplate(`existing:${doc.id}`);
+
+        // Create preview showing all phases
+        const preview = createExistingPlayPreview(play);
+
+        const statusBadge = play.status === 'published'
+          ? '<span class="template-status published">Published</span>'
+          : '<span class="template-status draft">Draft</span>';
+
+        card.innerHTML = `
+          <div class="template-preview">${preview}</div>
+          <div class="template-name">${play.name || 'Untitled'}</div>
+          ${statusBadge}
+        `;
+
+        grid.appendChild(card);
+      });
+    } catch (error) {
+      console.error('Error loading existing plays:', error);
+      grid.innerHTML = '<div class="template-empty">Error loading plays</div>';
+    }
+    return;
+  }
+
+  // Handle built-in templates
   Object.entries(templates).forEach(([key, template]) => {
     // Filter by court type
     if (template.category !== selectedCourtType) return;
@@ -704,6 +848,74 @@ function renderTemplateGrid() {
 
     grid.appendChild(card);
   });
+}
+
+function createExistingPlayPreview(play) {
+  const courtType = play.courtType || 'halfCourt';
+
+  // Use same coordinate transform as regular templates
+  let toMiniX, toMiniY, svgStart, svgEnd;
+
+  if (courtType === 'fullCourtH') {
+    toMiniX = (x) => (x + 50) * 0.85 + 5;
+    toMiniY = (y) => y * 1.1 + 5;
+    svgStart = '<svg viewBox="0 0 95 55" class="mini-court"><rect x="0" y="0" width="95" height="55" fill="#dbc097"/><rect x="5" y="5" width="85" height="45" fill="none" stroke="#fff" stroke-width="0.6"/><line x1="47.5" y1="5" x2="47.5" y2="50" stroke="#fff" stroke-width="0.6"/>';
+    svgEnd = '</svg>';
+  } else if (courtType === 'fullCourtV') {
+    toMiniX = (x) => (x + 28) * 1.0 + 5;
+    toMiniY = (y) => y * 0.95 + 5;
+    svgStart = '<svg viewBox="0 0 65 95" class="mini-court"><rect x="0" y="0" width="65" height="95" fill="#dbc097"/><rect x="5" y="5" width="55" height="85" fill="none" stroke="#fff" stroke-width="0.6"/><line x1="5" y1="47.5" x2="60" y2="47.5" stroke="#fff" stroke-width="0.6"/>';
+    svgEnd = '</svg>';
+  } else {
+    // Half court
+    toMiniX = (x) => (x + 25) * 1.5 + 5;
+    toMiniY = (y) => y * 1.47 + 5;
+    svgStart = '<svg viewBox="0 0 85 79" class="mini-court"><rect x="0" y="0" width="85" height="79" fill="#dbc097"/><rect x="5" y="5" width="75" height="69" fill="none" stroke="#fff" stroke-width="0.8"/><rect x="33" y="5" width="19" height="28" fill="none" stroke="#fff" stroke-width="0.8"/><path d="M33,33 A9.5,9.5 0 0,0 52,33" fill="none" stroke="#fff" stroke-width="0.8"/>';
+    svgEnd = '</svg>';
+  }
+
+  let playersHtml = '';
+  let actionsHtml = '';
+
+  // Get first phase for player positions
+  const firstPhase = play.phases && play.phases[0] ? play.phases[0] : { players: {} };
+
+  // Render players from first phase
+  if (firstPhase.players) {
+    Object.entries(firstPhase.players).forEach(([num, pos]) => {
+      const x = toMiniX(pos.x);
+      const y = toMiniY(pos.y);
+      if (pos.hasBall) {
+        playersHtml += `<circle cx="${x}" cy="${y}" r="5" fill="none" stroke="#333" stroke-width="1"/>`;
+      }
+      playersHtml += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" fill="#333" font-size="7" font-weight="700">${num}</text>`;
+    });
+  }
+
+  // Render actions from ALL phases (stacked)
+  if (play.phases) {
+    play.phases.forEach(phase => {
+      if (!phase.actions) return;
+      phase.actions.forEach(action => {
+        const startX = toMiniX(action.start.x);
+        const startY = toMiniY(action.start.y);
+        const endX = toMiniX(action.end.x);
+        const endY = toMiniY(action.end.y);
+        const color = action.color || '#333';
+
+        if (action.type === 'pass') {
+          actionsHtml += `<line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="${color}" stroke-width="0.8" stroke-dasharray="2,1"/>`;
+        } else if (action.type === 'cut' || action.type === 'dribble') {
+          actionsHtml += `<line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="${color}" stroke-width="0.8"/>`;
+        } else if (action.type === 'shot') {
+          actionsHtml += `<line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="${color}" stroke-width="0.8" stroke-dasharray="1,1"/>`;
+          actionsHtml += `<circle cx="${endX}" cy="${endY}" r="3" fill="none" stroke="${color}" stroke-width="0.5"/>`;
+        }
+      });
+    });
+  }
+
+  return svgStart + actionsHtml + playersHtml + svgEnd;
 }
 
 function createMiniCourtSVG(template) {
@@ -848,6 +1060,53 @@ function closeTemplateModal() {
 function startWithTemplate() {
   if (!selectedTemplate) return;
 
+  // Handle existing play as template
+  if (selectedTemplate.startsWith('existing:')) {
+    const playId = selectedTemplate.replace('existing:', '');
+    const existingPlay = existingPlaysCache[playId];
+
+    if (!existingPlay) {
+      alert('Play not found');
+      return;
+    }
+
+    // Clone the existing play as a new draft
+    currentPlay = {
+      id: null,
+      name: existingPlay.name ? `${existingPlay.name} (Copy)` : 'Untitled Copy',
+      description: existingPlay.description || '',
+      chapter: null,
+      status: 'draft',
+      courtType: existingPlay.courtType || 'halfCourt',
+      createdBy: currentUser.email,
+      createdAt: null,
+      updatedAt: null,
+      phases: JSON.parse(JSON.stringify(existingPlay.phases || []))
+    };
+
+    // Ensure at least one phase exists
+    if (currentPlay.phases.length === 0) {
+      currentPlay.phases = [{
+        players: {},
+        defenders: {},
+        actions: [],
+        description: ''
+      }];
+    }
+
+    currentPhaseIndex = 0;
+    isDirty = false;
+
+    closeTemplateModal();
+    document.getElementById('playName').value = currentPlay.name;
+    if (document.getElementById('playDescription')) {
+      document.getElementById('playDescription').value = currentPlay.description;
+    }
+    renderAll();
+    return;
+  }
+
+  // Handle built-in template
   const template = templates[selectedTemplate];
 
   currentPlay = {
