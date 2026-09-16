@@ -271,6 +271,20 @@ function initDesigner(user, info) {
 
   const urlParams = new URLSearchParams(window.location.search);
   const editId = urlParams.get('edit');
+  const previewId = urlParams.get('preview');
+  const animateId = urlParams.get('animate');
+
+  // Preview mode - just show the court, no controls
+  if (previewId) {
+    initPreviewMode(previewId);
+    return;
+  }
+
+  // Animate mode - load play and immediately open animation modal
+  if (animateId) {
+    initAnimateMode(animateId);
+    return;
+  }
 
   if (editId) {
     loadPlay(editId);
@@ -283,6 +297,94 @@ function initDesigner(user, info) {
 
   initEventListeners();
   renderTemplateGrid();
+}
+
+async function initPreviewMode(playId) {
+  try {
+    const doc = await db.collection('customPlays').doc(playId).get();
+    if (!doc.exists) {
+      document.body.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Play not found</p>';
+      return;
+    }
+
+    currentPlay = { ...doc.data(), id: doc.id };
+    currentPhaseIndex = 0;
+
+    // Hide everything except the court
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('designerContainer').style.display = 'block';
+
+    // Hide header, sidebar, footer
+    const header = document.querySelector('.designer-header');
+    const sidebar = document.querySelector('.designer-sidebar');
+    const footer = document.querySelector('.designer-footer');
+    const phaseNav = document.querySelector('.phase-nav');
+
+    if (header) header.style.display = 'none';
+    if (sidebar) sidebar.style.display = 'none';
+    if (footer) footer.style.display = 'none';
+    if (phaseNav) phaseNav.style.display = 'none';
+
+    // Make the court fill the container
+    const courtArea = document.querySelector('.court-area');
+    if (courtArea) {
+      courtArea.style.padding = '10px';
+      courtArea.style.display = 'flex';
+      courtArea.style.alignItems = 'center';
+      courtArea.style.justifyContent = 'center';
+    }
+
+    // Render the play
+    if (currentPlay.phases && currentPlay.phases.length > 0) {
+      renderPhase(currentPlay.phases[0]);
+      renderActions(currentPlay.phases[0]);
+    }
+
+  } catch (error) {
+    console.error('Error loading preview:', error);
+    document.body.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Error loading play</p>';
+  }
+}
+
+async function initAnimateMode(playId) {
+  try {
+    const doc = await db.collection('customPlays').doc(playId).get();
+    if (!doc.exists) {
+      alert('Play not found');
+      window.history.back();
+      return;
+    }
+
+    currentPlay = { ...doc.data(), id: doc.id };
+    currentPhaseIndex = 0;
+
+    // Hide the loading state and show designer
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('designerContainer').style.display = 'block';
+
+    // Set play name
+    document.getElementById('playName').value = currentPlay.name || '';
+    if (document.getElementById('playDescription')) {
+      document.getElementById('playDescription').value = currentPlay.description || '';
+    }
+
+    // Render the play
+    renderAll();
+
+    // Immediately open the animation modal
+    setTimeout(() => {
+      openAnimationModal();
+      // Auto-play
+      setTimeout(() => {
+        if (!isPlaying) togglePlayPause();
+      }, 500);
+    }, 300);
+
+  } catch (error) {
+    console.error('Error loading animate mode:', error);
+    alert('Error loading play');
+    window.history.back();
+  }
 }
 
 function initEventListeners() {
@@ -1219,7 +1321,7 @@ function createActionSVG(action, index, isSelected) {
 
 // Action path generators - all support optional mid point for curves
 function createWavyPath(start, end, mid, color) {
-  const amp = 0.8;
+  const amp = 1.5;  // Increased amplitude for more pronounced squiggle
 
   // Generate wavy path along a quadratic bezier if mid exists
   function generateWavySegment(p0, p1, startWavePhase = 0) {
@@ -1228,7 +1330,8 @@ function createWavyPath(start, end, mid, color) {
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len < 0.1) return '';
 
-    const waves = Math.max(2, Math.floor(len / 3));
+    // More waves for a squigglier look
+    const waves = Math.max(3, Math.floor(len / 2));
     const perpX = -dy / len;
     const perpY = dx / len;
 
@@ -1279,7 +1382,7 @@ function createDashedArrow(start, end, mid, color) {
   path.setAttribute('fill', 'none');
   path.setAttribute('stroke', color);
   path.setAttribute('stroke-width', '0.25');
-  path.setAttribute('stroke-dasharray', '1.2,0.4');
+  path.setAttribute('stroke-dasharray', '1.5,1.2');  // Wider gaps for visibility
   path.setAttribute('marker-end', 'url(#arrowhead)');
   return path;
 }
@@ -2253,6 +2356,7 @@ function handleKeyDown(e) {
 
 let animationSpeed = 1;
 let animationPaused = false;
+let animationComplete = false;
 let animationPhaseIndex = 0;
 let animationActionIndex = 0;
 let animationState = null; // Stores current animation state for pause/resume
@@ -2322,6 +2426,13 @@ function updatePhaseIndicator() {
     dot.classList.toggle('active', i === animationPhaseIndex);
     dot.classList.toggle('completed', i < animationPhaseIndex);
   });
+
+  // Update description
+  const descEl = document.getElementById('animDescription');
+  if (descEl && animationState && animationState.phases[animationPhaseIndex]) {
+    const phase = animationState.phases[animationPhaseIndex];
+    descEl.textContent = phase.description || '';
+  }
 }
 
 function renderAnimationCourt(phase, completedActionCount = 0) {
@@ -2377,7 +2488,11 @@ function renderAnimationCourt(phase, completedActionCount = 0) {
 }
 
 function togglePlayPause() {
-  if (animationPaused) {
+  if (animationComplete) {
+    // If animation finished, restart it
+    restartAnimation();
+    startAnimation();
+  } else if (animationPaused) {
     startAnimation();
   } else {
     pauseAnimation();
@@ -2388,8 +2503,11 @@ function startAnimation() {
   if (!animationState) return;
 
   animationPaused = false;
+  animationComplete = false;
   document.getElementById('playIcon').style.display = 'none';
   document.getElementById('pauseIcon').style.display = 'block';
+  document.getElementById('restartIcon').style.display = 'none';
+  document.getElementById('playPauseBtn').classList.remove('restart-mode');
 
   runAnimationLoop();
 }
@@ -2398,6 +2516,7 @@ function pauseAnimation() {
   animationPaused = true;
   document.getElementById('playIcon').style.display = 'block';
   document.getElementById('pauseIcon').style.display = 'none';
+  document.getElementById('restartIcon').style.display = 'none';
 }
 
 function stopAnimation() {
@@ -2414,13 +2533,20 @@ function restartAnimation() {
   // Reset to initial state
   animationPhaseIndex = 0;
   animationActionIndex = 0;
+  animationComplete = false;
   animationState = {
     phases: JSON.parse(JSON.stringify(currentPlay.phases))
   };
 
   renderAnimationCourt(animationState.phases[0]);
   updatePhaseIndicator();
-  pauseAnimation();
+
+  // Reset button to play mode
+  document.getElementById('playIcon').style.display = 'block';
+  document.getElementById('pauseIcon').style.display = 'none';
+  document.getElementById('restartIcon').style.display = 'none';
+  document.getElementById('playPauseBtn').classList.remove('restart-mode');
+  animationPaused = true;
 }
 
 function stepAnimation() {
@@ -2498,7 +2624,14 @@ function runAnimationLoop() {
       const finalPhase = animationState.phases[animationPhaseIndex];
       const totalActions = finalPhase.actions ? finalPhase.actions.length : 0;
       renderAnimationCourt(finalPhase, totalActions); // Hide all actions, show final player positions
-      pauseAnimation();
+
+      // Show restart button instead of play/pause
+      animationPaused = true;
+      animationComplete = true;
+      document.getElementById('playIcon').style.display = 'none';
+      document.getElementById('pauseIcon').style.display = 'none';
+      document.getElementById('restartIcon').style.display = 'block';
+      document.getElementById('playPauseBtn').classList.add('restart-mode');
     }
   }
 }
@@ -2904,7 +3037,7 @@ async function loadPlay(playId) {
       return;
     }
 
-    currentPlay = { id: doc.id, ...doc.data() };
+    currentPlay = { ...doc.data(), id: doc.id };
     currentPhaseIndex = 0;
 
     document.getElementById('playName').value = currentPlay.name || '';

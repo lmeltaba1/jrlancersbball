@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
   <link rel="stylesheet" href="css/athletic.css">
+  <link rel="stylesheet" href="css/play-designer.css">
   <link rel="manifest" href="manifest.json">
   <style>
     /* ========== MODERN PLAYBOOK STYLES ========== */
@@ -173,16 +174,53 @@
       height: 16px;
     }
 
+    /* Play header actions container */
+    .play-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Delete/hide button for plays */
+    .play-delete-btn {
+      background: transparent;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      opacity: 0.5;
+    }
+
+    .play-delete-btn:hover {
+      background: rgba(220, 53, 69, 0.15);
+      color: #dc3545;
+      opacity: 1;
+    }
+
+    .play-delete-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
     /* ========== COURT ========== */
-    .court-container {
-      width: 100%;
-      max-width: 300px;
+    .court-container,
+    .draft-court-container {
+      width: 60%;
       margin: 0 auto;
       aspect-ratio: 1 / 1.05;
-      background: linear-gradient(180deg, #8B6914 0%, #6B5010 100%);
-      border-radius: 16px;
+      border-radius: 12px;
       overflow: hidden;
       position: relative;
+    }
+
+    .court-container {
+      background: linear-gradient(180deg, #8B6914 0%, #6B5010 100%);
       box-shadow: inset 0 2px 20px rgba(0, 0, 0, 0.3);
     }
 
@@ -344,6 +382,162 @@
       color: var(--text-muted);
       font-size: 0.9rem;
     }
+
+    /* Drafts tab styling */
+    .drafts-tab {
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .drafts-tab.active {
+      background: #2196F3 !important;
+      color: white !important;
+    }
+
+    /* Draft card actions */
+    .draft-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .draft-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .draft-btn.publish {
+      background: #4a9f6e;
+      color: white;
+    }
+
+    .draft-btn.publish:hover {
+      background: #3d8a5e;
+    }
+
+    .draft-btn.edit {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .draft-btn.edit:hover {
+      background: var(--border-color);
+    }
+
+    .draft-btn.delete {
+      background: #ef4444;
+      color: white;
+    }
+
+    .draft-btn.delete:hover {
+      background: #dc2626;
+    }
+
+    .draft-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Drafts empty state */
+    .drafts-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    .drafts-empty p {
+      margin-bottom: 20px;
+    }
+
+    .create-play-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: #4a9f6e;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .create-play-btn:hover {
+      background: #3d8a5e;
+    }
+
+    /* Draft card header with status */
+    .draft-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .draft-status {
+      font-size: 0.7rem;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .draft-status.draft {
+      background: #2196F3;
+      color: white;
+    }
+
+    .draft-status.published {
+      background: #4a9f6e;
+      color: white;
+    }
+
+    /* Phase steps - compact inline list */
+    .phase-steps {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .phase-step {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .step-number {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--lancers-gold);
+      color: #000;
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-text {
+      color: var(--text-secondary);
+    }
   </style>
   <link rel="icon" type="image/png" href="images/lancers-logo-192.png">
 </head>
@@ -423,6 +617,7 @@
         <button class="playbook-tab active" data-chapter="man">vs Man</button>
         <button class="playbook-tab" data-chapter="zone">vs Zone</button>
         <button class="playbook-tab" data-chapter="inbound">Inbound</button>
+        <button class="playbook-tab drafts-tab" data-chapter="drafts" style="display: none;">Drafts</button>
       </div>
 
       <!-- Highlight + Legend Row -->
@@ -459,7 +654,38 @@
 
     <!-- Plays Container -->
     <div id="plays-container"></div>
+
+    <!-- Drafts Container (for coaches) -->
+    <div id="drafts-container" style="display: none;"></div>
   </main>
+
+  <!-- Publish Modal -->
+  <div id="publishModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 400px; padding: 24px;">
+      <h3 style="margin: 0 0 20px 0; font-size: 1.1rem;">Publish Play</h3>
+      <p style="margin: 0 0 16px 0; color: var(--text-secondary); font-size: 0.9rem;">
+        Choose which section to publish "<span id="publishPlayName"></span>" to:
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+        <label style="display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-elevated); border-radius: 8px; cursor: pointer;">
+          <input type="radio" name="publishChapter" value="man" checked>
+          <span>vs Man</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-elevated); border-radius: 8px; cursor: pointer;">
+          <input type="radio" name="publishChapter" value="zone">
+          <span>vs Zone</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-elevated); border-radius: 8px; cursor: pointer;">
+          <input type="radio" name="publishChapter" value="inbound">
+          <span>Inbound</span>
+        </label>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button onclick="closePublishModal()" style="flex: 1; padding: 12px; background: var(--bg-elevated); border: none; border-radius: 8px; color: var(--text-primary); font-weight: 600; cursor: pointer;">Cancel</button>
+        <button onclick="confirmPublish()" style="flex: 1; padding: 12px; background: #4a9f6e; border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">Publish</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Bottom Navigation -->
   <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
@@ -515,6 +741,7 @@
   <script src="js/theme.js"></script>
   <script src="js/notifications.js"></script>
   <script src="js/plays.js"></script>
+  <script src="js/play-viewer.js"></script>
   <script>
     // Profile menu functions
     function toggleProfileMenu() {
@@ -682,24 +909,62 @@
           ${play.phases.map((_, i) => `<div class="phase-dot${i === 0 ? ' active' : ''}" data-phase="${i}"></div>`).join('')}
         </div>` : '';
 
-      card.innerHTML = `
-        <div class="play-card-header">
-          <h3>${play.name}</h3>
-          <button class="replay-btn" id="btn-${playId}" onclick="replayPlay('${playId}')" aria-label="Play animation">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="6 4 20 12 6 20 6 4"></polygon>
-            </svg>
-          </button>
-        </div>
-        <div class="play-card-body">
-          <div class="court-container" id="court-${playId}">
-            ${generateCourtSVG()}
+      // Check if head coach can delete this play
+      const isHeadCoach = window.playbookUserInfo && window.playbookUserInfo.isHeadCoach;
+      const isCustomPlay = play.isCustom === true;
+      const deleteBtn = isHeadCoach ? `
+        <button class="play-delete-btn" onclick="event.stopPropagation(); ${isCustomPlay ? `deletePublishedPlay('${playId}', '${escapeHtml(play.name)}')` : `hideHardcodedPlay('${playId}', '${escapeHtml(play.name)}')`}" aria-label="Delete play" title="${isCustomPlay ? 'Delete play' : 'Hide play'}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </button>
+      ` : '';
+
+      // For custom plays from play designer, use PlayViewer
+      // For hardcoded plays, use the old rendering system
+      if (isCustomPlay) {
+        card.innerHTML = `
+          <div class="play-card-header">
+            <h3>${play.name}</h3>
+            <div class="play-header-actions">
+              ${deleteBtn}
+              <button class="replay-btn" id="btn-${playId}" onclick="PlayViewer.playAnimation('${playId}')" aria-label="Play animation">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="6 4 20 12 6 20 6 4"></polygon>
+                </svg>
+              </button>
+            </div>
           </div>
-          ${phaseIndicators}
-          <div class="phase-description-text" id="phase-text-${playId}" style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); min-height: 20px; margin-top: 8px;"></div>
-          ${generatePlayDescription(play)}
-        </div>
-      `;
+          <div class="play-card-body">
+            <div class="court-container" id="court-${playId}"></div>
+            <div class="phase-description-text" id="phase-text-${playId}" style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); min-height: 20px; margin-top: 8px;">
+              ${play.description ? escapeHtml(play.description) : ''}
+            </div>
+          </div>
+        `;
+      } else {
+        card.innerHTML = `
+          <div class="play-card-header">
+            <h3>${play.name}</h3>
+            <div class="play-header-actions">
+              ${deleteBtn}
+              <button class="replay-btn" id="btn-${playId}" onclick="replayPlay('${playId}')" aria-label="Play animation">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="6 4 20 12 6 20 6 4"></polygon>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="play-card-body">
+            <div class="court-container" id="court-${playId}">
+              ${generateCourtSVG()}
+            </div>
+            ${phaseIndicators}
+            <div class="phase-description-text" id="phase-text-${playId}" style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); min-height: 20px; margin-top: 8px;"></div>
+            ${generatePlayDescription(play)}
+          </div>
+        `;
+      }
 
       return card;
     }
@@ -711,13 +976,13 @@
       }
 
       // Check if phases have description arrays (detailed play from video)
-      const hasPhaseDescriptions = play.phases.some(p => p.description && p.description.length > 0);
+      const hasPhaseDescriptions = play.phases.some(p => p.description && Array.isArray(p.description) && p.description.length > 0);
 
       if (hasPhaseDescriptions) {
         // Use provided phase descriptions
         let allDescriptions = [];
         play.phases.forEach((phase, i) => {
-          if (phase.description && phase.description.length > 0) {
+          if (phase.description && Array.isArray(phase.description) && phase.description.length > 0) {
             phase.description.forEach(desc => {
               if (!allDescriptions.includes(desc)) {
                 allDescriptions.push(desc);
@@ -1641,7 +1906,10 @@
       const container = document.getElementById('plays-container');
       container.innerHTML = '';
 
-      const chapterPlays = Object.entries(plays).filter(([id, play]) => play.chapter === currentChapter);
+      // Filter by chapter and exclude hidden plays
+      const chapterPlays = Object.entries(plays).filter(([id, play]) => {
+        return play.chapter === currentChapter && !hiddenPlays.has(id);
+      });
 
       if (chapterPlays.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">No plays in this chapter yet.</p>';
@@ -1652,10 +1920,19 @@
         const card = renderPlayCard(playId, play, index);
         container.appendChild(card);
 
-        // Render static diagram (all actions visible)
+        // Render static diagram
         setTimeout(() => {
-          renderStaticPlay(playId, play);
-          applyHighlighting();
+          if (play.isCustom) {
+            // Custom plays from play designer use PlayViewer
+            const courtContainer = document.getElementById(`court-${playId}`);
+            if (courtContainer) {
+              PlayViewer.init(courtContainer, { ...play, id: playId });
+            }
+          } else {
+            // Hardcoded plays use old rendering
+            renderStaticPlay(playId, play);
+            applyHighlighting();
+          }
         }, 100);
       });
     }
@@ -1701,11 +1978,36 @@
         }
         if (userInfo.isEmulating) { showEmulationBanner(userInfo.emulatedEmail); }
 
-        // Show Create Play button for coaches
+        // Store user info for later use (needed for head coach check)
+        window.playbookUserInfo = userInfo;
+
+        // Check if user is head coach
+        try {
+          const headCoachDoc = await db.collection('config').doc('headCoach').get();
+          if (headCoachDoc.exists && headCoachDoc.data().email) {
+            const userEmail = auth.currentUser.email.toLowerCase();
+            window.playbookUserInfo.isHeadCoach = (headCoachDoc.data().email.toLowerCase() === userEmail);
+          }
+        } catch (e) {
+          console.error('Error checking head coach:', e);
+        }
+
+        // Show Create Play button and Drafts tab for coaches
         if (userInfo.isCoach) {
           const createBtn = document.getElementById('createPlayBtn');
           if (createBtn) createBtn.style.display = 'flex';
+
+          // Show drafts tab
+          const draftsTab = document.querySelector('.drafts-tab');
+          if (draftsTab) draftsTab.style.display = '';
+
+          // Load drafts
+          loadDrafts();
         }
+
+        // Load hidden plays and published plays before rendering
+        await loadHiddenPlays();
+        await loadPublishedPlays();
 
         // Tab switching
         document.querySelectorAll('.playbook-tab').forEach(tab => {
@@ -1713,9 +2015,22 @@
             document.querySelectorAll('.playbook-tab').forEach(t => t.classList.remove('active'));
             this.classList.add('active');
             currentChapter = this.dataset.chapter;
-            renderPlays();
-            // Re-apply highlighting after rendering new plays
-            setTimeout(applyHighlighting, 150);
+
+            // Toggle containers based on chapter
+            const playsContainer = document.getElementById('plays-container');
+            const draftsContainer = document.getElementById('drafts-container');
+
+            if (currentChapter === 'drafts') {
+              playsContainer.style.display = 'none';
+              draftsContainer.style.display = 'block';
+              renderDrafts();
+            } else {
+              playsContainer.style.display = 'block';
+              draftsContainer.style.display = 'none';
+              renderPlays();
+              // Re-apply highlighting after rendering new plays
+              setTimeout(applyHighlighting, 150);
+            }
           });
         });
 
@@ -1744,6 +2059,267 @@
         console.log('Auth required:', err);
       });
     });
+
+    // ========== DRAFTS FUNCTIONALITY ==========
+
+    let draftPlays = [];
+    let publishingPlayId = null;
+
+    async function loadDrafts() {
+      try {
+        const snapshot = await db.collection('customPlays')
+          .where('status', '==', 'draft')
+          .get();
+
+        draftPlays = [];
+        snapshot.forEach(doc => {
+          draftPlays.push({ ...doc.data(), id: doc.id });
+        });
+
+        // If we're on drafts tab, render them
+        if (currentChapter === 'drafts') {
+          renderDrafts();
+        }
+      } catch (error) {
+        console.error('Error loading drafts:', error);
+      }
+    }
+
+    // Generate phase steps description - uses descriptions entered in play designer
+    function generatePhaseSteps(play) {
+      if (!play.phases || play.phases.length === 0) return '';
+
+      // Collect phases that have descriptions
+      const steps = [];
+      play.phases.forEach((phase, index) => {
+        if (phase.description && phase.description.trim()) {
+          steps.push({ num: index + 1, text: phase.description.trim() });
+        }
+      });
+
+      if (steps.length === 0) return '';
+
+      // Generate HTML for steps
+      let html = '<div class="phase-steps">';
+      steps.forEach(step => {
+        html += `
+          <div class="phase-step">
+            <span class="step-number">${step.num}</span>
+            <span class="step-text">${escapeHtml(step.text)}</span>
+          </div>
+        `;
+      });
+      html += '</div>';
+
+      return html;
+    }
+
+    function renderDrafts() {
+      const container = document.getElementById('drafts-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (draftPlays.length === 0) {
+        container.innerHTML = `
+          <div class="drafts-empty">
+            <p>No draft plays yet</p>
+            <button class="create-play-btn" onclick="window.location.href='play-designer.html'">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Create New Play
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      const isHeadCoach = window.playbookUserInfo && window.playbookUserInfo.isHeadCoach;
+
+      draftPlays.forEach((play, index) => {
+        const card = document.createElement('div');
+        card.className = 'play-card';
+        card.id = `play-draft-${play.id}`;
+
+        // Generate phase steps description
+        const phaseSteps = generatePhaseSteps(play);
+
+        card.innerHTML = `
+          <div class="play-card-header">
+            <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <h3>${escapeHtml(play.name || 'Untitled Play')}</h3>
+                <span class="draft-status draft">Draft</span>
+              </div>
+              ${play.description ? `<p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0;">${escapeHtml(play.description)}</p>` : ''}
+            </div>
+            <button class="replay-btn" id="play-btn-${play.id}" onclick="PlayViewer.playAnimation('${play.id}')" aria-label="Play animation">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="6 4 20 12 6 20 6 4"></polygon>
+              </svg>
+            </button>
+          </div>
+          <div class="play-card-body">
+            <div class="draft-court-container" id="draft-court-${play.id}"></div>
+            ${phaseSteps}
+            <div class="draft-actions">
+              <button class="draft-btn publish" onclick="openPublishModal('${play.id}', '${escapeHtml(play.name || 'Untitled')}')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Publish
+              </button>
+              <button class="draft-btn edit" onclick="window.location.href='play-designer.html?edit=${play.id}'">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Edit
+              </button>
+              ${isHeadCoach ? `
+                <button class="draft-btn delete" onclick="deleteDraft('${play.id}', '${escapeHtml(play.name || 'Untitled')}')">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                  Delete
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+
+        // Render using PlayViewer (EXACT play designer rendering)
+        setTimeout(() => {
+          const courtContainer = document.getElementById(`draft-court-${play.id}`);
+          if (courtContainer) {
+            PlayViewer.init(courtContainer, play);
+          }
+        }, 50);
+      });
+    }
+
+    // ========== PUBLISH/DELETE FUNCTIONS ==========
+
+    function openPublishModal(playId, playName) {
+      publishingPlayId = playId;
+      document.getElementById('publishPlayName').textContent = playName;
+      document.getElementById('publishModal').style.display = 'flex';
+    }
+
+    function closePublishModal() {
+      publishingPlayId = null;
+      document.getElementById('publishModal').style.display = 'none';
+    }
+
+    async function confirmPublish() {
+      if (!publishingPlayId) return;
+
+      const selectedChapter = document.querySelector('input[name="publishChapter"]:checked').value;
+
+      try {
+        await db.collection('customPlays').doc(publishingPlayId).update({
+          status: 'published',
+          chapter: selectedChapter,
+          publishedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        closePublishModal();
+        await loadDrafts();
+        await loadPublishedPlays();  // Reload published plays to include the newly published one
+        alert('Play published successfully!');
+      } catch (error) {
+        console.error('Error publishing play:', error);
+        alert('Failed to publish play: ' + error.message);
+      }
+    }
+
+    async function deleteDraft(playId, playName) {
+      if (!confirm(`Are you sure you want to delete "${playName}"? This cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        await db.collection('customPlays').doc(playId).delete();
+        await loadDrafts();
+      } catch (error) {
+        console.error('Error deleting draft:', error);
+        alert('Failed to delete draft: ' + error.message);
+      }
+    }
+
+    // ========== HIDDEN PLAYS & PUBLISHED PLAYS FUNCTIONALITY ==========
+
+    let hiddenPlays = new Set();
+
+    // Load hidden plays from Firestore
+    async function loadHiddenPlays() {
+      try {
+        const doc = await db.collection('config').doc('hiddenPlays').get();
+        if (doc.exists && doc.data().playIds) {
+          hiddenPlays = new Set(doc.data().playIds);
+        }
+      } catch (error) {
+        console.error('Error loading hidden plays:', error);
+      }
+    }
+
+    // Load published custom plays from Firestore and merge with hardcoded plays
+    async function loadPublishedPlays() {
+      try {
+        const snapshot = await db.collection('customPlays')
+          .where('status', '==', 'published')
+          .get();
+
+        snapshot.forEach(doc => {
+          const playData = doc.data();
+          // Mark as custom play and add to plays object
+          plays[doc.id] = {
+            ...playData,
+            isCustom: true
+          };
+        });
+      } catch (error) {
+        console.error('Error loading published plays:', error);
+      }
+    }
+
+    // Hide a hardcoded play (head coach only)
+    async function hideHardcodedPlay(playId, playName) {
+      if (!confirm(`Hide "${playName}" from the playbook? You can restore it later.`)) {
+        return;
+      }
+
+      try {
+        // Add to hidden plays in Firestore
+        await db.collection('config').doc('hiddenPlays').set({
+          playIds: firebase.firestore.FieldValue.arrayUnion(playId),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        hiddenPlays.add(playId);
+        renderPlays();
+      } catch (error) {
+        console.error('Error hiding play:', error);
+        alert('Failed to hide play: ' + error.message);
+      }
+    }
+
+    // Delete a published custom play (head coach only)
+    async function deletePublishedPlay(playId, playName) {
+      if (!confirm(`Delete "${playName}"? This cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        await db.collection('customPlays').doc(playId).delete();
+        delete plays[playId];
+        renderPlays();
+      } catch (error) {
+        console.error('Error deleting play:', error);
+        alert('Failed to delete play: ' + error.message);
+      }
+    }
 
   </script>
 </body>

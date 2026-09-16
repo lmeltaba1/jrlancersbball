@@ -93,6 +93,8 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       // Allow any authenticated user to write simulation config (for testing)
       allow write: if docId == 'simulation' && isAuthenticated();
+      // Allow head coach to manage hidden plays
+      allow write: if docId == 'hiddenPlays' && isHeadCoach();
       // Other config docs only writable by cloud functions
     }
 
@@ -200,11 +202,9 @@ service cloud.firestore {
       }
     }
 
-    // Custom plays - coaches can create/edit, parents/players can read published
+    // Custom plays - coaches can create/edit, all authenticated users can read
     match /customPlays/{playId} {
-      // Read: coaches can read all, others can read only published plays
-      allow read: if isAuthenticated() &&
-        (isCoach() || resource.data.status == 'published');
+      allow read: if isAuthenticated();
       // Create: only coaches, must set createdBy to own email
       allow create: if isCoach()
         && request.resource.data.createdBy == getUserEmail();
