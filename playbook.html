@@ -439,12 +439,20 @@
           </select>
           <span id="auto-position-label" style="display: none; font-size: 0.7rem; color: var(--text-muted);"></span>
         </div>
-        <div class="position-legend-inline">
-          <span><strong>1</strong>PG</span>
-          <span><strong>2</strong>SG</span>
-          <span><strong>3</strong>SF</span>
-          <span><strong>4</strong>PF</span>
-          <span><strong>5</strong>C</span>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div class="position-legend-inline">
+            <span><strong>1</strong>PG</span>
+            <span><strong>2</strong>SG</span>
+            <span><strong>3</strong>SF</span>
+            <span><strong>4</strong>PF</span>
+            <span><strong>5</strong>C</span>
+          </div>
+          <a href="play-designer.html" id="createPlayBtn" class="btn btn-primary" style="display: none; padding: 8px 12px; font-size: 0.8rem; white-space: nowrap;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style="margin-right: 4px;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Create
+          </a>
         </div>
       </div>
     </div>
@@ -1692,6 +1700,12 @@
           if (emulateSection) { emulateSection.style.display = 'block'; populateEmulateDropdown(); }
         }
         if (userInfo.isEmulating) { showEmulationBanner(userInfo.emulatedEmail); }
+
+        // Show Create Play button for coaches
+        if (userInfo.isCoach) {
+          const createBtn = document.getElementById('createPlayBtn');
+          if (createBtn) createBtn.style.display = 'flex';
+        }
 
         // Tab switching
         document.querySelectorAll('.playbook-tab').forEach(tab => {

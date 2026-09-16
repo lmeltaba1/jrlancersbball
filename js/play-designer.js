@@ -45,67 +45,221 @@ const COURT = {
 // ============================================================================
 
 const templates = {
+  // === HALF COURT OFFENSE ===
   empty: {
     name: 'Empty',
-    positions: {
-      1: { x: 0, y: 31, hasBall: true },
-      2: { x: -13, y: 25, hasBall: false },
-      3: { x: 13, y: 25, hasBall: false },
-      4: { x: -18, y: 9, hasBall: false },
-      5: { x: 18, y: 9, hasBall: false }
-    }
+    category: 'halfCourt',
+    positions: {}
   },
   traditional: {
     name: 'Traditional',
+    category: 'halfCourt',
     positions: {
-      1: { x: 0, y: 31, hasBall: true },
-      2: { x: -13, y: 25, hasBall: false },
-      3: { x: 13, y: 25, hasBall: false },
-      4: { x: -8, y: 14, hasBall: false },
-      5: { x: 8, y: 14, hasBall: false }
+      1: { x: 0, y: 32, hasBall: true },
+      2: { x: -12, y: 22, hasBall: false },
+      3: { x: 12, y: 22, hasBall: false },
+      4: { x: -10, y: 8, hasBall: false },
+      5: { x: 10, y: 8, hasBall: false }
     }
   },
   fiveOut: {
     name: '5 Out',
+    category: 'halfCourt',
     positions: {
-      1: { x: 0, y: 35, hasBall: true },
-      2: { x: -21, y: 22, hasBall: false },
-      3: { x: 21, y: 22, hasBall: false },
-      4: { x: -15, y: 7, hasBall: false },
-      5: { x: 15, y: 7, hasBall: false }
+      1: { x: 0, y: 32, hasBall: true },
+      2: { x: -18, y: 22, hasBall: false },
+      3: { x: 18, y: 22, hasBall: false },
+      4: { x: -20, y: 8, hasBall: false },
+      5: { x: 20, y: 8, hasBall: false }
+    }
+  },
+  princeton: {
+    name: 'Princeton Offense',
+    category: 'halfCourt',
+    positions: {
+      1: { x: 0, y: 32, hasBall: true },
+      2: { x: -14, y: 8, hasBall: false },
+      3: { x: 18, y: 12, hasBall: false },
+      4: { x: -4, y: 16, hasBall: false },
+      5: { x: 14, y: 8, hasBall: false }
     }
   },
   box: {
     name: 'Box',
+    category: 'halfCourt',
     positions: {
-      1: { x: 0, y: 31, hasBall: true },
-      2: { x: -5, y: 10, hasBall: false },
-      3: { x: 5, y: 10, hasBall: false },
-      4: { x: -5, y: 18, hasBall: false },
-      5: { x: 5, y: 18, hasBall: false }
-    }
-  },
-  horns: {
-    name: 'Horns',
-    positions: {
-      1: { x: 0, y: 31, hasBall: true },
-      2: { x: -20, y: 20, hasBall: false },
-      3: { x: 20, y: 20, hasBall: false },
-      4: { x: -6, y: 16, hasBall: false },
-      5: { x: 6, y: 16, hasBall: false }
+      1: { x: 0, y: 32, hasBall: true },
+      2: { x: -5, y: 20, hasBall: false },
+      3: { x: 5, y: 20, hasBall: false },
+      4: { x: -5, y: 8, hasBall: false },
+      5: { x: 5, y: 8, hasBall: false }
     }
   },
   oneFourLow: {
     name: '1-4 Low',
+    category: 'halfCourt',
     positions: {
-      1: { x: 0, y: 31, hasBall: true },
-      2: { x: -18, y: 7, hasBall: false },
-      3: { x: 18, y: 7, hasBall: false },
+      1: { x: 0, y: 32, hasBall: true },
+      2: { x: -16, y: 7, hasBall: false },
+      3: { x: 16, y: 7, hasBall: false },
       4: { x: -6, y: 7, hasBall: false },
       5: { x: 6, y: 7, hasBall: false }
     }
+  },
+  horns: {
+    name: 'Horns',
+    category: 'halfCourt',
+    positions: {
+      1: { x: 0, y: 32, hasBall: true },
+      2: { x: -18, y: 18, hasBall: false },
+      3: { x: 18, y: 18, hasBall: false },
+      4: { x: -6, y: 14, hasBall: false },
+      5: { x: 6, y: 14, hasBall: false }
+    }
+  },
+  oneFourHigh: {
+    name: '1-4 High',
+    category: 'halfCourt',
+    positions: {
+      1: { x: 0, y: 32, hasBall: true },
+      2: { x: -16, y: 18, hasBall: false },
+      3: { x: 16, y: 18, hasBall: false },
+      4: { x: -6, y: 18, hasBall: false },
+      5: { x: 6, y: 18, hasBall: false }
+    }
+  },
+  flex: {
+    name: 'Flex',
+    category: 'halfCourt',
+    positions: {
+      1: { x: 10, y: 28, hasBall: true },
+      2: { x: 18, y: 12, hasBall: false },
+      3: { x: -16, y: 8, hasBall: false },
+      4: { x: -10, y: 20, hasBall: false },
+      5: { x: 0, y: 8, hasBall: false }
+    }
+  },
+
+  // === HALF COURT DEFENSE (defenders only) ===
+  zone23: {
+    name: '2-3 Zone Defense',
+    category: 'halfCourt',
+    positions: {},
+    defenders: {
+      1: { x: -6, y: 16 },
+      2: { x: 6, y: 16 },
+      3: { x: -12, y: 9 },
+      4: { x: 12, y: 9 },
+      5: { x: 0, y: 9 }
+    }
+  },
+  zone32: {
+    name: '3-2 Zone Defense',
+    category: 'halfCourt',
+    positions: {},
+    defenders: {
+      1: { x: 0, y: 22 },
+      2: { x: 10, y: 14 },
+      3: { x: -10, y: 14 },
+      4: { x: 12, y: 8 },
+      5: { x: -12, y: 8 }
+    }
+  },
+  zone131: {
+    name: '1-3-1 Zone Defense',
+    category: 'halfCourt',
+    positions: {},
+    defenders: {
+      1: { x: 0, y: 18 },
+      2: { x: -14, y: 12 },
+      3: { x: 14, y: 12 },
+      4: { x: 0, y: 6 },
+      5: { x: 0, y: 12 }
+    }
+  },
+
+  // === HORIZONTAL FULL COURT ===
+  fullHEmpty: {
+    name: 'Empty',
+    category: 'fullCourtH',
+    positions: {}
+  },
+  press1121: {
+    name: '1-1-2-1 Press Break',
+    category: 'fullCourtH',
+    positions: {
+      1: { x: -40, y: 24, hasBall: false },
+      2: { x: -20, y: 35, hasBall: false },
+      3: { x: -20, y: 12, hasBall: true },
+      4: { x: 10, y: 35, hasBall: false },
+      5: { x: 10, y: 12, hasBall: false }
+    }
+  },
+  press14: {
+    name: '1-4 Press Break',
+    category: 'fullCourtH',
+    positions: {
+      1: { x: -35, y: 24, hasBall: false },
+      2: { x: -15, y: 35, hasBall: false },
+      3: { x: -15, y: 12, hasBall: false },
+      4: { x: -15, y: 24, hasBall: true },
+      5: { x: 15, y: 24, hasBall: false }
+    }
+  },
+  press131: {
+    name: '1-3-1 Press Break',
+    category: 'fullCourtH',
+    positions: {
+      1: { x: -35, y: 35, hasBall: false },
+      2: { x: -35, y: 12, hasBall: false },
+      3: { x: -15, y: 24, hasBall: false },
+      4: { x: -35, y: 24, hasBall: true },
+      5: { x: 15, y: 24, hasBall: false }
+    }
+  },
+
+  // === VERTICAL FULL COURT ===
+  fullVEmpty: {
+    name: 'Empty',
+    category: 'fullCourtV',
+    positions: {}
+  },
+  vPress1121: {
+    name: '1-1-2-1 Press Break',
+    category: 'fullCourtV',
+    positions: {
+      1: { x: 0, y: 80, hasBall: false },
+      2: { x: -12, y: 60, hasBall: false },
+      3: { x: 12, y: 60, hasBall: true },
+      4: { x: -12, y: 35, hasBall: false },
+      5: { x: 12, y: 35, hasBall: false }
+    }
+  },
+  vPress14: {
+    name: '1-4 Press Break',
+    category: 'fullCourtV',
+    positions: {
+      1: { x: 0, y: 75, hasBall: false },
+      2: { x: -15, y: 55, hasBall: false },
+      3: { x: 15, y: 55, hasBall: false },
+      4: { x: 0, y: 55, hasBall: true },
+      5: { x: 0, y: 35, hasBall: false }
+    }
+  },
+  vPress131: {
+    name: '1-3-1 Press Break',
+    category: 'fullCourtV',
+    positions: {
+      1: { x: -15, y: 75, hasBall: false },
+      2: { x: 15, y: 75, hasBall: false },
+      3: { x: 0, y: 55, hasBall: false },
+      4: { x: 0, y: 75, hasBall: true },
+      5: { x: 0, y: 35, hasBall: false }
+    }
   }
 };
+
+let selectedCourtType = 'halfCourt';
 
 // ============================================================================
 // INITIALIZATION
@@ -409,11 +563,30 @@ function deselectItem() {
 // TEMPLATE PICKER
 // ============================================================================
 
+function selectCourtType(courtType) {
+  selectedCourtType = courtType;
+  selectedTemplate = null;
+
+  // Update sidebar buttons
+  document.querySelectorAll('.template-sidebar-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.court === courtType);
+  });
+
+  // Re-render grid
+  renderTemplateGrid();
+
+  // Disable start button
+  document.getElementById('startTemplateBtn').disabled = true;
+}
+
 function renderTemplateGrid() {
   const grid = document.getElementById('templateGrid');
   grid.innerHTML = '';
 
   Object.entries(templates).forEach(([key, template]) => {
+    // Filter by court type
+    if (template.category !== selectedCourtType) return;
+
     const card = document.createElement('div');
     card.className = 'template-card';
     card.dataset.template = key;
@@ -429,20 +602,41 @@ function renderTemplateGrid() {
 }
 
 function createMiniCourtSVG(template) {
+  const category = template.category || 'halfCourt';
+
+  if (category === 'fullCourtH') {
+    return createMiniFullCourtHorizontalSVG(template);
+  } else if (category === 'fullCourtV') {
+    return createMiniFullCourtVerticalSVG(template);
+  }
+
+  // Half court
   function toMiniX(x) { return (x + 25) * 1.5 + 5; }
   function toMiniY(y) { return y * 1.47 + 5; }
 
   let playersHtml = '';
 
-  Object.entries(template.positions).forEach(([num, pos]) => {
-    const x = toMiniX(pos.x);
-    const y = toMiniY(pos.y);
+  // Render players
+  if (template.positions) {
+    Object.entries(template.positions).forEach(([num, pos]) => {
+      const x = toMiniX(pos.x);
+      const y = toMiniY(pos.y);
 
-    if (pos.hasBall) {
-      playersHtml += `<circle cx="${x}" cy="${y}" r="5" fill="none" stroke="#333" stroke-width="1"/>`;
-    }
-    playersHtml += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" fill="#333" font-size="7" font-weight="700">${num}</text>`;
-  });
+      if (pos.hasBall) {
+        playersHtml += `<circle cx="${x}" cy="${y}" r="5" fill="none" stroke="#333" stroke-width="1"/>`;
+      }
+      playersHtml += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" fill="#333" font-size="7" font-weight="700">${num}</text>`;
+    });
+  }
+
+  // Render defenders
+  if (template.defenders) {
+    Object.entries(template.defenders).forEach(([num, pos]) => {
+      const x = toMiniX(pos.x);
+      const y = toMiniY(pos.y);
+      playersHtml += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" fill="#c44" font-size="6" font-weight="700">X<tspan font-size="4" baseline-shift="sub">${num}</tspan></text>`;
+    });
+  }
 
   return `
     <svg viewBox="0 0 85 79" class="mini-court">
@@ -453,6 +647,74 @@ function createMiniCourtSVG(template) {
       <path d="M10,5 L10,20 A32,32 0 0,0 75,20 L75,5" fill="none" stroke="#fff" stroke-width="0.8"/>
       <circle cx="42.5" cy="12" r="1.5" fill="none" stroke="#fff" stroke-width="0.8"/>
       <line x1="5" y1="74" x2="80" y2="74" stroke="#fff" stroke-width="0.8"/>
+      ${playersHtml}
+    </svg>
+  `;
+}
+
+function createMiniFullCourtHorizontalSVG(template) {
+  function toMiniX(x) { return (x + 50) * 0.85 + 5; }
+  function toMiniY(y) { return y * 1.1 + 5; }
+
+  let playersHtml = '';
+
+  if (template.positions) {
+    Object.entries(template.positions).forEach(([num, pos]) => {
+      const x = toMiniX(pos.x);
+      const y = toMiniY(pos.y);
+
+      if (pos.hasBall) {
+        playersHtml += `<circle cx="${x}" cy="${y}" r="4" fill="none" stroke="#333" stroke-width="0.8"/>`;
+      }
+      playersHtml += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" fill="#333" font-size="5" font-weight="700">${num}</text>`;
+    });
+  }
+
+  // Horizontal full court
+  return `
+    <svg viewBox="0 0 95 55" class="mini-court">
+      <rect x="0" y="0" width="95" height="55" fill="#dbc097"/>
+      <rect x="5" y="5" width="85" height="45" fill="none" stroke="#fff" stroke-width="0.6"/>
+      <line x1="47.5" y1="5" x2="47.5" y2="50" stroke="#fff" stroke-width="0.6"/>
+      <circle cx="47.5" cy="27.5" r="6" fill="none" stroke="#fff" stroke-width="0.6"/>
+      <rect x="5" y="15" width="12" height="25" fill="none" stroke="#fff" stroke-width="0.6"/>
+      <rect x="78" y="15" width="12" height="25" fill="none" stroke="#fff" stroke-width="0.6"/>
+      <circle cx="12" cy="27.5" r="1" fill="none" stroke="#fff" stroke-width="0.6"/>
+      <circle cx="83" cy="27.5" r="1" fill="none" stroke="#fff" stroke-width="0.6"/>
+      ${playersHtml}
+    </svg>
+  `;
+}
+
+function createMiniFullCourtVerticalSVG(template) {
+  function toMiniX(x) { return (x + 25) * 1.1 + 5; }
+  function toMiniY(y) { return y * 0.75 + 5; }
+
+  let playersHtml = '';
+
+  if (template.positions) {
+    Object.entries(template.positions).forEach(([num, pos]) => {
+      const x = toMiniX(pos.x);
+      const y = toMiniY(pos.y);
+
+      if (pos.hasBall) {
+        playersHtml += `<circle cx="${x}" cy="${y}" r="4" fill="none" stroke="#333" stroke-width="0.8"/>`;
+      }
+      playersHtml += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" fill="#333" font-size="5" font-weight="700">${num}</text>`;
+    });
+  }
+
+  // Vertical full court
+  return `
+    <svg viewBox="0 0 65 95" class="mini-court">
+      <rect x="0" y="0" width="65" height="95" fill="#dbc097"/>
+      <rect x="5" y="5" width="55" height="85" fill="none" stroke="#fff" stroke-width="0.6"/>
+      <line x1="5" y1="47.5" x2="60" y2="47.5" stroke="#fff" stroke-width="0.6"/>
+      <circle cx="32.5" cy="47.5" r="6" fill="none" stroke="#fff" stroke-width="0.6"/>
+      <rect x="20" y="5" width="25" height="15" fill="none" stroke="#fff" stroke-width="0.6"/>
+      <rect x="20" y="75" width="25" height="15" fill="none" stroke="#fff" stroke-width="0.6"/>
+      <circle cx="32.5" cy="12" r="1" fill="none" stroke="#fff" stroke-width="0.6"/>
+      <circle cx="32.5" cy="83" r="1" fill="none" stroke="#fff" stroke-width="0.6"/>
       ${playersHtml}
     </svg>
   `;
@@ -489,12 +751,13 @@ function startWithTemplate() {
     description: '',
     chapter: null,
     status: 'draft',
+    courtType: template.category || 'halfCourt',
     createdBy: currentUser.email,
     createdAt: null,
     updatedAt: null,
     phases: [{
-      players: JSON.parse(JSON.stringify(template.positions)),
-      defenders: {},
+      players: JSON.parse(JSON.stringify(template.positions || {})),
+      defenders: JSON.parse(JSON.stringify(template.defenders || {})),
       actions: []
     }]
   };
@@ -511,10 +774,157 @@ function startWithTemplate() {
 // ============================================================================
 
 function renderAll() {
+  updateCourtLayout();
   renderCourt();
   renderPhases();
   renderTimeline();
   renderPropertiesPanel();
+}
+
+// Update the court SVG based on courtType (halfCourt, fullCourtH, fullCourtV)
+function updateCourtLayout() {
+  if (!currentPlay) return;
+
+  const svg = document.getElementById('courtSvg');
+  const background = document.getElementById('courtBackground');
+  const linesGroup = document.getElementById('courtLines');
+  if (!svg || !background || !linesGroup) return;
+
+  const courtType = currentPlay.courtType || 'halfCourt';
+
+  if (courtType === 'fullCourtH') {
+    // Horizontal full court
+    svg.setAttribute('viewBox', '-53 -3 106 55');
+    background.setAttribute('x', '-53');
+    background.setAttribute('y', '-3');
+    background.setAttribute('width', '106');
+    background.setAttribute('height', '55');
+    linesGroup.innerHTML = getFullCourtHorizontalLines();
+  } else if (courtType === 'fullCourtV') {
+    // Vertical full court
+    svg.setAttribute('viewBox', '-28 -3 56 97');
+    background.setAttribute('x', '-28');
+    background.setAttribute('y', '-3');
+    background.setAttribute('width', '56');
+    background.setAttribute('height', '97');
+    linesGroup.innerHTML = getFullCourtVerticalLines();
+  } else {
+    // Half court (default)
+    svg.setAttribute('viewBox', '-28 -3 56 50');
+    background.setAttribute('x', '-28');
+    background.setAttribute('y', '-3');
+    background.setAttribute('width', '56');
+    background.setAttribute('height', '50');
+    linesGroup.innerHTML = getHalfCourtLines();
+  }
+}
+
+function getHalfCourtLines() {
+  return `
+    <!-- Baseline (top) -->
+    <line x1="-25" y1="0" x2="25" y2="0"/>
+    <!-- Sidelines -->
+    <line x1="-25" y1="0" x2="-25" y2="47"/>
+    <line x1="25" y1="0" x2="25" y2="47"/>
+    <!-- Paint/Key -->
+    <path d="M -6 0 L -6 19 L 6 19 L 6 0"/>
+    <!-- Free throw circle (bottom half) -->
+    <path d="M -6 19 A 6 6 0 0 0 6 19"/>
+    <!-- 3-point line -->
+    <path d="M -21.65 0 L -21.65 9.95 A 22.15 22.15 0 0 0 21.65 9.95 L 21.65 0"/>
+    <!-- Half court line -->
+    <path d="M -25 47 L 25 47"/>
+    <!-- Half court circle (top half) -->
+    <path d="M 6 47 A 6 6 0 0 0 -6 47"/>
+    <!-- Restricted area arc -->
+    <path d="M -4 5.25 A 4 4 0 0 0 4 5.25"/>
+    <!-- Lane tick marks -->
+    <line x1="-6" y1="18" x2="-6.5" y2="18"/>
+    <line x1="-6" y1="15" x2="-6.5" y2="15"/>
+    <line x1="-6" y1="12" x2="-6.5" y2="12"/>
+    <rect x="-6.5" y="8" width="0.5" height="1" fill="#fff"/>
+    <line x1="6" y1="18" x2="6.5" y2="18"/>
+    <line x1="6" y1="15" x2="6.5" y2="15"/>
+    <line x1="6" y1="12" x2="6.5" y2="12"/>
+    <rect x="6" y="8" width="0.5" height="1" fill="#fff"/>
+    <!-- Backboard and rim -->
+    <line x1="-3" y1="4" x2="3" y2="4"/>
+    <circle cx="0" cy="5.25" r="0.75"/>
+  `;
+}
+
+function getFullCourtHorizontalLines() {
+  return `
+    <!-- Court outline -->
+    <rect x="-50" y="0" width="100" height="48" fill="none" stroke="#fff" stroke-width="0.4"/>
+    <!-- Center line -->
+    <line x1="0" y1="0" x2="0" y2="48"/>
+    <!-- Center circle -->
+    <circle cx="0" cy="24" r="6" fill="none"/>
+
+    <!-- LEFT SIDE (baseline at x=-50) -->
+    <!-- Paint/Key -->
+    <path d="M -50 18 L -31 18 L -31 30 L -50 30"/>
+    <!-- Free throw circle -->
+    <path d="M -31 18 A 6 6 0 0 0 -31 30"/>
+    <!-- 3-point line -->
+    <path d="M -50 5 L -27 5 A 22.15 22.15 0 0 1 -27 43 L -50 43"/>
+    <!-- Restricted area -->
+    <path d="M -50 20 A 4 4 0 0 1 -50 28"/>
+    <!-- Backboard and rim -->
+    <line x1="-49" y1="21" x2="-49" y2="27"/>
+    <circle cx="-48.25" cy="24" r="0.75"/>
+
+    <!-- RIGHT SIDE (baseline at x=50) -->
+    <!-- Paint/Key -->
+    <path d="M 50 18 L 31 18 L 31 30 L 50 30"/>
+    <!-- Free throw circle -->
+    <path d="M 31 18 A 6 6 0 0 1 31 30"/>
+    <!-- 3-point line -->
+    <path d="M 50 5 L 27 5 A 22.15 22.15 0 0 0 27 43 L 50 43"/>
+    <!-- Restricted area -->
+    <path d="M 50 20 A 4 4 0 0 0 50 28"/>
+    <!-- Backboard and rim -->
+    <line x1="49" y1="21" x2="49" y2="27"/>
+    <circle cx="48.25" cy="24" r="0.75"/>
+  `;
+}
+
+function getFullCourtVerticalLines() {
+  return `
+    <!-- Court outline -->
+    <rect x="-25" y="0" width="50" height="94" fill="none" stroke="#fff" stroke-width="0.4"/>
+    <!-- Center line -->
+    <line x1="-25" y1="47" x2="25" y2="47"/>
+    <!-- Center circle -->
+    <circle cx="0" cy="47" r="6" fill="none"/>
+
+    <!-- TOP SIDE (baseline at y=0) -->
+    <!-- Paint/Key -->
+    <path d="M -6 0 L -6 19 L 6 19 L 6 0"/>
+    <!-- Free throw circle (bottom half) -->
+    <path d="M -6 19 A 6 6 0 0 0 6 19"/>
+    <!-- 3-point line -->
+    <path d="M -21.65 0 L -21.65 9.95 A 22.15 22.15 0 0 0 21.65 9.95 L 21.65 0"/>
+    <!-- Restricted area arc -->
+    <path d="M -4 5.25 A 4 4 0 0 0 4 5.25"/>
+    <!-- Backboard and rim -->
+    <line x1="-3" y1="4" x2="3" y2="4"/>
+    <circle cx="0" cy="5.25" r="0.75"/>
+
+    <!-- BOTTOM SIDE (baseline at y=94) -->
+    <!-- Paint/Key -->
+    <path d="M -6 94 L -6 75 L 6 75 L 6 94"/>
+    <!-- Free throw circle (top half) -->
+    <path d="M -6 75 A 6 6 0 0 1 6 75"/>
+    <!-- 3-point line -->
+    <path d="M -21.65 94 L -21.65 84.05 A 22.15 22.15 0 0 1 21.65 84.05 L 21.65 94"/>
+    <!-- Restricted area arc -->
+    <path d="M -4 88.75 A 4 4 0 0 1 4 88.75"/>
+    <!-- Backboard and rim -->
+    <line x1="-3" y1="90" x2="3" y2="90"/>
+    <circle cx="0" cy="88.75" r="0.75"/>
+  `;
 }
 
 function renderPropertiesPanel() {
@@ -927,38 +1337,54 @@ function createShotArc(start, end, mid, color) {
   const ctrlX = mid ? mid.x : (start.x + end.x) / 2;
   const ctrlY = mid ? mid.y : Math.min(start.y, end.y) - 5;
 
-  // Create a group to hold the arc and the made-shot indicator
+  // Create a group to hold the arc and the crosshair target
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 
-  // The dashed arc path
+  // The dashed line path (straight, not arc for shot)
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', `M${start.x},${start.y} Q${ctrlX},${ctrlY} ${end.x},${end.y}`);
+  if (mid) {
+    path.setAttribute('d', `M${start.x},${start.y} Q${mid.x},${mid.y} ${end.x},${end.y}`);
+  } else {
+    path.setAttribute('d', `M${start.x},${start.y} L${end.x},${end.y}`);
+  }
   path.setAttribute('fill', 'none');
   path.setAttribute('stroke', color);
   path.setAttribute('stroke-width', '0.25');
-  path.setAttribute('stroke-dasharray', '0.6,0.4');
+  path.setAttribute('stroke-dasharray', '0.8,0.5');
   g.appendChild(path);
 
-  // Made shot indicator - small circle with crosshairs at the end (like a target/hoop)
-  const indicatorSize = 1.2;
+  // Crosshair/target indicator at the end point
+  const size = 2.0;
 
-  // Outer circle (hoop)
-  const hoop = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  hoop.setAttribute('cx', end.x);
-  hoop.setAttribute('cy', end.y);
-  hoop.setAttribute('r', indicatorSize);
-  hoop.setAttribute('fill', 'none');
-  hoop.setAttribute('stroke', color);
-  hoop.setAttribute('stroke-width', '0.2');
-  g.appendChild(hoop);
+  // Outer circle
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('cx', end.x);
+  circle.setAttribute('cy', end.y);
+  circle.setAttribute('r', size);
+  circle.setAttribute('fill', 'none');
+  circle.setAttribute('stroke', color);
+  circle.setAttribute('stroke-width', '0.25');
+  g.appendChild(circle);
 
-  // Inner filled circle (ball going through)
-  const ball = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  ball.setAttribute('cx', end.x);
-  ball.setAttribute('cy', end.y);
-  ball.setAttribute('r', indicatorSize * 0.5);
-  ball.setAttribute('fill', color);
-  g.appendChild(ball);
+  // Horizontal crosshair line
+  const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  hLine.setAttribute('x1', end.x - size * 1.5);
+  hLine.setAttribute('y1', end.y);
+  hLine.setAttribute('x2', end.x + size * 1.5);
+  hLine.setAttribute('y2', end.y);
+  hLine.setAttribute('stroke', color);
+  hLine.setAttribute('stroke-width', '0.25');
+  g.appendChild(hLine);
+
+  // Vertical crosshair line
+  const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  vLine.setAttribute('x1', end.x);
+  vLine.setAttribute('y1', end.y - size * 1.5);
+  vLine.setAttribute('x2', end.x);
+  vLine.setAttribute('y2', end.y + size * 1.5);
+  vLine.setAttribute('stroke', color);
+  vLine.setAttribute('stroke-width', '0.25');
+  g.appendChild(vLine);
 
   return g;
 }
@@ -1001,8 +1427,15 @@ function renderPhases() {
     item.className = `phase-item ${index === currentPhaseIndex ? 'active' : ''}`;
     item.onclick = () => switchPhase(index);
 
+    // Pass court type for phase thumbnails
+    const phaseTemplate = {
+      positions: phase.players,
+      defenders: phase.defenders,
+      category: currentPlay.courtType || 'halfCourt'
+    };
+
     item.innerHTML = `
-      <div class="phase-preview">${createMiniCourtSVG({ positions: phase.players })}</div>
+      <div class="phase-preview">${createMiniCourtSVG(phaseTemplate)}</div>
       <div class="phase-label">Phase ${index + 1}</div>
       ${currentPlay.phases.length > 1 ? `
         <button class="phase-delete" onclick="event.stopPropagation(); deletePhase(${index})">×</button>
@@ -1698,8 +2131,24 @@ function handleMouseUp() {
           });
         }
 
+        // Also check hoop (for shot actions)
+        const hoopPos = { x: COURT.hoopX, y: COURT.hoopY };
+        const hoopDist = Math.hypot(point.x - hoopPos.x, point.y - hoopPos.y);
+        let snapToHoop = false;
+        if (hoopDist < nearestDist && hoopDist < SNAP_DISTANCE) {
+          nearestDist = hoopDist;
+          snapToHoop = true;
+        }
+
         // Snap if close enough
-        if (nearestPlayer && nearestDist < SNAP_DISTANCE) {
+        if (snapToHoop) {
+          if (dragTarget.type === 'action-start') {
+            action.start = { x: hoopPos.x, y: hoopPos.y };
+          } else {
+            action.end = { x: hoopPos.x, y: hoopPos.y };
+          }
+          renderCourt();
+        } else if (nearestPlayer && nearestDist < SNAP_DISTANCE) {
           if (dragTarget.type === 'action-start') {
             action.start = { x: nearestPlayer.pos.x, y: nearestPlayer.pos.y };
           } else {

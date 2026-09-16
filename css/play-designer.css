@@ -33,7 +33,7 @@
 
 .designer-main {
   padding-bottom: 70px;
-  background: #f5f5f5;
+  background: #e8e8e8;
   min-height: 100vh;
 }
 
@@ -66,9 +66,9 @@ html.dark .designer-toolbar {
 
 .play-name-input {
   flex: 1;
-  max-width: 200px;
-  padding: 8px 12px;
-  font-size: 1rem;
+  max-width: 280px;
+  padding: 10px 16px;
+  font-size: 1.1rem;
   font-weight: 600;
   background: #f5f5f5;
   border: 1px solid #e0e0e0;
@@ -126,9 +126,22 @@ html.dark .play-desc-input {
 /* Three Column Layout */
 .designer-layout {
   display: grid;
-  grid-template-columns: 160px 1fr 380px;
+  grid-template-columns: 200px 1fr 400px;
   gap: 0;
   min-height: calc(100vh - 200px);
+}
+
+/* Wider sidebars on large desktops */
+@media (min-width: 1400px) {
+  .designer-layout {
+    grid-template-columns: 240px 1fr 480px;
+  }
+}
+
+@media (min-width: 1700px) {
+  .designer-layout {
+    grid-template-columns: 280px 1fr 560px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -176,7 +189,7 @@ html.dark .play-desc-input {
 .designer-phases {
   background: #fff;
   border-right: 1px solid #e0e0e0;
-  padding: 12px;
+  padding: 16px;
   overflow-y: auto;
 }
 
@@ -189,8 +202,8 @@ html.dark .designer-phases {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 4px;
-  font-size: 0.75rem;
+  padding: 10px 4px;
+  font-size: 0.85rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -267,16 +280,17 @@ html.dark .phase-item {
 
 .phase-mini-court {
   width: 100%;
-  max-width: 120px;
+  max-width: 180px;
   height: auto;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .phase-label {
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   text-align: center;
   color: #666;
-  margin-top: 4px;
+  margin-top: 6px;
+  font-weight: 500;
 }
 
 html.dark .phase-label {
@@ -317,8 +331,8 @@ html.dark .phase-label {
 .designer-court {
   display: flex;
   flex-direction: column;
-  background: #e8e8e8;
-  padding: 20px;
+  background: #d8d8d8;
+  padding: 24px;
 }
 
 html.dark .designer-court {
@@ -331,14 +345,15 @@ html.dark .designer-court {
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  max-height: 75vh;
+  max-height: 85vh;
 }
 
 /* THE COURT - Wooden floor like Hoops Geek */
 .court-svg {
   width: 100%;
-  max-width: 600px;
+  max-width: none;
   height: auto;
+  max-height: 80vh;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   touch-action: none;
@@ -424,15 +439,49 @@ html.dark .designer-court {
 .animation-controls {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 16px;
+  padding: 20px;
   flex-wrap: wrap;
+  background: #f0f0f0;
+  border-top: 1px solid #ddd;
 }
 
 .animation-controls .btn {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  padding: 14px 28px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  background: #fff;
+  border: 2px solid #ccc;
+  color: #333;
+  border-radius: 10px;
+}
+
+.animation-controls .btn:hover {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+.animation-controls .btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+html.dark .animation-controls {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+html.dark .animation-controls .btn {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+html.dark .animation-controls .btn:hover {
+  background: var(--bg-primary);
 }
 
 .btn-play-full {
@@ -452,7 +501,7 @@ html.dark .designer-court {
 .designer-tools {
   background: #fff;
   border-left: 1px solid #e0e0e0;
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -499,8 +548,8 @@ html.dark .designer-tools {
   color: #333;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 1.1rem;
+  font-weight: 600;
   min-height: 80px;
 }
 
@@ -522,16 +571,16 @@ html.dark .action-btn {
 }
 
 .action-btn svg {
-  width: 40px;
-  height: 24px;
+  width: 48px;
+  height: 28px;
   flex-shrink: 0;
 }
 
 /* Player Button Rows - Like Hoops Geek */
 .player-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .player-row:last-child {
@@ -539,15 +588,16 @@ html.dark .action-btn {
 }
 
 .player-btn {
-  width: 52px;
-  height: 52px;
+  flex: 1;
+  height: 64px;
+  min-width: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #fff;
   border: 2px solid #ccc;
-  border-radius: 10px;
-  font-size: 1.1rem;
+  border-radius: 12px;
+  font-size: 1.4rem;
   font-weight: 700;
   color: #333;
   cursor: pointer;
@@ -585,15 +635,16 @@ html.dark .player-btn.has-ball {
 }
 
 .defender-btn {
-  width: 52px;
-  height: 52px;
+  flex: 1;
+  height: 64px;
+  min-width: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #fff;
   border: 2px solid #ccc;
-  border-radius: 10px;
-  font-size: 1rem;
+  border-radius: 12px;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #666;
   cursor: pointer;
@@ -619,7 +670,118 @@ html.dark .defender-btn:hover {
 .action-properties {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+
+.action-type-label {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+html.dark .action-type-label {
+  color: var(--text-primary);
+}
+
+.props-row {
+  display: flex;
+  align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.props-row label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #666;
+}
+
+html.dark .props-row label {
+  color: var(--text-secondary);
+}
+
+.props-row input[type="color"] {
+  width: 36px;
+  height: 36px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.shape-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: #fff;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+html.dark .shape-btn {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+.shape-btn:hover {
+  border-color: #4a9f6e;
+}
+
+.shape-menu {
+  position: relative;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 8px;
+}
+
+html.dark .shape-menu {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.shape-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+  transition: all 0.2s;
+}
+
+html.dark .shape-option {
+  color: var(--text-primary);
+}
+
+.shape-option:hover {
+  background: #f5f5f5;
+}
+
+html.dark .shape-option:hover {
+  background: var(--bg-tertiary);
+}
+
+.shape-option.active {
+  border-color: #4a9f6e;
+  background: rgba(74, 159, 110, 0.1);
+}
+
+.shape-option svg {
+  flex-shrink: 0;
 }
 
 .property-row {
@@ -905,13 +1067,17 @@ html.dark .timeline-desc {
 .modal-content {
   background: #fff;
   border-radius: 12px;
-  max-width: 700px;
+  max-width: 900px;
   width: 100%;
   max-height: 85vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.template-modal {
+  max-width: 1000px;
 }
 
 html.dark .modal-content {
@@ -967,10 +1133,11 @@ html.dark .modal-header h2 {
 }
 
 .template-sidebar {
-  width: 160px;
+  width: 220px;
   border-right: 1px solid #eee;
-  padding: 16px;
+  padding: 20px;
   background: #fafafa;
+  flex-shrink: 0;
 }
 
 html.dark .template-sidebar {
@@ -979,32 +1146,39 @@ html.dark .template-sidebar {
 }
 
 .template-sidebar-section {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .template-sidebar-title {
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #999;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding-left: 4px;
 }
 
 .template-sidebar-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 12px;
+  padding: 12px 14px;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   width: 100%;
   text-align: left;
-  font-size: 0.85rem;
+  font-size: 1rem;
+  font-weight: 500;
   color: #333;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  margin-bottom: 4px;
+}
+
+.template-sidebar-item svg {
+  flex-shrink: 0;
 }
 
 html.dark .template-sidebar-item {
@@ -1015,31 +1189,53 @@ html.dark .template-sidebar-item {
   background: #eee;
 }
 
+html.dark .template-sidebar-item:hover {
+  background: var(--bg-primary);
+}
+
 .template-sidebar-item.active {
-  background: #4a9f6e;
-  color: white;
+  background: rgba(74, 159, 110, 0.15);
+  color: #4a9f6e;
+}
+
+html.dark .template-sidebar-item.active {
+  background: rgba(74, 159, 110, 0.2);
+  color: #6bc090;
 }
 
 .template-grid-container {
   flex: 1;
-  padding: 16px;
+  padding: 24px;
   overflow-y: auto;
 }
 
 .template-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 16px;
+}
+
+@media (max-width: 800px) {
+  .template-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .template-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .template-card {
   background: #fff;
   border: 2px solid #eee;
-  border-radius: 8px;
-  padding: 8px;
+  border-radius: 12px;
+  padding: 12px;
   cursor: pointer;
   transition: all 0.2s;
   text-align: center;
+  position: relative;
 }
 
 html.dark .template-card {
@@ -1053,24 +1249,44 @@ html.dark .template-card {
 
 .template-card.selected {
   border-color: #4a9f6e;
-  background: rgba(74, 159, 110, 0.05);
+  background: rgba(74, 159, 110, 0.08);
+}
+
+.template-card.selected::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: #4a9f6e;
+  border-radius: 50%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+  background-size: 16px;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .template-preview {
   aspect-ratio: 1;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
 .mini-court {
   width: 100%;
   height: 100%;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .template-name {
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 600;
   color: #333;
+  line-height: 1.3;
+}
+
+.template-card.selected .template-name {
+  color: #4a9f6e;
 }
 
 html.dark .template-name {
@@ -1105,10 +1321,11 @@ html.dark .modal-footer {
 .hoops-toolbar {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
+  padding: 12px 24px;
   background: #fff;
   border-bottom: 1px solid #e0e0e0;
-  gap: 8px;
+  gap: 12px;
+  position: relative;
 }
 
 html.dark .hoops-toolbar {
@@ -1119,30 +1336,35 @@ html.dark .hoops-toolbar {
 .hoops-toolbar .toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
+  gap: 12px;
+  flex: 1;
 }
 
 .hoops-toolbar .toolbar-center {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   justify-content: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .hoops-toolbar .toolbar-right {
-  flex: 0 0 auto;
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .toolbar-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 8px;
+  padding: 10px 18px;
   background: transparent;
   border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  border-radius: 8px;
   color: #666;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -1188,13 +1410,13 @@ html.dark .toolbar-btn.mode-btn.active {
 .btn-save {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
+  gap: 8px;
+  padding: 10px 20px;
   background: #4a9f6e;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   color: white;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
@@ -1258,14 +1480,14 @@ html.dark .sidebar-tab:hover {
 
 /* Phase Counter */
 .phase-counter {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 700;
   text-align: center;
   color: #666;
-  padding: 8px;
+  padding: 12px;
   background: #f5f5f5;
-  border-radius: 6px;
-  margin-bottom: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
 }
 
 html.dark .phase-counter {
@@ -1277,20 +1499,20 @@ html.dark .phase-counter {
 .phase-actions {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .phase-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 8px 6px;
+  gap: 6px;
+  padding: 10px 8px;
   background: #fff;
   border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 0.7rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 500;
   color: #666;
   cursor: pointer;
@@ -1371,29 +1593,31 @@ html.dark .object-item:hover {
 .hoops-buttons {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
+  gap: 12px;
 }
 
 .action-btn.hoops-btn {
   flex-direction: column;
-  padding: 10px 6px;
-  gap: 4px;
+  padding: 16px 12px;
+  gap: 10px;
+  min-height: 90px;
 }
 
 .action-btn.hoops-btn svg {
-  width: 32px;
-  height: 16px;
+  width: 48px;
+  height: 24px;
 }
 
 .action-btn.hoops-btn span {
-  font-size: 0.7rem;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 /* Hoops Style Player Buttons */
 .hoops-player-row {
   display: flex;
-  gap: 4px;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .hoops-player-row:last-child {
@@ -1401,19 +1625,39 @@ html.dark .object-item:hover {
 }
 
 .player-btn.hoops-player {
-  width: 32px;
-  height: 32px;
-  font-size: 0.8rem;
+  flex: 1;
+  height: 52px;
+  min-width: 48px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  border-radius: 10px;
+  background: #fff;
+  border: 2px solid #ccc;
 }
 
 .player-btn.hoops-player.has-ball {
   border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  flex: 0 0 52px;
+  border-color: #333;
+}
+
+.player-btn.hoops-player svg {
+  width: 36px;
+  height: 36px;
 }
 
 .defender-btn.hoops-defender {
-  width: 32px;
-  height: 32px;
-  font-size: 0.65rem;
+  flex: 1;
+  height: 48px;
+  min-width: 48px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: 10px;
+  background: #fff;
+  border: 2px solid #ccc;
 }
 
 /* Help Icon */
@@ -1445,16 +1689,16 @@ html.dark .help-icon {
 }
 
 .misc-btn {
-  width: 52px;
-  height: 52px;
+  width: 60px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #fff;
   border: 2px solid #e0e0e0;
-  border-radius: 10px;
+  border-radius: 12px;
   color: #666;
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -1912,4 +2156,113 @@ html.dark .phase-dot {
 
 html.dark .item-properties {
   background: var(--bg-tertiary);
+}
+
+/* ============================================================================
+   DESKTOP RESPONSIVE OVERRIDES
+   ============================================================================ */
+
+/* Desktop bottom nav - full width, taller */
+@media (min-width: 1024px) {
+  .designer-main {
+    padding-bottom: 90px;
+  }
+
+  .bottom-nav {
+    height: 90px;
+    max-width: none;
+    width: 100%;
+    left: 0;
+    transform: none;
+    border-radius: 0;
+  }
+
+  .bottom-nav .nav-item {
+    padding: 14px 24px;
+  }
+
+  .bottom-nav .nav-item svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .bottom-nav .nav-item span {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  /* Larger sidebar tabs */
+  .sidebar-tabs {
+    margin: -16px -16px 16px -16px;
+  }
+
+  .sidebar-tab {
+    padding: 14px 12px;
+    font-size: 0.9rem;
+  }
+
+  /* Larger phase items */
+  .phase-item {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  /* Tool sections spacing */
+  .tool-section {
+    margin-bottom: 28px;
+  }
+
+  .tool-section .panel-header {
+    font-size: 0.9rem;
+    padding-bottom: 18px;
+  }
+}
+
+/* Extra large screens */
+@media (min-width: 1600px) {
+  .action-btn.hoops-btn {
+    min-height: 110px;
+    padding: 24px 20px;
+  }
+
+  .action-btn.hoops-btn span {
+    font-size: 1.3rem;
+  }
+
+  .action-btn.hoops-btn svg {
+    width: 60px;
+    height: 30px;
+  }
+
+  .player-btn.hoops-player {
+    height: 60px;
+    font-size: 1.5rem;
+  }
+
+  .player-btn.hoops-player.has-ball {
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    flex: 0 0 60px;
+  }
+
+  .player-btn.hoops-player svg {
+    width: 42px;
+    height: 42px;
+  }
+
+  .defender-btn.hoops-defender {
+    height: 56px;
+    font-size: 1.3rem;
+  }
+
+  .hoops-player-row {
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .animation-controls .btn {
+    padding: 16px 32px;
+    font-size: 1.15rem;
+  }
 }

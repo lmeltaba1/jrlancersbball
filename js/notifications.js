@@ -833,6 +833,57 @@ function autoClearNotificationsForCurrentPage() {
   }
 }
 
+// Mark notifications as read when arriving from a push notification click
+function markPushNotificationAsRead() {
+  const params = new URLSearchParams(window.location.search);
+  const fromPush = params.get('fromPush');
+
+  if (!fromPush || !currentUserUid) return;
+
+  console.log('Marking notifications as read from push click, type:', fromPush);
+
+  let hasChanges = false;
+  const userIdsToUpdate = [];
+
+  // Check team notifications for matching type
+  teamNotifications.forEach(n => {
+    const type = n.data?.type || '';
+    if (type.toLowerCase() === fromPush.toLowerCase() && !n.read) {
+      broadcastReadIds.add(n.id);
+      hasChanges = true;
+    }
+  });
+
+  // Check user notifications for matching type
+  userNotifications.forEach(n => {
+    const type = n.data?.type || '';
+    if (type.toLowerCase() === fromPush.toLowerCase() && !n.read) {
+      userIdsToUpdate.push(n.id);
+      hasChanges = true;
+    }
+  });
+
+  // Save changes
+  if (hasChanges) {
+    saveBroadcastStatus();
+
+    if (userIdsToUpdate.length > 0) {
+      const batch = db.batch();
+      userIdsToUpdate.forEach(id => {
+        const ref = db.collection('userNotifications').doc(currentUserUid)
+          .collection('notifications').doc(id);
+        batch.update(ref, { read: true });
+      });
+      batch.commit().catch(e => console.error('Error marking push notifications read:', e));
+    }
+  }
+
+  // Clean up URL (remove fromPush param)
+  params.delete('fromPush');
+  const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '') + window.location.hash;
+  window.history.replaceState({}, '', newUrl);
+}
+
 // Call auto-clear after notifications are loaded (runs once per page)
 let autoClearCalled = false;
 const originalMergeAndRender = mergeAndRender;
@@ -843,6 +894,9 @@ mergeAndRender = function() {
     autoClearCalled = true;
     setTimeout(() => {
       if (teamNotifications.length > 0 || userNotifications.length > 0) {
+        // First, handle push notification clicks
+        markPushNotificationAsRead();
+        // Then auto-clear based on current page
         autoClearNotificationsForCurrentPage();
       }
     }, 1000);

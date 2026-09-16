@@ -22,12 +22,19 @@ const messaging = firebase.messaging();
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  // Get URL from notification data
+  // Get URL and type from notification data
   let url = event.notification.data?.url || '/index.html';
+  const notificationType = event.notification.data?.type || '';
 
   // Ensure full URL for PWA
   if (url.startsWith('/')) {
     url = 'https://lancers-bball.web.app' + url;
+  }
+
+  // Add parameter to mark notifications as read when page loads
+  if (notificationType) {
+    const separator = url.includes('?') ? '&' : '?';
+    url += separator + 'fromPush=' + encodeURIComponent(notificationType);
   }
 
   console.log('Notification clicked, opening:', url);

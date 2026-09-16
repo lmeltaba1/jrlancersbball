@@ -199,5 +199,19 @@ service cloud.firestore {
         allow create: if false;
       }
     }
+
+    // Custom plays - coaches can create/edit, parents/players can read published
+    match /customPlays/{playId} {
+      // Read: coaches can read all, others can read only published plays
+      allow read: if isAuthenticated() &&
+        (isCoach() || resource.data.status == 'published');
+      // Create: only coaches, must set createdBy to own email
+      allow create: if isCoach()
+        && request.resource.data.createdBy == getUserEmail();
+      // Update: only coaches
+      allow update: if isCoach();
+      // Delete: only coaches
+      allow delete: if isCoach();
+    }
   }
 }
