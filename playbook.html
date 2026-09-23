@@ -210,7 +210,8 @@
 
     /* ========== COURT ========== */
     .court-container,
-    .draft-court-container {
+    .draft-court-container,
+    .custom-court-container {
       width: 60%;
       margin: 0 auto;
       aspect-ratio: 1 / 1.05;
@@ -222,6 +223,12 @@
     .court-container {
       background: linear-gradient(180deg, #8B6914 0%, #6B5010 100%);
       box-shadow: inset 0 2px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Custom plays use PlayViewer with its own SVG background - no container background needed */
+    .custom-court-container,
+    .draft-court-container {
+      background: transparent;
     }
 
     /* Light mode - lighter wood tone */
@@ -263,8 +270,8 @@
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     }
 
-    /* Highlighted player */
-    .player-highlighted text {
+    /* Highlighted player - hardcoded plays only (uses .players-group .player) */
+    .players-group .player.player-highlighted text {
       fill: #00D4FF !important;
       font-size: 26px !important;
       font-weight: 900 !important;
@@ -537,6 +544,17 @@
 
     .step-text {
       color: var(--text-secondary);
+    }
+
+    /* Active phase step during animation */
+    .phase-step-active .step-number {
+      background: #00D4FF;
+      box-shadow: 0 0 8px #00D4FF;
+    }
+
+    .phase-step-active .step-text {
+      color: #00D4FF;
+      font-weight: 600;
     }
   </style>
   <link rel="icon" type="image/png" href="images/lancers-logo-192.png">
@@ -923,9 +941,15 @@
       // For custom plays from play designer, use PlayViewer
       // For hardcoded plays, use the old rendering system
       if (isCustomPlay) {
+        // Generate phase steps description
+        const phaseSteps = generatePhaseSteps(play);
+
         card.innerHTML = `
           <div class="play-card-header">
-            <h3>${play.name}</h3>
+            <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+              <h3>${play.name}</h3>
+              ${play.description ? `<p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0;">${escapeHtml(play.description)}</p>` : ''}
+            </div>
             <div class="play-header-actions">
               ${deleteBtn}
               <button class="replay-btn" id="btn-${playId}" onclick="PlayViewer.playAnimation('${playId}')" aria-label="Play animation">
@@ -936,10 +960,8 @@
             </div>
           </div>
           <div class="play-card-body">
-            <div class="court-container" id="court-${playId}"></div>
-            <div class="phase-description-text" id="phase-text-${playId}" style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); min-height: 20px; margin-top: 8px;">
-              ${play.description ? escapeHtml(play.description) : ''}
-            </div>
+            <div class="custom-court-container" id="court-${playId}"></div>
+            ${phaseSteps}
           </div>
         `;
       } else {
@@ -1927,6 +1949,7 @@
             const courtContainer = document.getElementById(`court-${playId}`);
             if (courtContainer) {
               PlayViewer.init(courtContainer, { ...play, id: playId });
+              applyHighlighting();
             }
           } else {
             // Hardcoded plays use old rendering
@@ -1940,6 +1963,10 @@
     // Set highlighted position and update all courts
     function setHighlightPosition(position) {
       highlightedPosition = position ? parseInt(position) : null;
+      // Also update PlayViewer's highlighted position for custom plays
+      if (typeof PlayViewer !== 'undefined') {
+        PlayViewer.setHighlightedPosition(position);
+      }
       // Hide the auto-detected label when user manually changes
       document.getElementById('auto-position-label').style.display = 'none';
       // Re-render plays to apply highlighting
@@ -1948,12 +1975,23 @@
 
     // Apply highlighting to all player elements on all courts
     function applyHighlighting() {
+      // Hardcoded plays use .players-group .player
       document.querySelectorAll('.players-group .player').forEach(player => {
         const playerNum = player.getAttribute('data-player');
         if (highlightedPosition && parseInt(playerNum) === highlightedPosition) {
           player.classList.add('player-highlighted');
         } else {
           player.classList.remove('player-highlighted');
+        }
+      });
+
+      // Custom plays (PlayViewer) use .player-marker
+      document.querySelectorAll('.player-marker').forEach(marker => {
+        const playerNum = marker.getAttribute('data-player');
+        if (highlightedPosition && parseInt(playerNum) === highlightedPosition) {
+          marker.classList.add('player-highlighted');
+        } else {
+          marker.classList.remove('player-highlighted');
         }
       });
     }
@@ -2045,6 +2083,11 @@
             const select = document.getElementById('highlight-position');
             select.value = posNum.toString();
             highlightedPosition = posNum;
+
+            // Also update PlayViewer's highlighted position for custom plays
+            if (typeof PlayViewer !== 'undefined') {
+              PlayViewer.setHighlightedPosition(posNum);
+            }
 
             // Show label with player name
             const label = document.getElementById('auto-position-label');

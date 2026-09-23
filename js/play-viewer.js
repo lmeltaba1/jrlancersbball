@@ -6,6 +6,9 @@ const PlayViewer = (function() {
   // Track active animations per play
   const activeAnimations = {};
 
+  // Track highlighted position (shared across all plays)
+  let highlightedPosition = null;
+
   // Court dimensions (SVG viewBox: -28 -3 56 50)
   const COURT = {
     minX: -25,
@@ -15,6 +18,11 @@ const PlayViewer = (function() {
     hoopX: 0,
     hoopY: 5.25
   };
+
+  // Set the highlighted position
+  function setHighlightedPosition(position) {
+    highlightedPosition = position ? parseInt(position) : null;
+  }
 
   // Create the court SVG structure (EXACT from play-designer.html)
   function createCourtSVG(playId) {
@@ -70,8 +78,11 @@ const PlayViewer = (function() {
     layer.innerHTML = '';
 
     Object.entries(phase.players).forEach(([num, pos]) => {
+      const playerNum = parseInt(num);
+      const isHighlighted = highlightedPosition && playerNum === highlightedPosition;
+
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.setAttribute('class', 'player-marker');
+      g.setAttribute('class', 'player-marker' + (isHighlighted ? ' player-highlighted' : ''));
       g.setAttribute('data-player', num);
       g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
 
@@ -80,7 +91,7 @@ const PlayViewer = (function() {
         const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         ring.setAttribute('r', '1.5');
         ring.setAttribute('fill', 'none');
-        ring.setAttribute('stroke', '#333');
+        ring.setAttribute('stroke', isHighlighted ? '#00D4FF' : '#333');
         ring.setAttribute('stroke-width', '0.22');
         g.appendChild(ring);
       }
@@ -89,10 +100,13 @@ const PlayViewer = (function() {
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dominant-baseline', 'central');
-      text.setAttribute('fill', '#333');
-      text.setAttribute('font-weight', '700');
-      text.setAttribute('font-size', '2.2');
+      text.setAttribute('fill', isHighlighted ? '#00D4FF' : '#333');
+      text.setAttribute('font-weight', isHighlighted ? '900' : '700');
+      text.setAttribute('font-size', isHighlighted ? '2.8' : '2.2');
       text.setAttribute('font-family', 'Roboto, sans-serif');
+      if (isHighlighted) {
+        text.setAttribute('style', 'filter: drop-shadow(0 0 2px #00D4FF);');
+      }
       text.textContent = num;
       g.appendChild(text);
 
@@ -456,6 +470,31 @@ const PlayViewer = (function() {
     });
   }
 
+  // Highlight the current phase step in the phase-steps display
+  function highlightPhaseStep(playId, phaseIndex) {
+    // Find the play card for this play
+    const card = document.getElementById(`play-${playId}`);
+    if (!card) return;
+
+    // Find all phase steps within this card
+    const steps = card.querySelectorAll('.phase-step');
+    steps.forEach((step, index) => {
+      if (index === phaseIndex) {
+        step.classList.add('phase-step-active');
+      } else {
+        step.classList.remove('phase-step-active');
+      }
+    });
+  }
+
+  // Clear phase step highlighting
+  function clearPhaseStepHighlight(playId) {
+    const card = document.getElementById(`play-${playId}`);
+    if (!card) return;
+    const steps = card.querySelectorAll('.phase-step');
+    steps.forEach(step => step.classList.remove('phase-step-active'));
+  }
+
   // Play animation in place (EXACT logic from play-designer.js animatePhaseInline)
   function playAnimation(playId) {
     const state = activeAnimations[playId];
@@ -471,8 +510,12 @@ const PlayViewer = (function() {
         state.isAnimating = false;
         state.currentPhase = 0;
         renderStaticPreview(playId, play);
+        clearPhaseStepHighlight(playId);
         return;
       }
+
+      // Highlight current phase step
+      highlightPhaseStep(playId, phaseIndex);
 
       const phase = JSON.parse(JSON.stringify(play.phases[phaseIndex]));
       const originalPositions = JSON.parse(JSON.stringify(phase.players));
@@ -582,6 +625,7 @@ const PlayViewer = (function() {
     playAnimation,
     stopAnimation,
     isAnimating,
-    renderCourt
+    renderCourt,
+    setHighlightedPosition
   };
 })();
