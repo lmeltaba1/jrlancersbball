@@ -277,23 +277,29 @@ For completed games (`gamePhase === 'final'`), coaches see a different view:
 
 ## Playbook & Play Designer System
 
+**All plays are now managed via Play Designer** - no hardcoded plays in `js/plays.js`.
+
 ### Playbook (playbook.html)
 - Displays plays organized by chapter (VS MAN, VS ZONE, INBOUND, DRAFTS)
-- Custom plays from Firestore rendered with `PlayViewer` module (`js/play-viewer.js`)
+- All plays loaded from Firestore `customPlays` collection
+- Rendered with `PlayViewer` module (`js/play-viewer.js`)
 - Static preview shows all phases stacked; animation plays phase-by-phase
 - Phase descriptions displayed below court as numbered steps
-- Coaches can publish/edit/delete custom plays
+- Coaches can publish/edit/delete plays; head coach can hide/restore plays
 
 ### Play Designer (play-designer.html)
 Interactive visual editor for creating basketball plays. Coaches only.
 
 **Features:**
-- **Templates**: Half court, horizontal/vertical full court formations (Traditional, 5-Out, Box, Horns, etc.)
+- **Templates**: Half court, horizontal/vertical full court formations (Traditional, 5-Out, High Post, Horns, etc.)
 - **Existing Plays as Templates**: Clone any draft or published play
 - **Actions**: Dribble (wavy), Pass (dashed), Cut (solid), Screen (T-bar), Shot (crosshair), Handoff
 - **Multi-phase plays**: Each phase has positions, actions, and description
 - **Mirror Play**: Flips entire play horizontally, swaps players (2↔3, 4↔5), updates descriptions
 - **Animation preview**: Step-by-step playback with ball movement
+- **Out of bounds positioning**: Players can be dragged outside court bounds for inbound plays
+- **Validation**: Ball flow logic enforced (no shot required)
+- **Toast notifications**: Uses `showToast()` for all feedback messages
 
 **Data Model** (`customPlays/{playId}`):
 ```javascript
