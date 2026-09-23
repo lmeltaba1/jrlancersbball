@@ -818,12 +818,28 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
-  <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/notifications.js"></script>
   <script src="js/plays.js"></script>
   <script src="js/play-viewer.js"></script>
   <script>
+    // Simple toast notification
+    function showToast(message, type = 'info', duration = 3000) {
+      let container = document.querySelector('.toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:10px;';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      const bgColor = type === 'success' ? '#059669' : type === 'error' ? '#dc2626' : '#3b82f6';
+      toast.style.cssText = `background:${bgColor};color:white;padding:12px 20px;border-radius:8px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.3);`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, duration);
+    }
+
     // Profile menu functions
     function toggleProfileMenu() {
       const menu = document.getElementById('profileMenu');
