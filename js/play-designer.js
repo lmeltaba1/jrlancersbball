@@ -2904,13 +2904,15 @@ function animateActionsInModal(actions, phase, onComplete) {
   const animations = actions.map(action => {
     const startPlayer = findNearestPlayer(action.start, phase.players);
     const endPlayer = findNearestPlayer(action.end, phase.players);
+    const isMovementAction = action.type === 'dribble' || action.type === 'cut' || action.type === 'screen';
 
     return {
       action,
       startPlayer,
       endPlayer,
       startPos: startPlayer ? { ...phase.players[startPlayer] } : null,
-      endPos: action.type === 'dribble' || action.type === 'cut' || action.type === 'screen' ? { x: action.end.x, y: action.end.y } : null
+      midPos: isMovementAction && action.mid ? { x: action.mid.x, y: action.mid.y } : null,
+      endPos: isMovementAction ? { x: action.end.x, y: action.end.y } : null
     };
   });
 
@@ -2922,11 +2924,19 @@ function animateActionsInModal(actions, phase, onComplete) {
     const eased = easeInOutCubic(progress);
 
     // Update all animations
-    animations.forEach(({ action, startPlayer, endPlayer, startPos, endPos }) => {
-      // Move player for dribble/cut
+    animations.forEach(({ action, startPlayer, endPlayer, startPos, midPos, endPos }) => {
+      // Move player for dribble/cut/screen
       if (startPos && endPos && startPlayer) {
-        phase.players[startPlayer].x = startPos.x + (endPos.x - startPos.x) * eased;
-        phase.players[startPlayer].y = startPos.y + (endPos.y - startPos.y) * eased;
+        if (midPos) {
+          // Follow curved path using quadratic bezier
+          const pos = quadraticBezier(eased, startPos, midPos, endPos);
+          phase.players[startPlayer].x = pos.x;
+          phase.players[startPlayer].y = pos.y;
+        } else {
+          // Straight line interpolation
+          phase.players[startPlayer].x = startPos.x + (endPos.x - startPos.x) * eased;
+          phase.players[startPlayer].y = startPos.y + (endPos.y - startPos.y) * eased;
+        }
       }
 
       // Transfer ball at end of animation
