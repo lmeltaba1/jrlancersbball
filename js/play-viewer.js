@@ -383,7 +383,7 @@ const PlayViewer = (function() {
   // Helper functions (EXACT from play-designer.js)
   function findNearestPlayer(point, players) {
     let nearest = null;
-    let minDist = 4;
+    let minDist = 4; // Must match play-designer.js threshold
 
     Object.entries(players).forEach(([num, pos]) => {
       const dist = Math.sqrt(Math.pow(point.x - pos.x, 2) + Math.pow(point.y - pos.y, 2));
@@ -520,18 +520,6 @@ const PlayViewer = (function() {
       highlightPhaseStep(playId, phaseIndex);
 
       const phase = JSON.parse(JSON.stringify(play.phases[phaseIndex]));
-
-      // Carry forward player positions from previous phase (for screens, cuts, dribbles)
-      if (currentPositions) {
-        Object.keys(currentPositions).forEach(playerNum => {
-          if (phase.players[playerNum]) {
-            phase.players[playerNum].x = currentPositions[playerNum].x;
-            phase.players[playerNum].y = currentPositions[playerNum].y;
-            // Keep hasBall from carried positions too
-            phase.players[playerNum].hasBall = currentPositions[playerNum].hasBall;
-          }
-        });
-      }
 
       let actionIndex = 0;
 

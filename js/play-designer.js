@@ -2439,9 +2439,9 @@ function handleMouseMove(e) {
   const svg = document.getElementById('courtSvg');
   const pt = screenToSVG(svg, e.clientX, e.clientY);
 
-  // Clamp to court
-  const x = Math.max(COURT.minX + 1, Math.min(COURT.maxX - 1, pt.x));
-  const y = Math.max(COURT.minY + 1, Math.min(COURT.maxY - 1, pt.y));
+  // Clamp to viewBox (allow out of bounds for inbound plays)
+  const x = Math.max(-27, Math.min(27, pt.x));
+  const y = Math.max(-2, Math.min(46, pt.y));
 
   const phase = currentPlay.phases[currentPhaseIndex];
 
@@ -2484,7 +2484,7 @@ function handleMouseUp() {
 
     // Snap action endpoints to nearest player if close enough
     const phase = currentPlay.phases[currentPhaseIndex];
-    const SNAP_DISTANCE = 5; // SVG units - larger for easier snapping
+    const SNAP_DISTANCE = 2; // SVG units - tight snapping for precise placement
 
     if (dragTarget.type === 'action-start' || dragTarget.type === 'action-end') {
       const action = phase.actions[dragTarget.id];
