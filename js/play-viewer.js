@@ -503,6 +503,8 @@ const PlayViewer = (function() {
     state.isAnimating = true;
     const play = state.play;
     let phaseIndex = 0;
+    // Track current player positions across phases (carry forward after movements)
+    let currentPositions = null;
 
     function animatePhase() {
       if (phaseIndex >= play.phases.length) {
@@ -518,12 +520,25 @@ const PlayViewer = (function() {
       highlightPhaseStep(playId, phaseIndex);
 
       const phase = JSON.parse(JSON.stringify(play.phases[phaseIndex]));
-      const originalPositions = JSON.parse(JSON.stringify(phase.players));
+
+      // Carry forward player positions from previous phase (for screens, cuts, dribbles)
+      if (currentPositions) {
+        Object.keys(currentPositions).forEach(playerNum => {
+          if (phase.players[playerNum]) {
+            phase.players[playerNum].x = currentPositions[playerNum].x;
+            phase.players[playerNum].y = currentPositions[playerNum].y;
+            // Keep hasBall from carried positions too
+            phase.players[playerNum].hasBall = currentPositions[playerNum].hasBall;
+          }
+        });
+      }
+
       let actionIndex = 0;
 
       function animateNextAction() {
         if (actionIndex >= (phase.actions ? phase.actions.length : 0)) {
-          // Phase complete, move to next
+          // Phase complete - save current positions for next phase
+          currentPositions = JSON.parse(JSON.stringify(phase.players));
           phaseIndex++;
           state.timeout = setTimeout(animatePhase, 400);
           return;
@@ -543,12 +558,22 @@ const PlayViewer = (function() {
         state.timeout = setTimeout(animateNextAction, 300);
       } else {
         // No actions, just pause and move to next phase
+        currentPositions = JSON.parse(JSON.stringify(phase.players));
         phaseIndex++;
         state.timeout = setTimeout(animatePhase, 800);
       }
     }
 
     animatePhase();
+  }
+
+  // Quadratic bezier interpolation: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+  function quadraticBezier(t, p0, p1, p2) {
+    const oneMinusT = 1 - t;
+    return {
+      x: oneMinusT * oneMinusT * p0.x + 2 * oneMinusT * t * p1.x + t * t * p2.x,
+      y: oneMinusT * oneMinusT * p0.y + 2 * oneMinusT * t * p1.y + t * t * p2.y
+    };
   }
 
   // Animate a set of actions (EXACT from play-designer.js animateActionsInline)
@@ -561,25 +586,84 @@ const PlayViewer = (function() {
       startPlayer: findNearestPlayer(action.start, phase.players),
       endPlayer: findNearestPlayer(action.end, phase.players),
       startPos: null,
-      endPos: null
+      midPos: null,
+      endPos: null,
+      isShot: action.type === 'shot'
     }));
 
     animations.forEach(anim => {
-      if (anim.startPlayer && (anim.action.type === 'dribble' || anim.action.type === 'cut')) {
+      if (anim.startPlayer && (anim.action.type === 'dribble' || anim.action.type === 'cut' || anim.action.type === 'screen')) {
         anim.startPos = { ...phase.players[anim.startPlayer] };
         anim.endPos = { x: anim.action.end.x, y: anim.action.end.y };
+        // Capture mid point for curved paths
+        if (anim.action.mid) {
+          anim.midPos = { x: anim.action.mid.x, y: anim.action.mid.y };
+        }
+      }
+      // For shots, track ball from shooter to basket
+      if (anim.action.type === 'shot' && anim.startPlayer) {
+        anim.startPos = { ...phase.players[anim.startPlayer] };
+        anim.endPos = { x: anim.action.end.x, y: anim.action.end.y };
+        if (anim.action.mid) {
+          anim.midPos = { x: anim.action.mid.x, y: anim.action.mid.y };
+        }
+        // Remove ball from shooter at start of shot
+        phase.players[anim.startPlayer].hasBall = false;
       }
     });
+
+    // Create ball ring element for shot animations (same style as player ball ring)
+    let shotBall = null;
+    const hasShot = animations.some(a => a.isShot);
+    if (hasShot) {
+      const svg = document.getElementById(`courtSvg-${playId}`);
+      if (svg) {
+        shotBall = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        shotBall.setAttribute('r', '1.5');
+        shotBall.setAttribute('fill', 'none');
+        shotBall.setAttribute('stroke', '#333');
+        shotBall.setAttribute('stroke-width', '0.22');
+        shotBall.setAttribute('class', 'shot-ball');
+        svg.appendChild(shotBall);
+      }
+    }
 
     function animate(currentTime) {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = easeInOutCubic(progress);
 
-      animations.forEach(({ action, startPlayer, endPlayer, startPos, endPos }) => {
+      animations.forEach(({ action, startPlayer, endPlayer, startPos, midPos, endPos, isShot }) => {
         if (startPos && endPos && startPlayer) {
-          phase.players[startPlayer].x = startPos.x + (endPos.x - startPos.x) * eased;
-          phase.players[startPlayer].y = startPos.y + (endPos.y - startPos.y) * eased;
+          if (isShot) {
+            // Animate ball along shot path
+            if (shotBall) {
+              let ballPos;
+              if (midPos) {
+                ballPos = quadraticBezier(eased, startPos, midPos, endPos);
+              } else {
+                ballPos = {
+                  x: startPos.x + (endPos.x - startPos.x) * eased,
+                  y: startPos.y + (endPos.y - startPos.y) * eased
+                };
+              }
+              shotBall.setAttribute('cx', ballPos.x);
+              shotBall.setAttribute('cy', ballPos.y);
+
+              // Scale ball ring smaller as it approaches basket (perspective effect)
+              const scale = 1 - (eased * 0.3);
+              shotBall.setAttribute('r', 1.5 * scale);
+            }
+          } else if (midPos) {
+            // Follow curved path using quadratic bezier
+            const pos = quadraticBezier(eased, startPos, midPos, endPos);
+            phase.players[startPlayer].x = pos.x;
+            phase.players[startPlayer].y = pos.y;
+          } else {
+            // Straight line interpolation
+            phase.players[startPlayer].x = startPos.x + (endPos.x - startPos.x) * eased;
+            phase.players[startPlayer].y = startPos.y + (endPos.y - startPos.y) * eased;
+          }
         }
 
         if (progress >= 1 && (action.type === 'pass' || action.type === 'handoff') && startPlayer && endPlayer) {
@@ -591,9 +675,21 @@ const PlayViewer = (function() {
 
       renderCourt(playId, phase);
 
+      // Re-append shot ball after renderCourt (which clears layers)
+      if (shotBall) {
+        const svg = document.getElementById(`courtSvg-${playId}`);
+        if (svg && !svg.contains(shotBall)) {
+          svg.appendChild(shotBall);
+        }
+      }
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
+        // Remove shot ball at end
+        if (shotBall && shotBall.parentNode) {
+          shotBall.parentNode.removeChild(shotBall);
+        }
         if (onComplete) onComplete();
       }
     }

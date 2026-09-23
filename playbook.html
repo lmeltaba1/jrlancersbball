@@ -181,6 +181,33 @@
       gap: 8px;
     }
 
+    /* Edit button for plays */
+    .play-edit-btn {
+      background: transparent;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      opacity: 0.5;
+    }
+
+    .play-edit-btn:hover {
+      background: rgba(0, 123, 255, 0.15);
+      color: #007bff;
+      opacity: 1;
+    }
+
+    .play-edit-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
     /* Delete/hide button for plays */
     .play-delete-btn {
       background: transparent;
@@ -218,6 +245,36 @@
       border-radius: 12px;
       overflow: hidden;
       position: relative;
+    }
+
+    /* Larger courts on mobile */
+    @media (max-width: 600px) {
+      .court-container,
+      .draft-court-container,
+      .custom-court-container {
+        width: 90%;
+      }
+
+      /* Bigger player numbers on mobile */
+      .player-marker text {
+        font-size: 3.2px !important;
+      }
+
+      .player-marker.player-highlighted text {
+        font-size: 4px !important;
+      }
+
+      /* Bigger action lines on mobile */
+      .actions-layer path,
+      .actions-layer line {
+        stroke-width: 0.4px !important;
+      }
+
+      /* Bigger court lines on mobile */
+      .court-svg g[id^="courtLines"] line,
+      .court-svg g[id^="courtLines"] path {
+        stroke-width: 0.5px !important;
+      }
     }
 
     .court-container {
@@ -927,9 +984,16 @@
           ${play.phases.map((_, i) => `<div class="phase-dot${i === 0 ? ' active' : ''}" data-phase="${i}"></div>`).join('')}
         </div>` : '';
 
-      // Check if head coach can delete this play
+      // Check if head coach can edit/delete this play
       const isHeadCoach = window.playbookUserInfo && window.playbookUserInfo.isHeadCoach;
       const isCustomPlay = play.isCustom === true;
+      const editBtn = (isHeadCoach && isCustomPlay) ? `
+        <button class="play-edit-btn" onclick="event.stopPropagation(); window.location.href='play-designer.html?edit=${playId}'" aria-label="Edit play" title="Edit play">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+        </button>
+      ` : '';
       const deleteBtn = isHeadCoach ? `
         <button class="play-delete-btn" onclick="event.stopPropagation(); ${isCustomPlay ? `deletePublishedPlay('${playId}', '${escapeHtml(play.name)}')` : `hideHardcodedPlay('${playId}', '${escapeHtml(play.name)}')`}" aria-label="Delete play" title="${isCustomPlay ? 'Delete play' : 'Hide play'}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -951,6 +1015,7 @@
               ${play.description ? `<p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0;">${escapeHtml(play.description)}</p>` : ''}
             </div>
             <div class="play-header-actions">
+              ${editBtn}
               ${deleteBtn}
               <button class="replay-btn" id="btn-${playId}" onclick="PlayViewer.playAnimation('${playId}')" aria-label="Play animation">
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -1928,10 +1993,16 @@
       const container = document.getElementById('plays-container');
       container.innerHTML = '';
 
-      // Filter by chapter and exclude hidden plays
-      const chapterPlays = Object.entries(plays).filter(([id, play]) => {
-        return play.chapter === currentChapter && !hiddenPlays.has(id);
-      });
+      // Filter by chapter and exclude hidden plays, then sort alphabetically
+      const chapterPlays = Object.entries(plays)
+        .filter(([id, play]) => {
+          return play.chapter === currentChapter && !hiddenPlays.has(id);
+        })
+        .sort((a, b) => {
+          const nameA = (a[1].name || '').toLowerCase();
+          const nameB = (b[1].name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
 
       if (chapterPlays.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">No plays in this chapter yet.</p>';

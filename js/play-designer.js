@@ -523,7 +523,7 @@ function generateNextPhase() {
   currentPhase.actions.forEach(action => {
     const startPlayer = findNearestPlayer(action.start, currentPhase.players);
 
-    if (startPlayer && (action.type === 'dribble' || action.type === 'cut')) {
+    if (startPlayer && (action.type === 'dribble' || action.type === 'cut' || action.type === 'screen')) {
       // Move player to action end position
       newPositions[startPlayer].x = action.end.x;
       newPositions[startPlayer].y = action.end.y;
@@ -2910,7 +2910,7 @@ function animateActionsInModal(actions, phase, onComplete) {
       startPlayer,
       endPlayer,
       startPos: startPlayer ? { ...phase.players[startPlayer] } : null,
-      endPos: action.type === 'dribble' || action.type === 'cut' ? { x: action.end.x, y: action.end.y } : null
+      endPos: action.type === 'dribble' || action.type === 'cut' || action.type === 'screen' ? { x: action.end.x, y: action.end.y } : null
     };
   });
 
@@ -3006,13 +3006,18 @@ function animateActionsInline(actions, phase, onComplete) {
     startPlayer: findNearestPlayer(action.start, phase.players),
     endPlayer: findNearestPlayer(action.end, phase.players),
     startPos: null,
+    midPos: null,
     endPos: null
   }));
 
   animations.forEach(anim => {
-    if (anim.startPlayer && (anim.action.type === 'dribble' || anim.action.type === 'cut')) {
+    if (anim.startPlayer && (anim.action.type === 'dribble' || anim.action.type === 'cut' || anim.action.type === 'screen')) {
       anim.startPos = { ...phase.players[anim.startPlayer] };
       anim.endPos = { x: anim.action.end.x, y: anim.action.end.y };
+      // Capture mid point for curved paths
+      if (anim.action.mid) {
+        anim.midPos = { x: anim.action.mid.x, y: anim.action.mid.y };
+      }
     }
   });
 
@@ -3021,10 +3026,18 @@ function animateActionsInline(actions, phase, onComplete) {
     const progress = Math.min(elapsed / duration, 1);
     const eased = easeInOutCubic(progress);
 
-    animations.forEach(({ action, startPlayer, endPlayer, startPos, endPos }) => {
+    animations.forEach(({ action, startPlayer, endPlayer, startPos, midPos, endPos }) => {
       if (startPos && endPos && startPlayer) {
-        phase.players[startPlayer].x = startPos.x + (endPos.x - startPos.x) * eased;
-        phase.players[startPlayer].y = startPos.y + (endPos.y - startPos.y) * eased;
+        if (midPos) {
+          // Follow curved path using quadratic bezier
+          const pos = quadraticBezier(eased, startPos, midPos, endPos);
+          phase.players[startPlayer].x = pos.x;
+          phase.players[startPlayer].y = pos.y;
+        } else {
+          // Straight line interpolation
+          phase.players[startPlayer].x = startPos.x + (endPos.x - startPos.x) * eased;
+          phase.players[startPlayer].y = startPos.y + (endPos.y - startPos.y) * eased;
+        }
       }
 
       if (progress >= 1 && (action.type === 'pass' || action.type === 'handoff') && startPlayer && endPlayer) {
@@ -3087,11 +3100,16 @@ function animateAction(action, phase, onComplete) {
 
   // Store start position for movement actions
   let startPos = null;
+  let midPos = null;
   let endPos = null;
 
-  if (startPlayer && (action.type === 'dribble' || action.type === 'cut')) {
+  if (startPlayer && (action.type === 'dribble' || action.type === 'cut' || action.type === 'screen')) {
     startPos = { ...phase.players[startPlayer] };
     endPos = { x: action.end.x, y: action.end.y };
+    // Capture mid point for curved paths
+    if (action.mid) {
+      midPos = { x: action.mid.x, y: action.mid.y };
+    }
   }
 
   function animate(currentTime) {
@@ -3099,10 +3117,18 @@ function animateAction(action, phase, onComplete) {
     const progress = Math.min(elapsed / duration, 1);
     const eased = easeInOutCubic(progress);
 
-    // Move player for dribble/cut
+    // Move player for dribble/cut/screen
     if (startPos && endPos && startPlayer) {
-      phase.players[startPlayer].x = startPos.x + (endPos.x - startPos.x) * eased;
-      phase.players[startPlayer].y = startPos.y + (endPos.y - startPos.y) * eased;
+      if (midPos) {
+        // Follow curved path using quadratic bezier
+        const pos = quadraticBezier(eased, startPos, midPos, endPos);
+        phase.players[startPlayer].x = pos.x;
+        phase.players[startPlayer].y = pos.y;
+      } else {
+        // Straight line interpolation
+        phase.players[startPlayer].x = startPos.x + (endPos.x - startPos.x) * eased;
+        phase.players[startPlayer].y = startPos.y + (endPos.y - startPos.y) * eased;
+      }
       renderCourt();
     }
 
@@ -3126,6 +3152,15 @@ function animateAction(action, phase, onComplete) {
 
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+// Quadratic bezier interpolation: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+function quadraticBezier(t, p0, p1, p2) {
+  const oneMinusT = 1 - t;
+  return {
+    x: oneMinusT * oneMinusT * p0.x + 2 * oneMinusT * t * p1.x + t * t * p2.x,
+    y: oneMinusT * oneMinusT * p0.y + 2 * oneMinusT * t * p1.y + t * t * p2.y
+  };
 }
 
 function stopAnimation() {
