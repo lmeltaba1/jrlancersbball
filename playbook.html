@@ -736,28 +736,33 @@
 
   <!-- Publish Modal -->
   <div id="publishModal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width: 400px; padding: 24px;">
-      <h3 style="margin: 0 0 20px 0; font-size: 1.1rem;">Publish Play</h3>
-      <p style="margin: 0 0 16px 0; color: var(--text-secondary); font-size: 0.9rem;">
-        Choose which section to publish "<span id="publishPlayName"></span>" to:
-      </p>
-      <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
-        <label style="display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-elevated); border-radius: 8px; cursor: pointer;">
-          <input type="radio" name="publishChapter" value="man" checked>
-          <span>vs Man</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-elevated); border-radius: 8px; cursor: pointer;">
-          <input type="radio" name="publishChapter" value="zone">
-          <span>vs Zone</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-elevated); border-radius: 8px; cursor: pointer;">
-          <input type="radio" name="publishChapter" value="inbound">
-          <span>Inbound</span>
-        </label>
+    <div class="modal-content template-modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h2>Publish Play</h2>
+        <button class="modal-close" onclick="closePublishModal()">&times;</button>
       </div>
-      <div style="display: flex; gap: 10px;">
-        <button onclick="closePublishModal()" style="flex: 1; padding: 12px; background: var(--bg-elevated); border: none; border-radius: 8px; color: var(--text-primary); font-weight: 600; cursor: pointer;">Cancel</button>
-        <button onclick="confirmPublish()" style="flex: 1; padding: 12px; background: #4a9f6e; border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">Publish</button>
+      <div class="modal-body" style="padding: 20px 24px;">
+        <p style="margin: 0 0 16px 0; color: var(--text-secondary); font-size: 0.9rem;">
+          Choose which section to publish "<span id="publishPlayName"></span>" to:
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <label class="publish-chapter-option">
+            <input type="radio" name="publishChapter" value="man" checked>
+            <span>vs Man</span>
+          </label>
+          <label class="publish-chapter-option">
+            <input type="radio" name="publishChapter" value="zone">
+            <span>vs Zone</span>
+          </label>
+          <label class="publish-chapter-option">
+            <input type="radio" name="publishChapter" value="inbound">
+            <span>Inbound</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closePublishModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmPublish()">Publish</button>
       </div>
     </div>
   </div>
@@ -813,6 +818,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/app.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/notifications.js"></script>
   <script src="js/plays.js"></script>
@@ -2341,10 +2347,10 @@
         closePublishModal();
         await loadDrafts();
         await loadPublishedPlays();  // Reload published plays to include the newly published one
-        alert('Play published successfully!');
+        showToast('Play published successfully!', 'success');
       } catch (error) {
         console.error('Error publishing play:', error);
-        alert('Failed to publish play: ' + error.message);
+        showToast('Failed to publish play: ' + error.message, 'error');
       }
     }
 
@@ -2358,7 +2364,7 @@
         await loadDrafts();
       } catch (error) {
         console.error('Error deleting draft:', error);
-        alert('Failed to delete draft: ' + error.message);
+        showToast('Failed to delete draft: ' + error.message, 'error');
       }
     }
 
@@ -2415,7 +2421,7 @@
         renderPlays();
       } catch (error) {
         console.error('Error hiding play:', error);
-        alert('Failed to hide play: ' + error.message);
+        showToast('Failed to hide play: ' + error.message, 'error');
       }
     }
 
@@ -2431,7 +2437,7 @@
         renderPlays();
       } catch (error) {
         console.error('Error deleting play:', error);
-        alert('Failed to delete play: ' + error.message);
+        showToast('Failed to delete play: ' + error.message, 'error');
       }
     }
 

@@ -350,8 +350,8 @@ async function initAnimateMode(playId) {
   try {
     const doc = await db.collection('customPlays').doc(playId).get();
     if (!doc.exists) {
-      alert('Play not found');
-      window.history.back();
+      showToast('Play not found', 'error');
+      setTimeout(() => window.history.back(), 1500);
       return;
     }
 
@@ -382,8 +382,8 @@ async function initAnimateMode(playId) {
 
   } catch (error) {
     console.error('Error loading animate mode:', error);
-    alert('Error loading play');
-    window.history.back();
+    showToast('Error loading play', 'error');
+    setTimeout(() => window.history.back(), 1500);
   }
 }
 
@@ -598,7 +598,7 @@ function mirrorPlay() {
   // Check if there are any actions in any phase
   const hasActions = currentPlay.phases.some(p => p.actions && p.actions.length > 0);
   if (!hasActions) {
-    alert('No actions to mirror in this play');
+    showToast('No actions to mirror in this play', 'warning');
     return;
   }
 
@@ -712,7 +712,7 @@ function showPhaseMenu(event) {
 
 function deleteCurrentPhase() {
   if (!currentPlay || currentPlay.phases.length <= 1) {
-    alert('Cannot delete the only phase');
+    showToast('Cannot delete the only phase', 'warning');
     return;
   }
 
@@ -1066,7 +1066,7 @@ function startWithTemplate() {
     const existingPlay = existingPlaysCache[playId];
 
     if (!existingPlay) {
-      alert('Play not found');
+      showToast('Play not found', 'error');
       return;
     }
 
@@ -3235,25 +3235,13 @@ function validatePlay() {
 
     // Validate ball flow
     const flowAnalysis = analyzeBallFlow(phase);
-    let hasShot = false;
 
     for (let i = 0; i < flowAnalysis.length; i++) {
       const assignment = flowAnalysis[i];
-      const action = phase.actions[i];
 
       if (!assignment.isValid) {
         errors.push(`Phase ${phaseNum}, Action ${i + 1}: ${assignment.error || 'Invalid action'}`);
       }
-
-      if (action.type === 'shot' && assignment.isValid) {
-        hasShot = true;
-      }
-    }
-
-    // Play should end with a shot (warning, not error)
-    if (!hasShot && phaseIdx === currentPlay.phases.length - 1) {
-      // Only warn on last phase - earlier phases might just be setups
-      errors.push(`Phase ${phaseNum}: Play should end with a shot`);
     }
   }
 
@@ -3264,8 +3252,8 @@ function validatePlay() {
 }
 
 function showValidationErrors(errors) {
-  const message = 'Please fix the following issues:\n\n' + errors.map(e => '• ' + e).join('\n');
-  alert(message);
+  const message = 'Please fix: ' + errors.join(', ');
+  showToast(message, 'error');
 }
 
 // ============================================================================
@@ -3277,7 +3265,7 @@ async function savePlay() {
 
   const name = document.getElementById('playName').value.trim();
   if (!name) {
-    alert('Please enter a play name');
+    showToast('Please enter a play name', 'error');
     document.getElementById('playName').focus();
     return;
   }
@@ -3325,7 +3313,7 @@ async function savePlay() {
 
   } catch (error) {
     console.error('Save error:', error);
-    alert('Failed to save. Please try again.');
+    showToast('Failed to save. Please try again.', 'error');
     saveBtn.disabled = false;
     saveBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg> Save Draft`;
   }
@@ -3336,7 +3324,7 @@ async function loadPlay(playId) {
     const doc = await db.collection('customPlays').doc(playId).get();
 
     if (!doc.exists) {
-      alert('Play not found');
+      showToast('Play not found', 'error');
       showTemplateModal();
       return;
     }
@@ -3353,7 +3341,7 @@ async function loadPlay(playId) {
 
   } catch (error) {
     console.error('Load error:', error);
-    alert('Failed to load play');
+    showToast('Failed to load play', 'error');
     showTemplateModal();
   }
 }
