@@ -84,15 +84,15 @@ const templates = {
       5: { x: 14, y: 8, hasBall: false }
     }
   },
-  box: {
-    name: 'Box',
+  highPost: {
+    name: 'High Post',
     category: 'halfCourt',
     positions: {
-      1: { x: 0, y: 32, hasBall: true },
-      2: { x: -5, y: 20, hasBall: false },
-      3: { x: 5, y: 20, hasBall: false },
-      4: { x: -5, y: 8, hasBall: false },
-      5: { x: 5, y: 8, hasBall: false }
+      1: { x: 0, y: 42, hasBall: true },
+      2: { x: -18, y: 28, hasBall: false },
+      3: { x: 18, y: 28, hasBall: false },
+      4: { x: -18, y: 8, hasBall: false },
+      5: { x: 0, y: 20, hasBall: false }
     }
   },
   oneFourLow: {
