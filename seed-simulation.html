@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Seed Simulation Data</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 20px; background: #1a1a1a; color: #fff; max-width: 800px; margin: 0 auto; }
+    h1 { color: #ffd700; }
+    h2 { color: #888; font-size: 16px; margin-top: 30px; }
+    button { padding: 12px 24px; font-size: 14px; cursor: pointer; margin: 5px; border-radius: 8px; border: none; background: #333; color: #fff; }
+    button:hover { background: #444; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.primary { background: #ffd700; color: #000; font-weight: bold; }
+    button.danger { background: #dc2626; }
+    #output { background: #000; padding: 15px; white-space: pre-wrap; max-height: 500px; overflow-y: auto; font-family: monospace; font-size: 12px; border-radius: 8px; margin-top: 20px; }
+    .success { color: #22c55e; }
+    .error { color: #ef4444; }
+    .info { color: #3b82f6; }
+    .section { background: #222; padding: 15px; border-radius: 8px; margin: 15px 0; }
+    .progress { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .progress span { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    .progress .done { background: #166534; }
+    .progress .pending { background: #333; }
+    .progress .active { background: #ca8a04; }
+  </style>
+  <link rel="icon" type="image/png" href="images/lancers-logo-192.png">
+</head>
+<body>
+  <h1>Seed Simulation Data</h1>
+  <p id="status">Checking login status...</p>
+
+  <div class="section">
+    <h2>SIMULATED DATE: January 15, 2027</h2>
+    <p>This will create a mid-season simulation with 9 completed games and 4 upcoming games.</p>
+
+    <div class="progress" id="progress">
+      <span class="pending" id="step-time">Time</span>
+      <span class="pending" id="step-schedule">Schedule</span>
+      <span class="pending" id="step-stats">Stats</span>
+      <span class="pending" id="step-attendance">Attendance</span>
+      <span class="pending" id="step-volunteers">Volunteers</span>
+      <span class="pending" id="step-highlights">Highlights</span>
+      <span class="pending" id="step-messages">Messages</span>
+      <span class="pending" id="step-posts">Posts</span>
+      <span class="pending" id="step-wrapups">Wrapups</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <button onclick="runFullSimulation()" id="seedBtn" class="primary" disabled>Run Full Simulation</button>
+    <button onclick="clearAllData()" id="clearBtn" class="danger" disabled>Clear All Data First</button>
+  </div>
+
+  <div class="section">
+    <h2>Individual Steps (for debugging)</h2>
+    <button onclick="setSimulationTime()" disabled class="step-btn">Set Time</button>
+    <button onclick="syncSchedule()" disabled class="step-btn">Sync Schedule</button>
+    <button onclick="seedGameStats()" disabled class="step-btn">Seed Stats</button>
+    <button onclick="seedAttendance()" disabled class="step-btn">Seed Attendance</button>
+    <button onclick="seedVolunteers()" disabled class="step-btn">Seed Volunteers</button>
+    <button onclick="seedHighlights()" disabled class="step-btn">Seed Highlights</button>
+    <button onclick="seedMessages()" disabled class="step-btn">Seed Messages</button>
+    <button onclick="seedPosts()" disabled class="step-btn">Seed Posts</button>
+    <button onclick="seedWrapups()" disabled class="step-btn">Seed Wrapups</button>
+  </div>
+
+  <div class="section">
+    <h2>Screenshot Mode (Live Game)</h2>
+    <p style="color: #888; font-size: 12px;">Sets time to Jan 17, 2027 during Game 10 and creates live game state for screenshots.</p>
+    <button onclick="seedLiveGame()" disabled class="step-btn primary">Setup Live Game</button>
+    <button onclick="setSimulationTime()" disabled class="step-btn">Reset to Jan 15</button>
+  </div>
+
+  <pre id="output">Ready to seed simulation data.
+
+This will populate:
+- 13 games (9 completed, 4 upcoming)
+- 6 practice events
+- Full game stats with play-by-play
+- Attendance records
+- Volunteer signups
+- Highlight photos
+- Chat messages
+- Coach posts
+- Game wrap-ups with AI narratives</pre>
+
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyCZDonC8aqbg5OvtM-cHdA5LTJleZn8nwk",
+      authDomain: "lancers-bball.firebaseapp.com",
+      projectId: "lancers-bball",
+      storageBucket: "lancers-bball.firebasestorage.app",
+      messagingSenderId: "840563401504",
+      appId: "1:840563401504:web:fab87697f7129e98976d45"
+    });
+
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // ===== CONFIGURATION =====
+    const SIMULATED_DATE = new Date('2027-01-15T12:00:00');
+
+    const players = [
+      { id: 1, name: 'Raequan Brimer', firstName: 'Raequan', lastName: 'Brimer', number: 1, position: 'PF' },
+      { id: 2, name: 'Camden Kreyling', firstName: 'Camden', lastName: 'Kreyling', number: 9, position: 'PG' },
+      { id: 3, name: 'Grant Weltz', firstName: 'Grant', lastName: 'Weltz', number: 14, position: 'C' },
+      { id: 4, name: 'Rylan Trott', firstName: 'Rylan', lastName: 'Trott', number: 19, position: 'SF' },
+      { id: 5, name: 'Ashton Carney', firstName: 'Ashton', lastName: 'Carney', number: 27, position: 'C' },
+      { id: 6, name: 'Dean Meltabarger', firstName: 'Dean', lastName: 'Meltabarger', number: 30, position: 'SG' },
+      { id: 7, name: 'Wyatt Weems', firstName: 'Wyatt', lastName: 'Weems', number: 29, position: 'SF' },
+      { id: 8, name: 'Peyton Parks', firstName: 'Peyton', lastName: 'Parks', number: 23, position: 'SG' },
+      { id: 9, name: 'Jeevan Sabharwal', firstName: 'Jeevan', lastName: 'Sabharwal', number: 12, position: 'PG' },
+      { id: 10, name: 'Easton Moore', firstName: 'Easton', lastName: 'Moore', number: 5, position: 'PF' }
+    ];
+
+    const parents = [
+      { name: 'Mindy Carney', email: 'mindy.m.carney@gmail.com', playerId: 1 },
+      { name: 'Melissa Kreyling', email: 'mkreyling@yahoo.com', playerId: 2 },
+      { name: 'Carey Weltz', email: 'careypatton@hotmail.com', playerId: 3 },
+      { name: 'Brittany Trott', email: 'brittany28@aol.com', playerId: 4 },
+      { name: 'Ryan Carney', email: 'ryancar20@gmail.com', playerId: 5 },
+      { name: 'Bailey Meltabarger', email: 'bemeltabarger@gmail.com', playerId: 6 },
+      { name: 'Jillian Weems', email: 'jillian.weems@me.com', playerId: 7 },
+      { name: 'Jamie Parks', email: 'jamieparks86@gmail.com', playerId: 8 },
+      { name: 'Rebecca Sabharwal', email: 'ral0709@charter.net', playerId: 9 },
+      { name: 'Matthew Moore', email: 'matthewmoore09@yahoo.com', playerId: 10 }
+    ];
+
+    // Game results (games 1-9 are completed)
+    const gameResults = [
+      { id: 1, opponent: 'Warriors', lancersScore: 42, opponentScore: 35, result: 'W' },
+      { id: 2, opponent: 'Eagles', lancersScore: 38, opponentScore: 32, result: 'W' },
+      { id: 3, opponent: 'Hawks', lancersScore: 35, opponentScore: 41, result: 'L' },
+      { id: 4, opponent: 'Celtics', lancersScore: 45, opponentScore: 38, result: 'W' },
+      { id: 5, opponent: 'Thunder', lancersScore: 48, opponentScore: 42, result: 'W' },
+      { id: 6, opponent: 'Rockets', lancersScore: 39, opponentScore: 33, result: 'W' },
+      { id: 7, opponent: 'Lakers', lancersScore: 36, opponentScore: 44, result: 'L' },
+      { id: 8, opponent: 'Bulls', lancersScore: 41, opponentScore: 37, result: 'W' },
+      { id: 9, opponent: 'Spurs', lancersScore: 44, opponentScore: 39, result: 'W' }
+    ];
+
+    // Stock basketball photos from Unsplash
+    // Using SVG data URLs for guaranteed loading (no external network required)
+    function createSvgDataUrl(text, bgColor) {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+        <rect fill="${bgColor}" width="400" height="300"/>
+        <text x="200" y="150" text-anchor="middle" dominant-baseline="middle" fill="#FFD700" font-family="system-ui,-apple-system,sans-serif" font-size="24" font-weight="bold">${text}</text>
+        <text x="200" y="180" text-anchor="middle" dominant-baseline="middle" fill="#888" font-family="system-ui,-apple-system,sans-serif" font-size="14">Jr. Lancers</text>
+      </svg>`;
+      return 'data:image/svg+xml,' + encodeURIComponent(svg);
+    }
+    const stockPhotos = [
+      createSvgDataUrl('🏀 Great Shot!', '#1a1a1a'),
+      createSvgDataUrl('🏀 Fast Break!', '#222222'),
+      createSvgDataUrl('🏀 Three Pointer!', '#1a1a1a'),
+      createSvgDataUrl('🏀 Big Rebound!', '#222222'),
+      createSvgDataUrl('🏀 Nice Defense!', '#1a1a1a'),
+      createSvgDataUrl('🏀 Smooth Layup!', '#222222'),
+      createSvgDataUrl('🏀 Team Hustle!', '#1a1a1a'),
+      createSvgDataUrl('🏀 Clutch Play!', '#222222'),
+      createSvgDataUrl('🏀 Great Pass!', '#1a1a1a'),
+      createSvgDataUrl('🏀 Steal!', '#222222'),
+      createSvgDataUrl('🏀 And One!', '#1a1a1a'),
+      createSvgDataUrl('🏀 Game Winner!', '#222222')
+    ];
+
+    const captions = ['Great shot!', 'Nice defense!', 'Big rebound!', 'Fast break!', 'Smooth layup!',
+                      'Three pointer!', 'Clutch play!', 'Team hustle!', 'Great pass!', 'Steal and score!'];
+
+    // ===== AUTH STATE =====
+    auth.onAuthStateChanged(user => {
+      const status = document.getElementById('status');
+      const seedBtn = document.getElementById('seedBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const stepBtns = document.querySelectorAll('.step-btn');
+
+      if (user) {
+        status.innerHTML = '<span class="success">Logged in as: ' + user.email + '</span>';
+        seedBtn.disabled = false;
+        clearBtn.disabled = false;
+        stepBtns.forEach(btn => btn.disabled = false);
+      } else {
+        status.innerHTML = '<span class="error">Not logged in. <a href="login.html" style="color:#ffd700">Go login first</a></span>';
+        seedBtn.disabled = true;
+        clearBtn.disabled = true;
+        stepBtns.forEach(btn => btn.disabled = true);
+      }
+    });
+
+    // ===== UTILITY FUNCTIONS =====
+    function log(msg, type = '') {
+      const output = document.getElementById('output');
+      if (type === 'success') msg = '\u2705 ' + msg;
+      else if (type === 'error') msg = '\u274c ' + msg;
+      else if (type === 'info') msg = '\u2139\ufe0f ' + msg;
+      output.textContent += msg + '\n';
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function setStep(step, status) {
+      const el = document.getElementById('step-' + step);
+      el.className = status;
+    }
+
+    function delay(ms) {
+      return new Promise(r => setTimeout(r, ms));
+    }
+
+    // ===== CLEAR ALL DATA =====
+    async function clearAllData() {
+      const output = document.getElementById('output');
+      output.textContent = 'Clearing all simulation data...\n';
+
+      const collections = ['gameStats', 'attendance', 'volunteers', 'highlights', 'messages', 'posts', 'wrapups'];
+
+      for (const coll of collections) {
+        log('Clearing ' + coll + '...');
+        try {
+          const snapshot = await db.collection(coll).get();
+          let count = 0;
+          for (const doc of snapshot.docs) {
+            await doc.ref.delete();
+            count++;
+          }
+          log('  Deleted ' + count + ' documents', 'success');
+        } catch (e) {
+          log('  Error: ' + e.message, 'error');
+        }
+      }
+
+      // Clear simulation time
+      try {
+        await db.collection('config').doc('simulation').delete();
+        log('Cleared simulation time', 'success');
+      } catch (e) {
+        // Ignore if doesn't exist
+      }
+
+      log('\nAll data cleared. Ready to reseed.', 'info');
+    }
+
+    // ===== SET SIMULATION TIME =====
+    async function setSimulationTime() {
+      log('Setting simulation time to ' + SIMULATED_DATE.toLocaleDateString() + '...');
+      setStep('time', 'active');
+
+      const timeOffsetMs = SIMULATED_DATE.getTime() - Date.now();
+
+      try {
+        await db.collection('config').doc('simulation').set({
+          timeOffsetMs: timeOffsetMs,
+          setAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        log('Simulation time set to January 15, 2027', 'success');
+        setStep('time', 'done');
+        return true;
+      } catch (e) {
+        log('Error setting time: ' + e.message, 'error');
+        return false;
+      }
+    }
+
+    // ===== SYNC SCHEDULE =====
+    async function syncSchedule() {
+      log('Syncing schedule to Firestore...');
+      setStep('schedule', 'active');
+
+      try {
+        const response = await fetch('https://syncconfig-b2dpys66ra-uc.a.run.app');
+        const result = await response.json();
+        log('Schedule synced: ' + result.message, 'success');
+        setStep('schedule', 'done');
+        return true;
+      } catch (e) {
+        log('Error syncing schedule: ' + e.message, 'error');
+        return false;
+      }
+    }
+
+    // ===== SEED GAME STATS =====
+    async function seedGameStats() {
+      log('Seeding game stats with play-by-play...');
+      setStep('stats', 'active');
+
+      for (const game of gameResults) {
+        log('\nGame ' + game.id + ' vs ' + game.opponent + ' (' + game.result + ' ' + game.lancersScore + '-' + game.opponentScore + ')');
+
+        const gameStats = generateGameStats(game);
+
+        try {
+          await db.collection('gameStats').doc(String(game.id)).set(gameStats);
+          log('  Stats saved', 'success');
+        } catch (e) {
+          log('  Error: ' + e.message, 'error');
+        }
+
+        await delay(100);
+      }
+
+      setStep('stats', 'done');
+      return true;
+    }
+
+    function generateGameStats(game) {
+      const starters = [2, 6, 4, 1, 5]; // Camden, Dean, Rylan, Raequan, Ashton
+      const bench = [3, 7, 8, 9, 10]; // Grant, Wyatt, Peyton, Jeevan, Easton
+
+      // Generate player stats that add up to team score
+      const playerStats = {};
+      let totalPoints = 0;
+      const targetPoints = game.lancersScore;
+
+      // Distribute points across players
+      players.forEach(p => {
+        const isStarter = starters.includes(p.id);
+        const basePoints = isStarter ? Math.floor(Math.random() * 8) + 4 : Math.floor(Math.random() * 5);
+        const twoPointers = Math.floor(basePoints * 0.6 / 2);
+        const threePointers = Math.random() < 0.3 ? 1 : 0;
+        const freeThrows = Math.floor(Math.random() * 3);
+        const points = twoPointers * 2 + threePointers * 3 + freeThrows;
+
+        playerStats[p.id] = {
+          name: p.firstName + ' ' + p.lastName.charAt(0) + '.',
+          points: points,
+          rebounds: Math.floor(Math.random() * 6),
+          assists: Math.floor(Math.random() * 4),
+          steals: Math.floor(Math.random() * 3),
+          blocks: Math.floor(Math.random() * 2),
+          turnovers: Math.floor(Math.random() * 3),
+          fouls: Math.floor(Math.random() * 4),
+          twoPointersMade: twoPointers,
+          twoPointersMissed: Math.floor(Math.random() * 3),
+          threePointersMade: threePointers,
+          threePointersMissed: Math.floor(Math.random() * 2),
+          freeThrowsMade: freeThrows,
+          freeThrowsMissed: Math.floor(Math.random() * 2)
+        };
+        totalPoints += points;
+      });
+
+      // Adjust to match target score
+      const diff = targetPoints - totalPoints;
+      if (diff > 0) {
+        playerStats[2].points += diff;
+        playerStats[2].twoPointersMade += Math.floor(diff / 2);
+      }
+
+      // Generate play-by-play events
+      const events = generatePlayByPlay(game, playerStats);
+
+      return {
+        gameId: game.id,
+        isLive: false,
+        isComplete: true,  // Required for roster.html stat display
+        gamePhase: 'final',
+        playerStats: playerStats,
+        lancersScore: game.lancersScore,
+        opponentScore: game.opponentScore,
+        ourScore: game.lancersScore,  // Required for roster.html stat display
+        result: game.result,
+        finalScore: game.lancersScore + '-' + game.opponentScore,
+        onCourt: starters,
+        events: events,
+        trackedBy: 'mindy.m.carney@gmail.com',
+        startedAt: firebase.firestore.Timestamp.fromDate(new Date('2027-01-10T19:00:00')),
+        endedAt: firebase.firestore.Timestamp.fromDate(new Date('2027-01-10T20:30:00'))
+      };
+    }
+
+    function generatePlayByPlay(game, playerStats) {
+      const events = [];
+      let eventNum = 1;
+      let lancersScore = 0;
+      let opponentScore = 0;
+      const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+
+      // Calculate target scores per quarter
+      const quarterScores = {
+        lancers: [
+          Math.floor(game.lancersScore * 0.25),
+          Math.floor(game.lancersScore * 0.25),
+          Math.floor(game.lancersScore * 0.25),
+          game.lancersScore - Math.floor(game.lancersScore * 0.75)
+        ],
+        opponent: [
+          Math.floor(game.opponentScore * 0.25),
+          Math.floor(game.opponentScore * 0.25),
+          Math.floor(game.opponentScore * 0.25),
+          game.opponentScore - Math.floor(game.opponentScore * 0.75)
+        ]
+      };
+
+      quarters.forEach((quarter, qIndex) => {
+        // Quarter start
+        events.push({
+          id: 'evt-' + game.id + '-' + eventNum++,
+          timestamp: firebase.firestore.Timestamp.now(),
+          gamePhase: quarter,
+          type: 'phase',
+          description: quarter + ' started'
+        });
+
+        // Generate scoring plays for this quarter
+        let qLancers = 0;
+        let qOpponent = 0;
+
+        while (qLancers < quarterScores.lancers[qIndex] || qOpponent < quarterScores.opponent[qIndex]) {
+          // Lancers score
+          if (qLancers < quarterScores.lancers[qIndex]) {
+            const playerId = [1, 2, 3, 4, 5, 6][Math.floor(Math.random() * 6)];
+            const player = players.find(p => p.id === playerId);
+            const points = Math.random() < 0.2 ? 3 : 2;
+            const actualPoints = Math.min(points, quarterScores.lancers[qIndex] - qLancers);
+
+            if (actualPoints > 0) {
+              lancersScore += actualPoints;
+              qLancers += actualPoints;
+
+              events.push({
+                id: 'evt-' + game.id + '-' + eventNum++,
+                timestamp: firebase.firestore.Timestamp.now(),
+                gamePhase: quarter,
+                type: 'stat',
+                playerId: playerId,
+                stat: 'points',
+                value: actualPoints,
+                team: 'lancers',
+                lancersScore: lancersScore,
+                opponentScore: opponentScore,
+                description: player.firstName + ' scores ' + actualPoints + (actualPoints === 3 ? '-pointer' : ' points')
+              });
+            }
+          }
+
+          // Opponent scores
+          if (qOpponent < quarterScores.opponent[qIndex]) {
+            const points = Math.random() < 0.2 ? 3 : 2;
+            const actualPoints = Math.min(points, quarterScores.opponent[qIndex] - qOpponent);
+
+            if (actualPoints > 0) {
+              opponentScore += actualPoints;
+              qOpponent += actualPoints;
+
+              events.push({
+                id: 'evt-' + game.id + '-' + eventNum++,
+                timestamp: firebase.firestore.Timestamp.now(),
+                gamePhase: quarter,
+                type: 'stat',
+                stat: 'points',
+                value: actualPoints,
+                team: 'opponent',
+                lancersScore: lancersScore,
+                opponentScore: opponentScore,
+                description: game.opponent + ' scores ' + actualPoints
+              });
+            }
+          }
+        }
+
+        // Halftime event
+        if (quarter === 'Q2') {
+          events.push({
+            id: 'evt-' + game.id + '-' + eventNum++,
+            timestamp: firebase.firestore.Timestamp.now(),
+            gamePhase: 'halftime',
+            type: 'phase',
+            description: 'HALFTIME: Lancers ' + lancersScore + ' - ' + game.opponent + ' ' + opponentScore
+          });
+        }
+      });
+
+      // Final event
+      events.push({
+        id: 'evt-' + game.id + '-' + eventNum++,
+        timestamp: firebase.firestore.Timestamp.now(),
+        gamePhase: 'final',
+        type: 'phase',
+        description: 'FINAL: Lancers ' + (game.result === 'W' ? 'WIN' : 'LOSE') + ' ' + game.lancersScore + '-' + game.opponentScore
+      });
+
+      return events;
+    }
+
+    // ===== SEED ATTENDANCE =====
+    async function seedAttendance() {
+      log('Seeding attendance records...');
+      setStep('attendance', 'active');
+
+      // Games 1-9 are completed
+      for (let gameId = 1; gameId <= 9; gameId++) {
+        log('Game ' + gameId + ': ', '');
+
+        for (const player of players) {
+          const attending = Math.random() < 0.9; // 90% attendance
+          const parent = parents.find(p => p.playerId === player.id);
+
+          try {
+            await db.collection('attendance').doc(gameId + '_' + player.id).set({
+              gameId: gameId,
+              playerId: player.id,
+              playerName: player.name,
+              attending: attending,
+              respondedBy: parent ? parent.email : 'unknown@email.com',
+              respondedAt: firebase.firestore.Timestamp.now()
+            });
+          } catch (e) {
+            // ignore
+          }
+        }
+        log('  ' + players.length + ' records added', 'success');
+        await delay(50);
+      }
+
+      // Some responses for upcoming games (varied)
+      for (let gameId = 10; gameId <= 13; gameId++) {
+        log('Game ' + gameId + ' (upcoming): ', '');
+        let responded = 0;
+
+        for (const player of players) {
+          if (Math.random() < 0.6) { // 60% have responded
+            const attending = Math.random() < 0.85;
+            const parent = parents.find(p => p.playerId === player.id);
+
+            try {
+              await db.collection('attendance').doc(gameId + '_' + player.id).set({
+                gameId: gameId,
+                playerId: player.id,
+                playerName: player.name,
+                attending: attending,
+                respondedBy: parent ? parent.email : 'unknown@email.com',
+                respondedAt: firebase.firestore.Timestamp.now()
+              });
+              responded++;
+            } catch (e) {
+              // ignore
+            }
+          }
+        }
+        log('  ' + responded + ' responses', 'success');
+        await delay(50);
+      }
+
+      setStep('attendance', 'done');
+      return true;
+    }
+
+    // ===== SEED VOLUNTEERS =====
+    async function seedVolunteers() {
+      log('Seeding volunteer signups...');
+      setStep('volunteers', 'active');
+
+      // Rotate volunteers through games
+      const scorekeepers = [parents[0], parents[1], parents[2], parents[3], parents[0], parents[1], parents[2], parents[3], parents[0]];
+      const tableWorkers = [parents[4], parents[5], parents[6], parents[7], parents[4], parents[5], parents[6], parents[7], parents[4]];
+
+      for (let i = 0; i < 9; i++) {
+        const gameId = i + 1;
+        const isCNR = gameId % 2 === 0; // Even games are CNR
+
+        const volunteerData = {
+          scorekeeper: {
+            name: scorekeepers[i].name,
+            email: scorekeepers[i].email,
+            playerId: scorekeepers[i].playerId,
+            signedUpAt: firebase.firestore.Timestamp.now()
+          }
+        };
+
+        if (isCNR) {
+          volunteerData.tableWorker = {
+            name: tableWorkers[i].name,
+            email: tableWorkers[i].email,
+            playerId: tableWorkers[i].playerId,
+            signedUpAt: firebase.firestore.Timestamp.now()
+          };
+        }
+
+        try {
+          await db.collection('volunteers').doc(String(gameId)).set(volunteerData);
+          log('Game ' + gameId + ': ' + scorekeepers[i].name + (isCNR ? ' + ' + tableWorkers[i].name : ''), 'success');
+        } catch (e) {
+          log('Game ' + gameId + ': Error - ' + e.message, 'error');
+        }
+
+        await delay(50);
+      }
+
+      // One signup for upcoming game 10
+      try {
+        await db.collection('volunteers').doc('10').set({
+          scorekeeper: {
+            name: parents[0].name,
+            email: parents[0].email,
+            playerId: parents[0].playerId,
+            signedUpAt: firebase.firestore.Timestamp.now()
+          }
+        });
+        log('Game 10: ' + parents[0].name + ' (upcoming)', 'success');
+      } catch (e) {
+        // ignore
+      }
+
+      setStep('volunteers', 'done');
+      return true;
+    }
+
+    // ===== SEED HIGHLIGHTS =====
+    async function seedHighlights() {
+      log('Seeding highlights with stock photos...');
+      setStep('highlights', 'active');
+
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        log('Error: Must be logged in to seed highlights', 'error');
+        return false;
+      }
+
+      let photoIndex = 0;
+
+      for (let gameId = 1; gameId <= 9; gameId++) {
+        // 2-3 highlights per game
+        const numHighlights = Math.floor(Math.random() * 2) + 2;
+        log('Game ' + gameId + ': ' + numHighlights + ' highlights');
+
+        for (let h = 0; h < numHighlights; h++) {
+          const player = players[Math.floor(Math.random() * players.length)];
+          const parent = parents[Math.floor(Math.random() * parents.length)];
+          const caption = captions[Math.floor(Math.random() * captions.length)];
+          const photo = stockPhotos[photoIndex % stockPhotos.length];
+          photoIndex++;
+
+          try {
+            await db.collection('highlights').add({
+              playerId: player.id,
+              playerName: player.name,
+              gameId: gameId,
+              mediaType: 'photo',
+              caption: caption,
+              uploaderName: parent.name,
+              uploaderEmail: parent.email,
+              uploadedBy: currentUser.uid,  // Required by Firestore rules
+              downloadUrl: photo,
+              thumbnailUrl: photo,
+              timestamp: firebase.firestore.Timestamp.now()
+            });
+          } catch (e) {
+            log('  Error: ' + e.message, 'error');
+          }
+
+          await delay(50);
+        }
+      }
+
+      log('Highlights seeded', 'success');
+      setStep('highlights', 'done');
+      return true;
+    }
+
+    // ===== SEED MESSAGES =====
+    async function seedMessages() {
+      log('Seeding chat messages...');
+      setStep('messages', 'active');
+
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        log('Error: Must be logged in to seed messages', 'error');
+        return false;
+      }
+
+      const messages = [
+        { sender: 'Mindy Carney', email: 'mindy.m.carney@gmail.com', text: 'Great game last night everyone! The kids played so hard.' },
+        { sender: 'Melissa Kreyling', email: 'mkreyling@yahoo.com', text: 'Camden was so excited about that steal he made!' },
+        { sender: 'Coach Logan', email: 'lmeltabarger@icloud.com', text: 'Proud of how the team is coming together. Keep up the great work!' },
+        { sender: 'Brittany Trott', email: 'brittany28@aol.com', text: 'Rylan said practice yesterday was really fun. Thanks coaches!' },
+        { sender: 'Bailey Meltabarger', email: 'bemeltabarger@gmail.com', text: 'Does anyone have the address for Saturday game?' },
+        { sender: 'Coach Logan', email: 'lmeltabarger@icloud.com', text: 'CNR Sportsplex - 12391 Olive Blvd. Game starts at 11 AM.' },
+        { sender: 'Carey Weltz', email: 'careypatton@hotmail.com', text: 'Thanks! Grant is pumped for the game.' },
+        { sender: 'Jamie Parks', email: 'jamieparks86@gmail.com', text: 'Peyton will be a few minutes late to practice Tuesday - dentist appointment.' },
+        { sender: 'Jillian Weems', email: 'jillian.weems@me.com', text: 'No problem! See everyone there.' },
+        { sender: 'Coach Matt', email: 'matthewmoore09@yahoo.com', text: 'Reminder: wear black jerseys for Thursday game!' },
+        { sender: 'Mindy Carney', email: 'mindy.m.carney@gmail.com', text: 'Got it, thanks for the reminder!' },
+        { sender: 'Rebecca Sabharwal', email: 'ral0709@charter.net', text: 'Jeevan is bringing oranges for halftime snacks on Saturday.' }
+      ];
+
+      // Spread messages over past 2 weeks
+      const now = SIMULATED_DATE.getTime();
+      const twoWeeksAgo = now - (14 * 24 * 60 * 60 * 1000);
+
+      for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i];
+        const timestamp = new Date(twoWeeksAgo + (i * (14 * 24 * 60 * 60 * 1000 / messages.length)));
+
+        try {
+          await db.collection('messages').add({
+            senderName: msg.sender,
+            senderEmail: msg.email,
+            senderUid: currentUser.uid,  // Required by Firestore rules (all seeded as current user)
+            text: msg.text,
+            timestamp: firebase.firestore.Timestamp.fromDate(timestamp)
+          });
+          log('  ' + msg.sender + ': "' + msg.text.substring(0, 40) + '..."', '');
+        } catch (e) {
+          log('  Error: ' + e.message, 'error');
+        }
+
+        await delay(50);
+      }
+
+      log('Messages seeded', 'success');
+      setStep('messages', 'done');
+      return true;
+    }
+
+    // ===== SEED POSTS =====
+    async function seedPosts() {
+      log('Seeding coach posts...');
+      setStep('posts', 'active');
+
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        log('Error: Must be logged in as head coach to seed posts', 'error');
+        return false;
+      }
+
+      const posts = [
+        {
+          title: 'Welcome to the Season!',
+          text: 'Welcome to the 2026-2027 Jr. Lancers season! We have a great group of kids and I am excited to see them grow as players and teammates. Our first game is December 5th against the Warriors. Let\'s go Lancers!',
+          date: new Date('2026-12-01')
+        },
+        {
+          title: 'Midseason Update',
+          text: 'We\'re 7-2 heading into the second half of the season! The kids have been working hard in practice and it\'s showing on the court. Special shoutout to our parents who have been volunteering to help with scorekeeping and the table. We couldn\'t do it without you!',
+          date: new Date('2027-01-08')
+        },
+        {
+          title: 'Practice Schedule Change',
+          text: 'Due to a school event, practice on January 14th will be moved from 6pm to 7pm. Same location. Please let me know if this is a problem for anyone.',
+          date: new Date('2027-01-12')
+        }
+      ];
+
+      for (const post of posts) {
+        try {
+          await db.collection('posts').add({
+            title: post.title,
+            text: post.text,
+            authorName: 'Coach Logan',
+            authorEmail: currentUser.email,
+            authorUid: currentUser.uid,
+            timestamp: firebase.firestore.Timestamp.fromDate(post.date)
+          });
+          log('  "' + post.title + '"', 'success');
+        } catch (e) {
+          log('  Error: ' + e.message, 'error');
+        }
+
+        await delay(50);
+      }
+
+      setStep('posts', 'done');
+      return true;
+    }
+
+    // ===== SEED WRAPUPS =====
+    async function seedWrapups() {
+      log('Seeding game wrap-ups...');
+
+      const wrapupData = [
+        {
+          gameId: 1,
+          opponent: 'Warriors',
+          finalScore: '42-35',
+          result: 'W',
+          narrative: 'The Jr. Lancers opened their season with a dominant 42-35 victory over the Warriors. The team came out firing on all cylinders, with sharp ball movement and aggressive defense setting the tone early. Camden K. led the charge with 12 points, while the entire starting five contributed to a balanced scoring attack. The defense was particularly impressive, holding the Warriors to just 35 points through strong help-side rotations.',
+          coachNotes: 'Great energy to start the season! The kids executed our plays really well. Loved seeing the ball movement in the second half.'
+        },
+        {
+          gameId: 2,
+          opponent: 'Eagles',
+          finalScore: '38-32',
+          result: 'W',
+          narrative: 'The Lancers continued their winning ways with a hard-fought 38-32 victory over the Eagles. Despite some early turnovers, the team settled down in the second quarter and built a lead they would never relinquish. Dean M. had a breakout game with 10 points and 5 rebounds, showing improved confidence on both ends of the floor.',
+          coachNotes: 'Need to work on ball handling under pressure, but proud of how the kids responded after a slow start.'
+        },
+        {
+          gameId: 3,
+          opponent: 'Hawks',
+          finalScore: '35-41',
+          result: 'L',
+          narrative: 'The Lancers suffered their first loss of the season, falling 35-41 to a talented Hawks squad. Despite a valiant effort, the team struggled to contain the Hawks\' fast break attack. The loss was a valuable learning experience, highlighting areas for improvement in transition defense.',
+          coachNotes: 'Tough loss but the kids fought hard. We got outrebounded on the offensive glass - that\'s something we\'ll address in practice this week.'
+        },
+        {
+          gameId: 4,
+          opponent: 'Celtics',
+          finalScore: '45-38',
+          result: 'W',
+          narrative: 'Bouncing back from their first loss, the Lancers delivered a statement performance against the Celtics. The team scored a season-high 45 points, showcasing excellent offensive execution. Raequan B. dominated inside with 14 points, while Rylan T. added crucial three-pointers to stretch the defense.',
+          coachNotes: 'That\'s the response I was looking for! The kids came out with a chip on their shoulder and played great team basketball.'
+        },
+        {
+          gameId: 5,
+          opponent: 'Thunder',
+          finalScore: '48-42',
+          result: 'W',
+          narrative: 'In a high-scoring affair, the Lancers outlasted the Thunder 48-42. Both teams traded baskets throughout the first half before the Lancers pulled away in the fourth quarter. The bench provided a huge spark, with fresh legs making the difference down the stretch.',
+          coachNotes: 'Our depth really showed tonight. Everyone who came off the bench contributed. That\'s what team basketball is all about.'
+        },
+        {
+          gameId: 6,
+          opponent: 'Rockets',
+          finalScore: '39-33',
+          result: 'W',
+          narrative: 'The Lancers defense stole the show in a 39-33 victory over the Rockets. Holding their opponent to just 33 points, the team showed improved communication and help defense. Multiple players recorded steals, and the energy on the defensive end was contagious.',
+          coachNotes: 'Best defensive game of the season. The kids are really buying into our defensive principles.'
+        },
+        {
+          gameId: 7,
+          opponent: 'Lakers',
+          finalScore: '36-44',
+          result: 'L',
+          narrative: 'The Lakers proved to be a formidable opponent, handing the Lancers a 36-44 loss. Despite trailing most of the game, the Lancers never gave up, mounting a late rally that fell just short. The loss highlighted the need for better shot selection in crucial moments.',
+          coachNotes: 'The Lakers are a good team. We had our chances but couldn\'t convert. We\'ll learn from this and get better.'
+        },
+        {
+          gameId: 8,
+          opponent: 'Bulls',
+          finalScore: '41-37',
+          result: 'W',
+          narrative: 'The Lancers edged out the Bulls 41-37 in a defensive slugfest. With both teams struggling to find offensive rhythm, it was the Lancers\' superior free throw shooting that made the difference. The team went 8-for-10 from the line in the fourth quarter to seal the win.',
+          coachNotes: 'Grind-out win. Not our prettiest game but the kids found a way. Clutch free throws down the stretch!'
+        },
+        {
+          gameId: 9,
+          opponent: 'Spurs',
+          finalScore: '44-39',
+          result: 'W',
+          narrative: 'The Lancers closed out the first half of the season with an impressive 44-39 victory over the Spurs. The team played with confidence and poise, showing how much they\'ve grown since the opening game. Multiple players contributed double-digit scoring, demonstrating the team\'s balanced attack.',
+          coachNotes: '7-2 at the midpoint! The kids should be proud. We\'ve come a long way but still have room to improve.'
+        }
+      ];
+
+      for (const wrapup of wrapupData) {
+        try {
+          // Note: wrapups are normally created by Cloud Functions, but we set directly for simulation
+          await db.collection('wrapups').doc(String(wrapup.gameId)).set({
+            gameId: wrapup.gameId,
+            status: 'complete',
+            opponent: wrapup.opponent,
+            finalScore: wrapup.finalScore,
+            result: wrapup.result,
+            coachNotes: {
+              commentary: wrapup.coachNotes,
+              playerShoutouts: []
+            },
+            report: {
+              narrative: wrapup.narrative,
+              generatedAt: firebase.firestore.Timestamp.now()
+            },
+            approvedAt: firebase.firestore.Timestamp.now(),
+            createdAt: firebase.firestore.Timestamp.now()
+          });
+          log('  Game ' + wrapup.gameId + ' vs ' + wrapup.opponent, 'success');
+        } catch (e) {
+          log('  Game ' + wrapup.gameId + ' Error: ' + e.message, 'error');
+        }
+        await delay(50);
+      }
+
+      log('Wrap-ups seeded', 'success');
+      return true;
+    }
+
+    // ===== SEED LIVE GAME (Game 10 in progress) =====
+    async function seedLiveGame() {
+      log('Setting up live game (Game 10 vs Heat)...');
+
+      // First, update simulation time to be during game 10 (Jan 17, 2027 11:20 AM)
+      const liveGameDate = new Date('2027-01-17T11:20:00');
+      const timeOffsetMs = liveGameDate.getTime() - Date.now();
+
+      try {
+        await db.collection('config').doc('simulation').set({
+          timeOffsetMs: timeOffsetMs,
+          setAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        log('Simulation time set to Jan 17, 2027 11:20 AM (during game)', 'success');
+      } catch (e) {
+        log('Error setting time: ' + e.message, 'error');
+        return false;
+      }
+
+      // Create a mid-game state for game 10
+      const starters = [2, 6, 4, 1, 5]; // Camden, Dean, Rylan, Raequan, Ashton
+      const playerStats = {};
+
+      // Give some stats to starters (mid-game state)
+      players.forEach(p => {
+        const isOnCourt = starters.includes(p.id);
+        playerStats[p.id] = {
+          name: p.firstName + ' ' + p.lastName.charAt(0) + '.',
+          points: isOnCourt ? Math.floor(Math.random() * 6) + 2 : 0,
+          rebounds: isOnCourt ? Math.floor(Math.random() * 3) : 0,
+          assists: isOnCourt ? Math.floor(Math.random() * 2) : 0,
+          steals: isOnCourt ? Math.floor(Math.random() * 2) : 0,
+          blocks: 0,
+          turnovers: isOnCourt ? Math.floor(Math.random() * 2) : 0,
+          fouls: isOnCourt ? Math.floor(Math.random() * 2) : 0,
+          twoPointersMade: isOnCourt ? Math.floor(Math.random() * 2) + 1 : 0,
+          twoPointersMissed: isOnCourt ? Math.floor(Math.random() * 2) : 0,
+          threePointersMade: 0,
+          threePointersMissed: isOnCourt ? Math.floor(Math.random() * 2) : 0,
+          freeThrowsMade: 0,
+          freeThrowsMissed: 0
+        };
+      });
+
+      // Calculate total score
+      let lancersScore = 0;
+      Object.values(playerStats).forEach(ps => lancersScore += ps.points);
+
+      const events = [
+        {
+          id: 'evt-10-1',
+          timestamp: firebase.firestore.Timestamp.now(),
+          gamePhase: 'Q1',
+          type: 'phase',
+          description: 'Q1 started'
+        },
+        {
+          id: 'evt-10-2',
+          timestamp: firebase.firestore.Timestamp.now(),
+          gamePhase: 'Q1',
+          type: 'stat',
+          playerId: 2,
+          stat: 'points',
+          value: 2,
+          team: 'lancers',
+          lancersScore: 2,
+          opponentScore: 0,
+          description: 'Camden scores 2 points'
+        },
+        {
+          id: 'evt-10-3',
+          timestamp: firebase.firestore.Timestamp.now(),
+          gamePhase: 'Q1',
+          type: 'stat',
+          stat: 'points',
+          value: 2,
+          team: 'opponent',
+          lancersScore: 2,
+          opponentScore: 2,
+          description: 'Heat scores 2'
+        },
+        {
+          id: 'evt-10-4',
+          timestamp: firebase.firestore.Timestamp.now(),
+          gamePhase: 'Q2',
+          type: 'phase',
+          description: 'Q2 started'
+        }
+      ];
+
+      try {
+        await db.collection('gameStats').doc('10').set({
+          gameId: 10,
+          isLive: true,
+          isComplete: false,
+          gamePhase: 'Q2',
+          playerStats: playerStats,
+          lancersScore: lancersScore,
+          opponentScore: Math.floor(lancersScore * 0.9),
+          onCourt: starters,
+          events: events,
+          trackedBy: 'mindy.m.carney@gmail.com',
+          startedAt: firebase.firestore.Timestamp.fromDate(new Date('2027-01-17T11:00:00'))
+        });
+        log('Live game state created for Game 10', 'success');
+        log('Lancers: ' + lancersScore + ' - Heat: ' + Math.floor(lancersScore * 0.9), 'info');
+        return true;
+      } catch (e) {
+        log('Error creating live game: ' + e.message, 'error');
+        return false;
+      }
+    }
+
+    // ===== RUN FULL SIMULATION =====
+    async function runFullSimulation() {
+      const output = document.getElementById('output');
+      output.textContent = '=== Starting Full Simulation ===\n\n';
+
+      // Reset all steps
+      ['time', 'schedule', 'stats', 'attendance', 'volunteers', 'highlights', 'messages', 'posts', 'wrapups'].forEach(s => setStep(s, 'pending'));
+
+      await setSimulationTime();
+      await syncSchedule();
+      await seedGameStats();
+      await seedAttendance();
+      await seedVolunteers();
+      await seedHighlights();
+      await seedMessages();
+      await seedPosts();
+
+      // Wrapups require head coach write permission in Firestore rules
+      setStep('wrapups', 'active');
+      await seedWrapups();
+      setStep('wrapups', 'done');
+
+      log('\n=== SIMULATION COMPLETE ===', 'success');
+      log('\nRefresh the app to see the simulated data.');
+      log('The app is now set to January 15, 2027 with 9 completed games and 4 upcoming.');
+    }
+  </script>
+</body>
+</html>

@@ -2,31 +2,33 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jr. Lancers Basketball - Installation Guide</title>
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       max-width: 700px;
       margin: 0 auto;
       padding: 40px 20px;
       color: #1a1a1a;
-      line-height: 1.6;
+      line-height: 1.7;
     }
     h1 {
       color: #000;
-      border-bottom: 3px solid #FFD700;
-      padding-bottom: 10px;
-      margin-bottom: 5px;
+      border-bottom: 4px solid #FFD700;
+      padding-bottom: 12px;
+      margin-bottom: 8px;
     }
     h2 {
       color: #000;
-      margin-top: 30px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 5px;
+      margin-top: 40px;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 8px;
     }
     h3 {
       color: #B8860B;
-      margin-top: 25px;
+      margin-top: 30px;
     }
     .subtitle {
       color: #666;
@@ -36,61 +38,90 @@
     hr {
       border: none;
       border-top: 1px solid #ddd;
-      margin: 25px 0;
+      margin: 35px 0;
     }
     ol, ul {
       padding-left: 25px;
     }
     li {
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
     code {
       background: #f0f0f0;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.95em;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 1em;
+      font-weight: 600;
     }
     .highlight {
       background: #FFFDE7;
-      padding: 15px;
-      border-radius: 8px;
+      padding: 18px;
+      border-radius: 10px;
       border-left: 4px solid #FFD700;
-      margin: 20px 0;
+      margin: 22px 0;
     }
     .step-box {
       background: #f8f9fa;
-      padding: 15px 20px;
-      border-radius: 8px;
-      margin: 15px 0;
+      padding: 20px 25px;
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+    .step-box ol {
+      margin-bottom: 0;
+    }
+    .tip {
+      background: #E8F5E9;
+      padding: 15px 18px;
+      border-radius: 10px;
+      border-left: 4px solid #4CAF50;
+      margin: 18px 0;
+    }
+    .warning {
+      background: #FFF3E0;
+      padding: 15px 18px;
+      border-radius: 10px;
+      border-left: 4px solid #FF9800;
+      margin: 18px 0;
     }
     .screenshot {
       text-align: center;
-      margin: 20px 0;
+      margin: 25px 0;
     }
     .screenshot img {
       max-width: 280px;
-      border-radius: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      border-radius: 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.18);
     }
     .screenshot-caption {
       font-size: 0.85em;
       color: #666;
-      margin-top: 8px;
+      margin-top: 10px;
+      font-style: italic;
+    }
+    .feature-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .feature-item {
+      background: #f8f9fa;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 0.95em;
     }
     .footer {
       text-align: center;
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 2px solid #FFD700;
+      margin-top: 50px;
+      padding-top: 25px;
+      border-top: 3px solid #FFD700;
       color: #000;
       font-weight: bold;
-      font-size: 1.2em;
+      font-size: 1.3em;
     }
-    @media print {
-      body { padding: 20px; }
-      h2 { page-break-after: avoid; }
-      .step-box { page-break-inside: avoid; }
-      .screenshot { page-break-inside: avoid; }
+    @media (max-width: 600px) {
+      body { padding: 20px 15px; }
+      .screenshot img { max-width: 100%; }
     }
   </style>
 </head>
@@ -98,111 +129,221 @@
   <h1>Jr. Lancers Basketball App</h1>
   <p class="subtitle">Installation Guide</p>
 
-  <p>Welcome to the Jr. Lancers! This guide will help you install our team app on your phone.</p>
+  <p>Welcome to the Jr. Lancers! This guide will help you install the team app on your phone so you can access schedules, stats, chat, and more.</p>
 
   <hr>
 
-  <h2>What is this app?</h2>
-  <p>The Jr. Lancers app is a <strong>web app</strong> that works like a regular app on your phone. It gives you access to:</p>
-  <ul>
-    <li>Game schedules and locations</li>
-    <li>Live game stats</li>
-    <li>Team playbook</li>
-    <li>Team chat and announcements</li>
-    <li>Player roster and contacts</li>
-    <li>Game highlights (photos and videos)</li>
-    <li>Attendance and volunteer signups</li>
-  </ul>
+  <h2>What is the Jr. Lancers App?</h2>
+  <p>The Jr. Lancers app is a <strong>Progressive Web App (PWA)</strong> - a website that works like a native app on your phone. Once installed, it appears on your home screen just like any other app.</p>
 
-  <hr>
-
-  <h2>Installation Instructions</h2>
-
-  <h3>iPhone / iPad</h3>
-  <div class="step-box">
-    <ol>
-      <li><strong>Open Safari</strong> (must use Safari, not Chrome)</li>
-      <li><strong>Go to:</strong> <code>lancers-bball.web.app</code></li>
-      <li><strong>Tap the Share button</strong> (square with arrow pointing up, at the bottom of the screen)</li>
-      <li><strong>Scroll down and tap "Add to Home Screen"</strong></li>
-      <li><strong>Tap "Add"</strong> in the top right corner</li>
-      <li>The Jr. Lancers app icon will appear on your home screen!</li>
-    </ol>
-  </div>
-
-  <h3>Android Phone</h3>
-  <div class="step-box">
-    <ol>
-      <li><strong>Open Chrome</strong></li>
-      <li><strong>Go to:</strong> <code>lancers-bball.web.app</code></li>
-      <li><strong>Tap the three dots</strong> (menu) in the top right corner</li>
-      <li><strong>Tap "Add to Home screen"</strong> or "Install app"</li>
-      <li><strong>Tap "Add"</strong> to confirm</li>
-      <li>The Jr. Lancers app icon will appear on your home screen!</li>
-    </ol>
+  <div class="feature-list">
+    <div class="feature-item">📅 Game schedules & locations</div>
+    <div class="feature-item">📊 Live game stats</div>
+    <div class="feature-item">🏀 Animated playbook</div>
+    <div class="feature-item">💬 Team chat & announcements</div>
+    <div class="feature-item">👥 Player roster & contacts</div>
+    <div class="feature-item">📸 Game highlights</div>
+    <div class="feature-item">✋ Attendance & volunteering</div>
+    <div class="feature-item">🔔 Push notifications</div>
   </div>
 
   <hr>
 
-  <h2>First Time Setup</h2>
+  <h2>Step 1: Open the App in Your Browser</h2>
+
+  <div class="step-box">
+    <ol>
+      <li>Open your phone's browser:
+        <ul>
+          <li><strong>iPhone/iPad:</strong> Use <strong>Safari</strong> (required)</li>
+          <li><strong>Android:</strong> Use <strong>Chrome</strong> (recommended)</li>
+        </ul>
+      </li>
+      <li>Go to: <code>lancers-bball.web.app</code></li>
+      <li>You'll see the login screen</li>
+    </ol>
+  </div>
 
   <div class="screenshot">
     <img src="screenshots/login.png" alt="Login Screen">
-    <p class="screenshot-caption">Login Screen</p>
+    <p class="screenshot-caption">Login screen</p>
   </div>
 
-  <div class="step-box">
-    <ol>
-      <li><strong>Open the app</strong> from your home screen</li>
-      <li><strong>Tap "Register"</strong> to create your account</li>
-      <li><strong>Enter your email</strong> (use the same email you gave Coach Logan)</li>
-      <li><strong>Create a password</strong> (at least 6 characters)</li>
-      <li><strong>Tap Register</strong></li>
-      <li><strong>Check your email</strong> for a verification link and click it</li>
-      <li><strong>Return to the app</strong> and sign in</li>
-    </ol>
-    <p>You'll be automatically logged in and see your child's information!</p>
+  <div class="warning">
+    <strong>iPhone users:</strong> You MUST use Safari. The "Add to Home Screen" option is not available in Chrome or other browsers on iOS.
   </div>
 
   <hr>
 
-  <h2>After Signing In</h2>
+  <h2>Step 2: Login or Register</h2>
+
+  <p><strong>Important:</strong> You must login FIRST before installing the app to your home screen.</p>
+
+  <div class="step-box">
+    <ol>
+      <li><strong>If you have an account:</strong> Enter your email and password, tap "Sign In"</li>
+      <li><strong>If you're new:</strong> Tap "Register", enter your email (must be pre-approved by Coach), create a password</li>
+      <li><strong>Verify your email</strong> if prompted</li>
+      <li>Once logged in, you'll see the home screen with your player info</li>
+    </ol>
+  </div>
+
+  <div class="screenshot">
+    <img src="screenshots/home-top.png" alt="Home Screen After Login">
+    <p class="screenshot-caption">Home screen after logging in</p>
+  </div>
+
+  <hr>
+
+  <h2>Step 3: Install to Home Screen</h2>
+
+  <h3>iPhone / iPad (Safari)</h3>
+
+  <div class="screenshot-row" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin: 25px 0;">
+    <div class="screenshot" style="flex: 1; min-width: 150px; max-width: 200px;">
+      <img src="screenshots/install-ios-1-menu.png" alt="Step 1: Tap menu" style="width: 100%; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+      <p style="text-align: center; font-size: 0.85em; color: #666; margin-top: 8px;"><strong>1.</strong> Tap the menu icon</p>
+    </div>
+    <div class="screenshot" style="flex: 1; min-width: 150px; max-width: 200px;">
+      <img src="screenshots/install-ios-2-share.png" alt="Step 2: Tap Share" style="width: 100%; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+      <p style="text-align: center; font-size: 0.85em; color: #666; margin-top: 8px;"><strong>2.</strong> Tap "Share"</p>
+    </div>
+    <div class="screenshot" style="flex: 1; min-width: 150px; max-width: 200px;">
+      <img src="screenshots/install-ios-3-add-to-home.png" alt="Step 3: Add to Home Screen" style="width: 100%; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+      <p style="text-align: center; font-size: 0.85em; color: #666; margin-top: 8px;"><strong>3.</strong> Tap "Add to Home Screen"</p>
+    </div>
+    <div class="screenshot" style="flex: 1; min-width: 150px; max-width: 200px;">
+      <img src="screenshots/install-ios-4-confirm.png" alt="Step 4: Tap Add" style="width: 100%; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+      <p style="text-align: center; font-size: 0.85em; color: #666; margin-top: 8px;"><strong>4.</strong> Tap "Add"</p>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <ol>
+      <li><strong>Tap the menu icon</strong> (three lines) at the bottom of Safari</li>
+      <li><strong>Tap "Share"</strong> in the menu that appears</li>
+      <li><strong>Scroll down and tap "Add to Home Screen"</strong></li>
+      <li><strong>Tap "Add"</strong> in the top right corner</li>
+      <li><strong>Done!</strong> The Jr. Lancers icon appears on your home screen</li>
+    </ol>
+  </div>
+
+  <div class="tip">
+    <strong>Can't find "Add to Home Screen"?</strong>
+    <ul>
+      <li>Make sure you're using Safari (not Chrome)</li>
+      <li>Scroll down in the share menu - it's not always visible at first</li>
+      <li>If using iOS 17+, you may need to scroll horizontally to find it</li>
+    </ul>
+  </div>
+
+  <h3>Android (Chrome)</h3>
+
+  <div class="step-box">
+    <ol>
+      <li><strong>Tap the three dots (⋮)</strong> in the top right corner of Chrome</li>
+      <li><strong>Tap "Install app"</strong> or "Add to Home screen"</li>
+      <li><strong>Tap "Install"</strong> to confirm</li>
+      <li><strong>Done!</strong> The Jr. Lancers icon appears on your home screen</li>
+    </ol>
+  </div>
+
+  <div class="tip">
+    <strong>Android alternative:</strong> Some phones show an "Install" banner at the bottom of the screen automatically. Tap it to install.
+  </div>
+
+  <hr>
+
+  <h2>Step 4: Enable Notifications</h2>
+
+  <p>After logging in, you'll be prompted to enable push notifications. We recommend enabling them to stay updated on:</p>
+
+  <ul>
+    <li>New chat messages</li>
+    <li>Coach announcements</li>
+    <li>RSVP and volunteer reminders</li>
+    <li>Game starting alerts</li>
+  </ul>
+
+  <div class="step-box">
+    <ol>
+      <li>Tap <strong>"Enable"</strong> when prompted in the app</li>
+      <li>Tap <strong>"Allow"</strong> when your phone asks for permission</li>
+      <li><strong>Done!</strong> You'll receive notifications for team updates</li>
+    </ol>
+  </div>
+
+  <div class="tip">
+    <strong>Missed the prompt?</strong> You can enable notifications later:
+    <ul>
+      <li><strong>iPhone:</strong> Settings → Safari → Notifications → Allow</li>
+      <li><strong>Android:</strong> Settings → Apps → Chrome/Jr. Lancers → Notifications → On</li>
+    </ul>
+  </div>
+
+  <hr>
+
+  <h2>You're All Set!</h2>
+
   <p>Once logged in, you'll see the home screen with your child's info and the next game:</p>
 
   <div class="screenshot">
-    <img src="screenshots/home.png" alt="Home Screen">
-    <p class="screenshot-caption">Home Screen</p>
+    <img src="screenshots/home-top.png" alt="Home Screen">
+    <p class="screenshot-caption">Home screen after login</p>
+  </div>
+
+  <div class="highlight">
+    <strong>Next steps:</strong>
+    <ul>
+      <li>Check the <strong>Schedule</strong> for upcoming games</li>
+      <li>RSVP for the next game</li>
+      <li>Review the <strong>Playbook</strong> with your child</li>
+      <li>Read the <a href="user-guide.html">User Guide</a> for full feature details</li>
+    </ul>
   </div>
 
   <hr>
 
   <h2>Troubleshooting</h2>
 
-  <p><strong>"Add to Home Screen" not showing?</strong></p>
+  <h3>"Add to Home Screen" not showing?</h3>
   <ul>
-    <li>iPhone: Make sure you're using Safari (not Chrome or another browser)</li>
-    <li>Android: Make sure you're using Chrome</li>
+    <li><strong>iPhone:</strong> Make sure you're using Safari, not Chrome</li>
+    <li><strong>Android:</strong> Make sure you're using Chrome, not another browser</li>
+    <li>Try refreshing the page</li>
+    <li>Make sure you're on the correct URL: <code>lancers-bball.web.app</code></li>
   </ul>
 
-  <p><strong>Can't register?</strong></p>
+  <h3>Can't register?</h3>
   <ul>
     <li>Make sure you're using the email address you provided to Coach Logan</li>
-    <li>Only pre-approved parent emails can register</li>
-    <li>If you get an error, contact Coach Logan</li>
+    <li>Only pre-approved parent/coach emails can register</li>
+    <li>If you're a viewer (grandparent, etc.), ask your family member to invite you first</li>
+    <li>Contact Coach Logan if you're still having issues</li>
   </ul>
 
-  <p><strong>Verification email not arriving?</strong></p>
+  <h3>Verification email not arriving?</h3>
   <ul>
     <li>Check your spam/junk folder</li>
-    <li>Wait a few minutes and try again</li>
-    <li>Contact Coach Logan if still having issues</li>
+    <li>Wait a few minutes - sometimes there's a delay</li>
+    <li>Try registering again with the same email</li>
+    <li>Make sure you entered your email correctly</li>
   </ul>
 
-  <p><strong>App not loading?</strong></p>
+  <h3>App not loading or showing errors?</h3>
   <ul>
     <li>Check your internet connection</li>
-    <li>Try refreshing the page</li>
-    <li>Clear your browser cache</li>
+    <li>Try refreshing or closing and reopening the app</li>
+    <li>Clear your browser cache (Settings → Safari/Chrome → Clear History)</li>
+    <li>Make sure you're using a supported browser (Safari on iOS, Chrome on Android)</li>
+  </ul>
+
+  <h3>Notifications not working?</h3>
+  <ul>
+    <li>Check that notifications are enabled in your phone's settings</li>
+    <li>On iPhone: Settings → Notifications → Safari/Jr. Lancers → Allow Notifications</li>
+    <li>On Android: Settings → Apps → Chrome/Jr. Lancers → Notifications → On</li>
+    <li>Make sure you tapped "Allow" when first prompted</li>
   </ul>
 
   <hr>
@@ -214,6 +355,6 @@
     Phone: 314-258-1513</p>
   </div>
 
-  <div class="footer">Go Lancers!</div>
+  <div class="footer">Go Lancers! 🏀</div>
 </body>
 </html>

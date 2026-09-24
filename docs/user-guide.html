@@ -2,31 +2,38 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jr. Lancers Basketball - User Guide</title>
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 700px;
+      max-width: 800px;
       margin: 0 auto;
       padding: 40px 20px;
       color: #1a1a1a;
-      line-height: 1.6;
+      line-height: 1.7;
     }
     h1 {
       color: #000;
-      border-bottom: 3px solid #FFD700;
-      padding-bottom: 10px;
-      margin-bottom: 5px;
+      border-bottom: 4px solid #FFD700;
+      padding-bottom: 12px;
+      margin-bottom: 8px;
     }
     h2 {
       color: #000;
-      margin-top: 35px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 5px;
+      margin-top: 50px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #ddd;
     }
     h3 {
       color: #B8860B;
+      margin-top: 30px;
+    }
+    h4 {
+      color: #444;
       margin-top: 20px;
+      margin-bottom: 10px;
     }
     .subtitle {
       color: #666;
@@ -36,68 +43,96 @@
     hr {
       border: none;
       border-top: 1px solid #ddd;
-      margin: 30px 0;
+      margin: 40px 0;
     }
     ul, ol {
       padding-left: 25px;
     }
     li {
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
     .feature-box {
       background: #f8f9fa;
-      padding: 15px 20px;
-      border-radius: 8px;
-      margin: 15px 0;
+      padding: 18px 22px;
+      border-radius: 10px;
+      margin: 18px 0;
     }
     .highlight {
       background: #FFFDE7;
-      padding: 15px;
-      border-radius: 8px;
+      padding: 18px;
+      border-radius: 10px;
       border-left: 4px solid #FFD700;
-      margin: 20px 0;
+      margin: 22px 0;
     }
     .tip {
-      background: #FFF8E1;
-      padding: 15px;
-      border-radius: 8px;
-      border-left: 4px solid #B8860B;
-      margin: 20px 0;
+      background: #E8F5E9;
+      padding: 15px 18px;
+      border-radius: 10px;
+      border-left: 4px solid #4CAF50;
+      margin: 18px 0;
+    }
+    .warning {
+      background: #FFF3E0;
+      padding: 15px 18px;
+      border-radius: 10px;
+      border-left: 4px solid #FF9800;
+      margin: 18px 0;
+    }
+    .coach-only {
+      background: #E3F2FD;
+      padding: 15px 18px;
+      border-radius: 10px;
+      border-left: 4px solid #2196F3;
+      margin: 18px 0;
     }
     .screenshot {
       text-align: center;
-      margin: 25px 0;
+      margin: 28px 0;
     }
     .screenshot img {
-      max-width: 280px;
-      border-radius: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      max-width: 300px;
+      border-radius: 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.18);
     }
     .screenshot-caption {
       font-size: 0.85em;
       color: #666;
-      margin-top: 8px;
+      margin-top: 10px;
+      font-style: italic;
     }
     .screenshot-row {
       display: flex;
       justify-content: center;
-      gap: 20px;
+      gap: 24px;
       flex-wrap: wrap;
-      margin: 25px 0;
+      margin: 28px 0;
     }
     .screenshot-row .screenshot {
-      margin: 10px 0;
+      margin: 12px 0;
     }
     .screenshot-row .screenshot img {
-      max-width: 200px;
+      max-width: 220px;
+    }
+    .screenshot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 28px 0;
+    }
+    .screenshot-grid .screenshot {
+      margin: 0;
+    }
+    .screenshot-grid .screenshot img {
+      max-width: 100%;
+      width: 200px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 15px 0;
+      margin: 18px 0;
     }
     th, td {
-      padding: 10px;
+      padding: 12px;
       text-align: left;
       border-bottom: 1px solid #ddd;
     }
@@ -105,14 +140,48 @@
       background: #000;
       color: white;
     }
+    tr:hover {
+      background: #f8f9fa;
+    }
+    code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .toc {
+      background: #f8f9fa;
+      padding: 20px 30px;
+      border-radius: 10px;
+      margin: 30px 0;
+    }
+    .toc h3 {
+      margin-top: 0;
+      color: #000;
+    }
+    .toc ol {
+      margin: 0;
+    }
+    .toc a {
+      color: #1a1a1a;
+      text-decoration: none;
+    }
+    .toc a:hover {
+      color: #B8860B;
+    }
     .footer {
       text-align: center;
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 2px solid #FFD700;
+      margin-top: 50px;
+      padding-top: 25px;
+      border-top: 3px solid #FFD700;
       color: #000;
       font-weight: bold;
-      font-size: 1.2em;
+      font-size: 1.3em;
+    }
+    @media (max-width: 600px) {
+      body { padding: 20px 15px; }
+      .screenshot img { max-width: 100%; }
+      .screenshot-row .screenshot img { max-width: 160px; }
     }
     @media print {
       body { padding: 20px; }
@@ -123,157 +192,367 @@
 </head>
 <body>
   <h1>Jr. Lancers Basketball App</h1>
-  <p class="subtitle">User Guide</p>
+  <p class="subtitle">Complete User Guide</p>
 
-  <p>A complete guide to using all the features in the Jr. Lancers team app.</p>
+  <p>Everything you need to know about using the Jr. Lancers team app. This guide covers all features for parents, coaches, and viewers.</p>
+
+  <div class="toc">
+    <h3>Table of Contents</h3>
+    <ol>
+      <li><a href="#home">Home Screen</a></li>
+      <li><a href="#roster">Roster & Player Profiles</a></li>
+      <li><a href="#schedule">Schedule</a></li>
+      <li><a href="#game-detail">Game Details</a></li>
+      <li><a href="#attendance">Attendance (RSVP)</a></li>
+      <li><a href="#volunteering">Volunteering</a></li>
+      <li><a href="#messages">Messages & Chat</a></li>
+      <li><a href="#playbook">Playbook</a></li>
+      <li><a href="#play-designer">Play Designer (Coaches)</a></li>
+      <li><a href="#live-stats">Live Game Stats</a></li>
+      <li><a href="#scorekeeping">Scorekeeping Guide</a></li>
+      <li><a href="#highlights">Highlights</a></li>
+      <li><a href="#wrapups">Game Wrap-Ups</a></li>
+      <li><a href="#viewers">For Viewers (Family)</a></li>
+      <li><a href="#features">Universal Features</a></li>
+      <li><a href="#tips">Tips & Quick Reference</a></li>
+    </ol>
+  </div>
 
   <hr>
 
-  <h2>Home Screen</h2>
-  <p>The home screen is your dashboard showing the most important info at a glance.</p>
+  <!-- ============================================ -->
+  <!-- HOME SCREEN -->
+  <!-- ============================================ -->
+  <h2 id="home">Home Screen</h2>
+  <p>Your dashboard showing the most important information at a glance.</p>
 
-  <div class="screenshot">
-    <img src="screenshots/home.png" alt="Home Screen">
-    <p class="screenshot-caption">Home Screen</p>
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/home-top.png" alt="Home Screen - Top">
+      <p class="screenshot-caption">Top: Player info & next game</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/home-bottom.png" alt="Home Screen - Bottom">
+      <p class="screenshot-caption">Bottom: Volunteering & leaderboard</p>
+    </div>
   </div>
 
-  <p><strong>What you'll see:</strong></p>
+  <h4>What You'll See:</h4>
   <ul>
-    <li><strong>Your Player Info</strong> - Your child's name, number, and position</li>
-    <li><strong>Next Game/Practice</strong> - Date, time, opponent, and location</li>
+    <li><strong>Player Banner</strong> - Your child's name, number, and position (tap to switch if you have multiple children)</li>
+    <li><strong>Next Game Card</strong> - Date, time, opponent, location, and jersey color</li>
+    <li><strong>Live Stats Button</strong> - Appears during games (see <a href="#live-stats">Live Stats</a>)</li>
     <li><strong>Season Record</strong> - Team wins and losses</li>
     <li><strong>My Volunteering</strong> - Your completed and upcoming volunteer roles</li>
-    <li><strong>Sign Up to Volunteer</strong> - Quick link to volunteer for games</li>
+    <li><strong>Team Spirit Leaderboard</strong> - Families ranked by volunteer points and highlights uploaded</li>
   </ul>
 
-  <div class="tip">
-    <strong>Tip:</strong> Tap the moon icon in the header to switch to light mode!
+  <div class="feature-box">
+    <h4>Team Spirit Points</h4>
+    <table>
+      <tr><th>Activity</th><th>Points</th></tr>
+      <tr><td>Volunteering (scorekeeper or table worker)</td><td>+10 per game</td></tr>
+      <tr><td>Uploading a highlight</td><td>+1 per highlight</td></tr>
+    </table>
   </div>
 
   <hr>
 
-  <h2>Roster</h2>
-  <p>View all players, parents, and coaches.</p>
+  <!-- ============================================ -->
+  <!-- ROSTER -->
+  <!-- ============================================ -->
+  <h2 id="roster">Roster & Player Profiles</h2>
+  <p>View all players, parents, and coaches on the team.</p>
 
-  <div class="screenshot">
-    <img src="screenshots/roster.png" alt="Roster">
-    <p class="screenshot-caption">Roster - Players Tab</p>
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/roster-players.png" alt="Roster - Players">
+      <p class="screenshot-caption">Players tab</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/roster-parents.png" alt="Roster - Parents">
+      <p class="screenshot-caption">Parents tab</p>
+    </div>
   </div>
 
-  <p><strong>Features:</strong></p>
+  <h4>Features:</h4>
   <ul>
-    <li>View all players with their numbers and positions</li>
-    <li>See coaching staff at the top</li>
-    <li>Tap the <strong>Parents</strong> tab to see parent contact info</li>
-    <li>Tap any player card to view their full profile</li>
+    <li><strong>Players Tab</strong> - All players with numbers and positions</li>
+    <li><strong>Parents Tab</strong> - Parent contact directory with phone/email</li>
+    <li><strong>Coaches</strong> - Shown at the top of the players tab</li>
+    <li><strong>Tap any player</strong> to view their full profile</li>
   </ul>
 
   <h3>Player Profile</h3>
-  <p>Tap any player to see their detailed profile:</p>
+  <p>Tap any player card to see their detailed profile with stats, highlights, and contact info.</p>
 
-  <div class="screenshot">
-    <img src="screenshots/player-profile.png" alt="Player Profile">
-    <p class="screenshot-caption">Player Profile</p>
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/player-profile-top.png" alt="Player Profile">
+      <p class="screenshot-caption">Profile header & contact</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/player-profile-stats.png" alt="Player Stats">
+      <p class="screenshot-caption">Season statistics</p>
+    </div>
   </div>
 
-  <p>The player profile shows:</p>
+  <h4>Profile Sections:</h4>
   <ul>
-    <li><strong>Stats</strong> - Season totals and per-game averages</li>
+    <li><strong>Season Stats</strong> - Aggregated totals with toggle for per-game averages
+      <ul>
+        <li>Points, rebounds, assists, steals, blocks, turnovers, fouls</li>
+        <li>Shooting percentages (FG%, 3P%, FT%)</li>
+      </ul>
+    </li>
+    <li><strong>Game-by-Game Stats</strong> - Individual game performance history</li>
     <li><strong>Highlights</strong> - Photos and videos featuring this player</li>
-    <li><strong>Contact Info</strong> - Parent names, phone, and email</li>
-    <li><strong>Invited Viewers</strong> - Family members you've invited (see below)</li>
+    <li><strong>Contact Info</strong> - Parent names, phone numbers, and email</li>
+    <li><strong>Invited Viewers</strong> - Family members you've invited (your child only)</li>
   </ul>
 
-  <h3>Invite Viewers (Family Members)</h3>
-  <p>You can invite grandparents, aunts, uncles, or other family members to view the app.</p>
+  <h3>Game-by-Game Stats</h3>
+  <p>See how a player performed in each individual game throughout the season.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/player-profile-games.png" alt="Game-by-Game Stats">
+    <p class="screenshot-caption">Individual game performance breakdown</p>
+  </div>
+
+  <div class="feature-box">
+    <h4>Game-by-Game View:</h4>
+    <ul>
+      <li><strong>Date & Opponent</strong> - Which game the stats are from</li>
+      <li><strong>Result</strong> - Win or loss with final score</li>
+      <li><strong>Individual Stats</strong> - Points, rebounds, assists, and other stats for that game</li>
+      <li><strong>Shooting Breakdown</strong> - Made/attempted for 2PT, 3PT, and free throws</li>
+    </ul>
+    <p>Tap any game row to jump to the full game details page.</p>
+  </div>
+
+  <div class="tip">
+    <strong>Track progress:</strong> Use game-by-game stats to see how your player is improving over the season. Compare early games to recent ones to spot growth areas.
+  </div>
+
+  <h3>Inviting Viewers (Family Members)</h3>
+  <p>Parents can invite grandparents, aunts, uncles, or other family to follow the team.</p>
 
   <div class="feature-box">
     <p><strong>To invite a viewer:</strong></p>
     <ol>
       <li>Open your child's player profile</li>
-      <li>Scroll down to <strong>"Invited Viewers"</strong></li>
+      <li>Scroll to <strong>"Invited Viewers"</strong></li>
       <li>Tap <strong>"+ Add"</strong></li>
       <li>Enter their email, name, and relationship</li>
       <li>Tap <strong>"Send Invite"</strong></li>
     </ol>
-    <p>They'll receive an email with instructions to create their account.</p>
+    <p>They'll receive an email with registration instructions.</p>
   </div>
 
   <div class="tip">
-    <strong>Note:</strong> Viewers can see schedules, roster, stats, and highlights, but cannot access chat or the playbook.
+    <strong>Note:</strong> Viewers have limited access - they can see schedules, stats, and highlights, but cannot access team chat or the playbook.
   </div>
 
   <hr>
 
-  <h2>Schedule</h2>
+  <!-- ============================================ -->
+  <!-- SCHEDULE -->
+  <!-- ============================================ -->
+  <h2 id="schedule">Schedule</h2>
   <p>View all games and practices for the season.</p>
 
-  <div class="screenshot">
-    <img src="screenshots/schedule.png" alt="Schedule">
-    <p class="screenshot-caption">Schedule</p>
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/schedule-upcoming.png" alt="Schedule - Upcoming">
+      <p class="screenshot-caption">Upcoming games</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/schedule-completed.png" alt="Schedule - Completed">
+      <p class="screenshot-caption">Completed games with scores</p>
+    </div>
   </div>
 
-  <p><strong>For each event you'll see:</strong></p>
+  <h4>For Each Event:</h4>
   <ul>
-    <li>Date and time</li>
-    <li>Type (Game or Practice)</li>
-    <li>Opponent (for games)</li>
-    <li>Location</li>
-    <li>Attendance count</li>
+    <li><strong>Date & Time</strong></li>
+    <li><strong>Event Type</strong> - Game or Practice</li>
+    <li><strong>Opponent</strong> - Team name and league (Park Rock or CNR)</li>
+    <li><strong>Location</strong> - Gym address</li>
+    <li><strong>Jersey Color</strong> - Black or gold</li>
+    <li><strong>Attendance Count</strong> - How many have RSVP'd</li>
+    <li><strong>Volunteer Status</strong> - Icons show if positions are filled</li>
   </ul>
 
-  <p>Tap any event to see full details, RSVP, and volunteer.</p>
-
-  <h3>Game Details</h3>
-
-  <div class="screenshot">
-    <img src="screenshots/game-detail.png" alt="Game Details">
-    <p class="screenshot-caption">Game Details</p>
-  </div>
-
-  <p>The game detail page shows:</p>
-  <ul>
-    <li><strong>Attendance</strong> - Who's coming, who can't make it</li>
-    <li><strong>RSVP Button</strong> - Respond for your child</li>
-    <li><strong>Volunteers Needed</strong> - Sign up to help</li>
-    <li><strong>Highlights</strong> - Photos/videos from this game</li>
-  </ul>
+  <p>Tap any event to see full details, RSVP, or sign up to volunteer.</p>
 
   <hr>
 
-  <h2>Attendance (RSVP)</h2>
-  <p>Let Coach know if your child can make it to each game.</p>
+  <!-- ============================================ -->
+  <!-- GAME DETAIL -->
+  <!-- ============================================ -->
+  <h2 id="game-detail">Game Details</h2>
+  <p>The game detail page shows everything about a specific game.</p>
+
+  <h3>Upcoming Games</h3>
+
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/game-upcoming-top.png" alt="Upcoming Game">
+      <p class="screenshot-caption">Game info</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/volunteers-list.png" alt="Volunteers Section">
+      <p class="screenshot-caption">Volunteer signups</p>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong>Game Info</strong> - Date, time, location, opponent</li>
+    <li><strong>RSVP Section</strong> - See who's attending, submit your response</li>
+    <li><strong>Volunteers Needed</strong> - Sign up as scorekeeper or table worker</li>
+  </ul>
+
+  <h3>Completed Games</h3>
+
+  <p>Completed games include all the details of how the game went - score, stats, play-by-play, and more.</p>
+
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/game-completed-top.png" alt="Completed Game">
+      <p class="screenshot-caption">Final score & game info</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/game-completed-boxscore.png" alt="Box Score">
+      <p class="screenshot-caption">Player statistics</p>
+    </div>
+  </div>
+
+  <h4>Game Info Section</h4>
+  <ul>
+    <li><strong>Final Score</strong> - Win/loss result with final score</li>
+    <li><strong>Quarter-by-Quarter</strong> - Score breakdown by period (Q1, Q2, Q3, Q4)</li>
+    <li><strong>Team Stats Summary</strong> - Quick overview of key team stats</li>
+  </ul>
+
+  <h4>Box Score (Stats)</h4>
+  <p>Full statistical breakdown for every player who played in the game.</p>
 
   <div class="screenshot">
-    <img src="screenshots/attendance.png" alt="Attendance">
-    <p class="screenshot-caption">Attendance / RSVP</p>
+    <img src="screenshots/game-completed-boxscore.png" alt="Box Score">
+    <p class="screenshot-caption">Complete box score with all player stats</p>
+  </div>
+
+  <div class="feature-box">
+    <h4>Box Score Includes:</h4>
+    <ul>
+      <li><strong>Points (PTS)</strong> - Total points scored</li>
+      <li><strong>Field Goals (FG)</strong> - Made/attempted with percentage</li>
+      <li><strong>3-Pointers (3PT)</strong> - Made/attempted with percentage</li>
+      <li><strong>Free Throws (FT)</strong> - Made/attempted with percentage</li>
+      <li><strong>Rebounds (REB)</strong> - Total rebounds</li>
+      <li><strong>Assists (AST)</strong> - Total assists</li>
+      <li><strong>Steals (STL)</strong> - Total steals</li>
+      <li><strong>Blocks (BLK)</strong> - Total blocks</li>
+      <li><strong>Turnovers (TO)</strong> - Total turnovers</li>
+      <li><strong>Fouls (PF)</strong> - Personal fouls</li>
+    </ul>
+  </div>
+
+  <h4>Play-by-Play (Game Flow)</h4>
+  <p>A chronological timeline of every play that happened during the game.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/game-completed-pbp.png" alt="Play by Play">
+    <p class="screenshot-caption">Play-by-play event feed</p>
+  </div>
+
+  <ul>
+    <li><strong>Quarter Headers</strong> - Events grouped by quarter</li>
+    <li><strong>Scoring Plays</strong> - Every basket with player name and running score</li>
+    <li><strong>Other Plays</strong> - Steals, blocks, turnovers, fouls</li>
+    <li><strong>Timestamps</strong> - When each play occurred</li>
+    <li><strong>Highlight Links</strong> - Camera icon appears if a highlight is linked to that play</li>
+  </ul>
+
+  <div class="tip">
+    <strong>Relive the game:</strong> The play-by-play lets you see exactly how the game unfolded, play by play. Look for the camera icon to see photos/videos from specific moments!
+  </div>
+
+  <h4>Game Highlights</h4>
+  <p>Photos and videos captured during this game.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/game-completed-highlights.png" alt="Game Highlights">
+    <p class="screenshot-caption">Highlights from this game</p>
+  </div>
+
+  <ul>
+    <li><strong>Thumbnail Grid</strong> - Quick preview of all media</li>
+    <li><strong>Player Tags</strong> - See which player is featured</li>
+    <li><strong>Linked Plays</strong> - Some highlights are linked to specific plays in the play-by-play</li>
+    <li>Tap any thumbnail to view fullscreen</li>
+  </ul>
+
+  <h4>Game Wrap-Up</h4>
+  <p>Summary narrative and coach's notes about the game.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/game-wrapup.png" alt="Game Wrap-Up">
+    <p class="screenshot-caption">AI-generated game recap with coach's notes</p>
+  </div>
+
+  <ul>
+    <li><strong>Narrative Summary</strong> - AI-generated recap describing key moments and how the game went</li>
+    <li><strong>Coach's Notes</strong> - Commentary from Coach about the game</li>
+    <li><strong>Player of the Game</strong> - Standout performer with their key stats</li>
+    <li><strong>Player Shoutouts</strong> - Recognition for great plays or effort</li>
+  </ul>
+
+  <p>See the <a href="#wrapups">Game Wrap-Ups</a> section below for more details on how wrap-ups work.</p>
+
+  <hr>
+
+  <!-- ============================================ -->
+  <!-- ATTENDANCE -->
+  <!-- ============================================ -->
+  <h2 id="attendance">Attendance (RSVP)</h2>
+  <p>Let Coach know if your child can make it to each game or practice.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/attendance-list.png" alt="Attendance">
+    <p class="screenshot-caption">Attendance tracker</p>
   </div>
 
   <div class="feature-box">
     <p><strong>To RSVP:</strong></p>
     <ol>
       <li>Go to <strong>Schedule</strong> and tap a game</li>
+      <li>Find the <strong>Attendance</strong> section</li>
       <li>Tap <strong>"RSVP Now"</strong></li>
-      <li>Select <strong>"Yes, attending"</strong> or <strong>"Can't make it"</strong></li>
+      <li>Select <strong>"Attending"</strong> or <strong>"Can't Make It"</strong></li>
     </ol>
   </div>
 
   <p>You can change your response anytime by tapping <strong>"Change"</strong>.</p>
 
   <div class="highlight">
-    <strong>Please RSVP as early as possible so Coach can plan accordingly!</strong>
+    <strong>Please RSVP as early as possible!</strong> This helps Coach plan lineups and know if we have enough players.
   </div>
 
   <hr>
 
-  <h2>Volunteering</h2>
-  <p>Sign up to help at games!</p>
+  <!-- ============================================ -->
+  <!-- VOLUNTEERING -->
+  <!-- ============================================ -->
+  <h2 id="volunteering">Volunteering</h2>
+  <p>Sign up to help at games! We need volunteers for every game.</p>
 
   <div class="screenshot">
-    <img src="screenshots/volunteers.png" alt="Volunteers">
-    <p class="screenshot-caption">Volunteer Sign-ups</p>
+    <img src="screenshots/volunteers-list.png" alt="Volunteers">
+    <p class="screenshot-caption">Volunteer signup page</p>
   </div>
 
+  <h3>Volunteer Roles</h3>
   <table>
     <tr>
       <th>Role</th>
@@ -281,233 +560,533 @@
     </tr>
     <tr>
       <td><strong>Scorekeeper</strong></td>
-      <td>Track live stats in the app during the game</td>
+      <td>Track live stats in the app during the game. See <a href="#scorekeeping">Scorekeeping Guide</a>.</td>
     </tr>
     <tr>
       <td><strong>Table Worker</strong></td>
-      <td>Run the official scorer's table (CNR games only)</td>
+      <td>Run the official scorer's table (CNR games only) - tracking fouls, timeouts, etc.</td>
     </tr>
   </table>
 
   <div class="feature-box">
     <p><strong>To sign up:</strong></p>
     <ol>
-      <li>Go to a game's detail page or the Volunteers section</li>
-      <li>Find a role that needs filling</li>
-      <li>Tap <strong>"Sign Up"</strong></li>
+      <li>Go to a game's detail page or the <strong>Volunteers</strong> tab</li>
+      <li>Find a game that needs volunteers</li>
+      <li>Tap <strong>"Sign Up"</strong> for your preferred role</li>
     </ol>
+  </div>
+
+  <h3>Team Spirit Scoreboard</h3>
+  <p>The home page shows a <strong>Team Spirit Leaderboard</strong> ranking families by:</p>
+  <ul>
+    <li><strong>Volunteer points</strong> - 10 points per game volunteered</li>
+    <li><strong>Highlight uploads</strong> - 1 point per photo/video uploaded</li>
+  </ul>
+
+  <div class="tip">
+    <strong>Game day reminders:</strong> Volunteers receive push notifications:
+    <ul>
+      <li>2 days before: "Volunteers Needed!"</li>
+      <li>Day before: "URGENT: Volunteers Needed Tomorrow!"</li>
+      <li>Game day: Reminder 10 minutes before game time</li>
+    </ul>
   </div>
 
   <hr>
 
-  <h2>Chat (Messages)</h2>
-  <p>The Chat section has three tabs for team communication.</p>
+  <!-- ============================================ -->
+  <!-- MESSAGES -->
+  <!-- ============================================ -->
+  <h2 id="messages">Messages & Chat</h2>
+  <p>Team communication hub with three tabs.</p>
 
-  <h3>Group Chat (Default)</h3>
-  <p>Real-time messaging with the whole team.</p>
-
-  <div class="screenshot">
-    <img src="screenshots/chat-group.png" alt="Group Chat">
-    <p class="screenshot-caption">Group Chat</p>
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/chat-group.png" alt="Group Chat">
+      <p class="screenshot-caption">Group Chat</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/chat-posts.png" alt="Posts">
+      <p class="screenshot-caption">Coach Posts</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/chat-text.png" alt="Text Contacts">
+      <p class="screenshot-caption">Text Contacts</p>
+    </div>
   </div>
 
-  <div class="feature-box">
-    <p><strong>To send a message:</strong></p>
-    <ol>
-      <li>Type your message in the box at the bottom</li>
-      <li>Tap the send button (arrow icon)</li>
-    </ol>
-  </div>
+  <h3>Group Chat (Default Tab)</h3>
+  <p>Real-time messaging with the whole team - parents and coaches.</p>
+  <ul>
+    <li>Type a message and tap send</li>
+    <li>See who sent each message</li>
+    <li><strong>"New Messages" divider</strong> shows where you left off</li>
+  </ul>
 
   <h3>Posts Tab</h3>
-  <p>Coach announcements that everyone can see and comment on.</p>
-
-  <div class="screenshot">
-    <img src="screenshots/chat-posts.png" alt="Posts">
-    <p class="screenshot-caption">Posts Tab</p>
-  </div>
-
+  <p>Official announcements from Coach. Only the head coach can create posts.</p>
   <ul>
-    <li>Read important updates from Coach</li>
-    <li>React to posts with emojis</li>
+    <li>Important updates and reminders</li>
     <li>Tap a post to view and add comments</li>
+    <li>React with emojis</li>
   </ul>
 
   <h3>Text Tab</h3>
-  <p>Quick access to text (SMS) any parent or coach directly.</p>
-
-  <div class="screenshot">
-    <img src="screenshots/chat-text.png" alt="Text">
-    <p class="screenshot-caption">Text Tab - Contact Directory</p>
-  </div>
-
-  <div class="feature-box">
-    <p><strong>To text someone:</strong></p>
-    <ol>
-      <li>Find the person (use search if needed)</li>
-      <li>Tap the <strong>"Text"</strong> button</li>
-      <li>Your phone's messaging app opens with their number</li>
-    </ol>
-  </div>
-
-  <p>Great for private conversations or coordinating carpools!</p>
+  <p>Contact directory for texting parents and coaches directly via SMS.</p>
+  <ul>
+    <li>Search for a person</li>
+    <li>Tap <strong>"Text"</strong> to open your phone's messaging app</li>
+    <li>Great for private conversations or coordinating carpools</li>
+  </ul>
 
   <hr>
 
-  <h2>Playbook</h2>
-  <p>View all the team's plays with animated diagrams.</p>
+  <!-- ============================================ -->
+  <!-- PLAYBOOK -->
+  <!-- ============================================ -->
+  <h2 id="playbook">Playbook</h2>
+  <p>View all the team's plays with animated diagrams. Great for practicing at home!</p>
 
-  <div class="screenshot">
-    <img src="screenshots/playbook.png" alt="Playbook">
-    <p class="screenshot-caption">Playbook</p>
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/playbook-list.png" alt="Playbook">
+      <p class="screenshot-caption">Playbook with plays</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/playbook-animating.png" alt="Playbook Animation">
+      <p class="screenshot-caption">Play animation</p>
+    </div>
   </div>
 
+  <h4>How to Use:</h4>
+  <ol>
+    <li><strong>Select a category:</strong> VS MAN, VS ZONE, or INBOUND</li>
+    <li><strong>Choose a play</strong> from the list</li>
+    <li><strong>Use the "Highlight" dropdown</strong> to show your child's position highlighted on the court</li>
+    <li><strong>Tap "Go"</strong> to watch the play animate step-by-step</li>
+    <li><strong>Read the steps</strong> below the diagram</li>
+  </ol>
+
   <div class="feature-box">
-    <p><strong>How to use:</strong></p>
-    <ol>
-      <li>Select a category: <strong>VS MAN</strong>, <strong>VS ZONE</strong>, or <strong>INBOUND</strong></li>
-      <li>Use the <strong>"Highlight"</strong> dropdown to show your child's position</li>
-      <li>Tap <strong>"Go"</strong> to watch the play animate</li>
-      <li>Read the steps below the diagram</li>
-    </ol>
+    <h4>Position Highlighting</h4>
+    <p>Select your child's position (1-5) from the "Highlight" dropdown to see their movements emphasized during animation. This makes it easy to understand exactly what your player does in each play.</p>
   </div>
 
   <div class="tip">
-    <strong>Tip:</strong> Great for practicing plays at home with your child!
+    <strong>Practice at home!</strong> Walk through plays with your child using the animated diagrams. Knowing the plays builds confidence on the court.
   </div>
 
   <hr>
 
-  <h2>Live Game Stats</h2>
-  <p>View stats during games or track them as Scorekeeper.</p>
+  <!-- ============================================ -->
+  <!-- PLAY DESIGNER -->
+  <!-- ============================================ -->
+  <h2 id="play-designer">Play Designer (Coaches Only)</h2>
+  <p>Coaches can create and edit plays using the interactive Play Designer.</p>
 
-  <h3>Viewing Stats</h3>
+  <div class="coach-only">
+    <strong>Coach Access Only:</strong> This feature is only available to coaches. Parents see plays in the Playbook but cannot create or edit them.
+  </div>
+
+  <div class="screenshot">
+    <img src="screenshots/play-designer.png" alt="Play Designer">
+    <p class="screenshot-caption">Play Designer with court and action tools</p>
+  </div>
+
+  <h4>Features:</h4>
   <ul>
-    <li>During games, stats update in real-time</li>
-    <li>Go to <strong>Stats</strong> tab and select a game</li>
-    <li>See points, rebounds, assists, steals, and more for each player</li>
+    <li><strong>Templates</strong> - Start from preset formations (Traditional, 5-Out, Horns, Box, etc.)</li>
+    <li><strong>Drag Players</strong> - Position players anywhere on court (including out of bounds for inbound plays)</li>
+    <li><strong>Draw Actions:</strong>
+      <ul>
+        <li><strong>Dribble</strong> - Wavy line</li>
+        <li><strong>Pass</strong> - Dashed line</li>
+        <li><strong>Cut</strong> - Solid line</li>
+        <li><strong>Screen</strong> - T-bar symbol</li>
+        <li><strong>Shot</strong> - Crosshair target</li>
+        <li><strong>Handoff</strong> - Arrow</li>
+      </ul>
+    </li>
+    <li><strong>Multi-Phase Plays</strong> - Create plays with multiple steps</li>
+    <li><strong>Mirror Play</strong> - Flip the entire play horizontally</li>
+    <li><strong>Animation Preview</strong> - Watch the play animate before saving</li>
+    <li><strong>Publish</strong> - Make plays visible to parents in the Playbook</li>
   </ul>
+
+  <hr>
+
+  <!-- ============================================ -->
+  <!-- LIVE STATS -->
+  <!-- ============================================ -->
+  <h2 id="live-stats">Live Game Stats</h2>
+  <p>View real-time stats during games, or track them as the designated Scorekeeper.</p>
+
+  <h3>Viewing Stats (Everyone)</h3>
+  <p>During games, anyone can view live stats:</p>
+  <ul>
+    <li>From <strong>Home</strong>, tap <strong>"View Live Stats"</strong> during the game window</li>
+    <li>Or go to <strong>Stats</strong> tab and select the game</li>
+    <li>See the live scoreboard, player stats, and play-by-play feed</li>
+  </ul>
+
+  <div class="screenshot">
+    <img src="screenshots/stats-view-live.png" alt="Stats View">
+    <p class="screenshot-caption">Stats viewing mode</p>
+  </div>
 
   <h3>Tracking Stats (Scorekeeper)</h3>
-  <p>If you signed up as Scorekeeper, here's how to track stats:</p>
+  <p>If you signed up as Scorekeeper, you'll see the full tracking interface with buttons.</p>
 
   <div class="screenshot">
-    <img src="screenshots/stats-tracking.png" alt="Stats Tracking">
-    <p class="screenshot-caption">Scorekeeper Interface</p>
+    <img src="screenshots/stats-track-overview.png" alt="Stats Tracking">
+    <p class="screenshot-caption">Scorekeeper tracking interface</p>
   </div>
 
-  <div class="feature-box">
-    <p><strong>Stat Buttons (for each player on court):</strong></p>
-    <table>
-      <tr>
-        <th>Button</th>
-        <th>What It Records</th>
-      </tr>
-      <tr>
-        <td><strong>+2</strong></td>
-        <td>Made 2-point shot</td>
-      </tr>
-      <tr>
-        <td><strong>+3</strong></td>
-        <td>Made 3-point shot</td>
-      </tr>
-      <tr>
-        <td><strong>+1</strong></td>
-        <td>Made free throw</td>
-      </tr>
-      <tr>
-        <td><strong>R</strong> (green)</td>
-        <td>Rebound</td>
-      </tr>
-      <tr>
-        <td><strong>A</strong> (green)</td>
-        <td>Assist</td>
-      </tr>
-      <tr>
-        <td><strong>S</strong> (yellow)</td>
-        <td>Steal</td>
-      </tr>
-      <tr>
-        <td><strong>T</strong> (red)</td>
-        <td>Turnover</td>
-      </tr>
-      <tr>
-        <td><strong>F</strong> (red)</td>
-        <td>Foul</td>
-      </tr>
-    </table>
+  <div class="warning">
+    <strong>Tracking window:</strong> Stat tracking is only available from 10 minutes before game time until 30 minutes after the game ends.
   </div>
 
-  <h3>Making Substitutions</h3>
+  <p>See the full <a href="#scorekeeping">Scorekeeping Guide</a> below for detailed instructions.</p>
+
+  <hr>
+
+  <!-- ============================================ -->
+  <!-- SCOREKEEPING GUIDE -->
+  <!-- ============================================ -->
+  <h2 id="scorekeeping">Scorekeeping Guide</h2>
+  <p>Complete guide for tracking stats during games.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/stats-track-overview.png" alt="Live Stats Tracking">
+    <p class="screenshot-caption">Live stats tracking interface with player buttons and game controls</p>
+  </div>
+
+  <h3>Stat Buttons (For Each Player)</h3>
+  <table>
+    <tr>
+      <th>Button</th>
+      <th>Tap</th>
+      <th>Long Press (hold)</th>
+    </tr>
+    <tr>
+      <td><strong>+2</strong></td>
+      <td>Made 2-point shot</td>
+      <td>Missed 2-point shot</td>
+    </tr>
+    <tr>
+      <td><strong>+3</strong></td>
+      <td>Made 3-point shot</td>
+      <td>Missed 3-point shot</td>
+    </tr>
+    <tr>
+      <td><strong>+1</strong></td>
+      <td>Made free throw</td>
+      <td>Missed free throw</td>
+    </tr>
+    <tr>
+      <td><strong>R</strong> (green)</td>
+      <td>Rebound</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><strong>A</strong> (green)</td>
+      <td>Assist</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><strong>S</strong> (yellow)</td>
+      <td>Steal</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><strong>B</strong> (yellow)</td>
+      <td>Block</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><strong>T</strong> (red)</td>
+      <td>Turnover</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><strong>F</strong> (red)</td>
+      <td>Foul</td>
+      <td>-</td>
+    </tr>
+  </table>
+
+  <h3>Recording Missed Shots</h3>
   <div class="feature-box">
-    <p><strong>To substitute players:</strong></p>
+    <p><strong>Long-press (hold) the +2, +3, or +1 button</strong> to record a missed shot:</p>
     <ol>
-      <li>Tap the <strong>"SUB"</strong> button at the bottom</li>
-      <li>Players currently ON court are highlighted</li>
-      <li>Tap a player ON court to take them OUT</li>
-      <li>Tap a player OFF court to put them IN</li>
-      <li>Tap <strong>"Done"</strong> when finished</li>
+      <li>Press and hold the button</li>
+      <li>A <strong>"MISS?"</strong> indicator appears at the top</li>
+      <li>Keep holding until it changes to <strong>"MISS!"</strong></li>
+      <li>The missed shot is recorded with a red flash</li>
     </ol>
-    <p>Keep exactly 5 players on court at all times.</p>
+    <p>Tracking missed shots enables accurate shooting percentage calculations.</p>
   </div>
 
-  <h3>Tracking Opponent Score</h3>
+  <h3>Opponent Score</h3>
   <p>Use the <strong>OPP</strong> row at the bottom to track the opponent's score:</p>
   <ul>
-    <li><strong>+2</strong>, <strong>+3</strong>, <strong>+1</strong> to add points</li>
-    <li><strong>-1</strong> to correct mistakes</li>
+    <li><strong>+2, +3, +1</strong> - Add points</li>
+    <li><strong>-1</strong> - Subtract a point (to correct mistakes)</li>
   </ul>
 
-  <h3>Ending the Game</h3>
-  <p>When the game is over, tap <strong>"END GAME"</strong> to save final stats.</p>
+  <h3>Substitutions</h3>
 
-  <div class="tip">
-    <strong>Note:</strong> Stat tracking is only available from 10 minutes before game time until 30 minutes after.
+  <div class="feature-box">
+    <p><strong>To make substitutions:</strong></p>
+    <ol>
+      <li>Tap the <strong>"SUB"</strong> button</li>
+      <li>Players on court are shown at the top</li>
+      <li>Players on bench are shown at the bottom</li>
+      <li>Tap a player <strong>on court</strong> to select them for removal</li>
+      <li>Tap a player <strong>on bench</strong> to put them in</li>
+      <li>The swap happens automatically</li>
+      <li>Tap <strong>X</strong> to close when done</li>
+    </ol>
+    <p>Always keep exactly 5 players on court.</p>
+  </div>
+
+  <h3>Quarter Changes</h3>
+  <p>Tap the quarter buttons to advance the game:</p>
+  <ul>
+    <li><strong>Q1 → Q2 → HALF → Q3 → Q4 → END GAME</strong></li>
+  </ul>
+  <p>The current quarter is shown in the header.</p>
+
+  <h3>Timeouts</h3>
+  <p>Use the timeout buttons to track timeouts:</p>
+  <ul>
+    <li><strong>TIMEOUT</strong> - Lancers timeout (shows remaining count)</li>
+    <li><strong>OPP TIMEOUT</strong> - Opponent timeout</li>
+  </ul>
+  <p>Youth rules: 4 timeouts per half, 2 per overtime.</p>
+
+  <h3>Ending the Game</h3>
+  <p>After Q4, tap <strong>"END GAME"</strong> to finalize stats. This locks the stats and triggers the game wrap-up process.</p>
+
+  <h3>Coach: Editing Stats After the Game</h3>
+  <div class="coach-only">
+    <p>Coaches can edit stats for completed games:</p>
+    <ol>
+      <li>Go to <strong>Stats</strong> tab</li>
+      <li>Select the completed game</li>
+      <li>Tap any stat value to open the edit modal</li>
+      <li>Enter made and missed values for shooting stats</li>
+      <li>Tap <strong>Save</strong></li>
+    </ol>
+  </div>
+
+  <div class="screenshot">
+    <img src="screenshots/stats-edit-interface.png" alt="Stats Edit">
+    <p class="screenshot-caption">Coach editing completed game stats</p>
   </div>
 
   <hr>
 
-  <h2>Highlights</h2>
+  <!-- ============================================ -->
+  <!-- HIGHLIGHTS -->
+  <!-- ============================================ -->
+  <h2 id="highlights">Highlights</h2>
   <p>View and upload photos and videos from games.</p>
 
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/highlights-grid.png" alt="Highlights Grid">
+      <p class="screenshot-caption">Highlights gallery</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/highlights-upload-modal.png" alt="Upload Modal">
+      <p class="screenshot-caption">Upload form</p>
+    </div>
+  </div>
+
+  <h3>Viewing Highlights</h3>
+  <ul>
+    <li>Browse all highlights in a grid</li>
+    <li><strong>Filter by game</strong> - Select a specific game</li>
+    <li><strong>Filter by player</strong> - See one player's highlights</li>
+    <li>Tap any thumbnail to view fullscreen</li>
+  </ul>
+
+  <h3>Uploading Highlights</h3>
   <div class="feature-box">
     <p><strong>To upload a highlight:</strong></p>
     <ol>
-      <li>Go to <strong>Highlights</strong></li>
-      <li>Tap the <strong>Upload</strong> button (camera icon)</li>
+      <li>Tap the <strong>camera icon</strong> (upload button)</li>
       <li>Select your photo or video</li>
-      <li>Choose which game it's from</li>
-      <li>Select which player is featured</li>
-      <li>Add a caption (optional)</li>
+      <li>Choose which <strong>game</strong> it's from</li>
+      <li>Select which <strong>player</strong> is featured</li>
+      <li>Add a <strong>caption</strong> (optional)</li>
       <li>Tap <strong>"Upload"</strong></li>
     </ol>
   </div>
 
-  <p><strong>View highlights by:</strong></p>
+  <h3>Smart Timestamp Matching</h3>
+  <div class="tip">
+    <p><strong>Auto-matching:</strong> When you upload a photo or video taken during a game, the app reads the file's timestamp and tries to match it to a specific play in the play-by-play feed.</p>
+    <p>If a match is found, the game and player are automatically selected, and the highlight gets linked to that specific play!</p>
+  </div>
+
+  <p>Highlights appear in multiple places:</p>
   <ul>
-    <li>All highlights (newest first)</li>
-    <li>Filter by specific game</li>
-    <li>Filter by specific player</li>
-    <li>View in a player's profile</li>
+    <li>Main Highlights gallery</li>
+    <li>Game detail page</li>
+    <li>Player profile modal</li>
+    <li>Play-by-play feed (linked plays show a camera icon)</li>
   </ul>
 
   <hr>
 
-  <h2>Tips for Game Day</h2>
+  <!-- ============================================ -->
+  <!-- GAME WRAPUPS -->
+  <!-- ============================================ -->
+  <h2 id="wrapups">Game Wrap-Ups</h2>
+  <p>After each game, a wrap-up summary is generated with highlights of the game.</p>
+
+  <div class="screenshot">
+    <img src="screenshots/game-wrapup.png" alt="Game Wrap-Up">
+    <p class="screenshot-caption">Game wrap-up section</p>
+  </div>
+
+  <h3>What's in a Wrap-Up:</h3>
+  <ul>
+    <li><strong>Narrative Summary</strong> - AI-generated game recap describing key moments</li>
+    <li><strong>Coach's Notes</strong> - Commentary from Coach about the game</li>
+    <li><strong>Player of the Game</strong> - Standout performer with their stats</li>
+    <li><strong>Highlight Reel</strong> - Compiled video of game highlights (when available)</li>
+  </ul>
+
+  <h3>How It Works:</h3>
+  <ol>
+    <li>Game ends (scorekeeper taps "END GAME")</li>
+    <li>Coach has a window to add notes and shoutouts</li>
+    <li>AI generates a narrative summary based on stats</li>
+    <li>Coach reviews and approves</li>
+    <li>Everyone receives a notification when published</li>
+  </ol>
+
+  <p>Find wrap-ups at the bottom of any completed game's detail page.</p>
+
+  <hr>
+
+  <!-- ============================================ -->
+  <!-- FOR VIEWERS -->
+  <!-- ============================================ -->
+  <h2 id="viewers">For Viewers (Grandparents, Relatives)</h2>
+  <p>Viewers are family members invited by parents to follow the team.</p>
+
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/viewer-home.png" alt="Viewer Home">
+      <p class="screenshot-caption">Viewer home screen</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/viewer-schedule.png" alt="Viewer Navigation">
+      <p class="screenshot-caption">Limited navigation</p>
+    </div>
+  </div>
+
+  <div class="feature-box">
+    <h4>Viewers CAN:</h4>
+    <ul>
+      <li>View the schedule and game results</li>
+      <li>View the roster and player stats</li>
+      <li>View and upload highlights</li>
+      <li>View game details, box scores, and wrap-ups</li>
+      <li>View live stats during games</li>
+    </ul>
+  </div>
+
+  <div class="warning">
+    <h4>Viewers CANNOT:</h4>
+    <ul>
+      <li>Access team chat or posts (private team communication)</li>
+      <li>View the playbook (team strategy)</li>
+      <li>RSVP for attendance</li>
+      <li>Sign up to volunteer</li>
+    </ul>
+  </div>
+
+  <h3>How to Get Invited</h3>
+  <p>Ask the player's parent to invite you from their child's player profile. They'll need your email address. You'll receive an email with instructions to create your account.</p>
+
+  <hr>
+
+  <!-- ============================================ -->
+  <!-- UNIVERSAL FEATURES -->
+  <!-- ============================================ -->
+  <h2 id="features">Universal Features</h2>
+
+  <h3>Dark / Light Mode</h3>
+  <p>The app defaults to dark mode. Tap the <strong>moon/sun icon</strong> in the header to switch.</p>
+
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/home-top.png" alt="Dark Mode">
+      <p class="screenshot-caption">Dark mode (default)</p>
+    </div>
+    <div class="screenshot">
+      <img src="screenshots/home-light.png" alt="Light Mode">
+      <p class="screenshot-caption">Light mode</p>
+    </div>
+  </div>
+
+  <h3>Push Notifications</h3>
+  <p>Get notified about important team updates:</p>
+  <ul>
+    <li>New chat messages</li>
+    <li>Coach announcements (posts)</li>
+    <li>RSVP reminders</li>
+    <li>Volunteer reminders</li>
+    <li>Game starting soon (for scorekeepers)</li>
+    <li>Game wrap-up ready</li>
+  </ul>
+
+  <div class="feature-box">
+    <p><strong>To enable notifications:</strong></p>
+    <ol>
+      <li>Look for the notification prompt on the home screen</li>
+      <li>Tap <strong>"Enable Notifications"</strong></li>
+      <li>Allow when your phone asks for permission</li>
+    </ol>
+  </div>
+
+  <h3>Install as App</h3>
+  <p>For the best experience, install the app to your home screen. See the <a href="install-guide.html">Installation Guide</a>.</p>
+  <ul>
+    <li>Works offline for viewing previously loaded data</li>
+    <li>Opens faster without browser UI</li>
+    <li>Feels like a native app</li>
+  </ul>
+
+  <h3>Notification Bell</h3>
+  <p>The bell icon in the header shows unread notifications. Tap to see recent alerts and navigate to relevant pages.</p>
+
+  <hr>
+
+  <!-- ============================================ -->
+  <!-- TIPS AND QUICK REFERENCE -->
+  <!-- ============================================ -->
+  <h2 id="tips">Tips & Quick Reference</h2>
+
+  <h3>Game Day Checklist</h3>
   <div class="highlight">
     <ol>
       <li><strong>RSVP</strong> - Make sure you've responded for the game</li>
       <li><strong>Check Chat</strong> - Look for any last-minute updates</li>
       <li><strong>Review Plays</strong> - Practice with your child using the Playbook</li>
       <li><strong>Arrive Early</strong> - Be there for warm-ups</li>
-      <li><strong>Take Photos/Videos</strong> - Upload them as Highlights!</li>
+      <li><strong>Take Photos/Videos</strong> - Upload them as highlights!</li>
       <li><strong>If Scorekeeping</strong> - Arrive 10 min early to get set up</li>
     </ol>
   </div>
 
-  <hr>
-
-  <h2>Quick Reference</h2>
+  <h3>Navigation Quick Reference</h3>
   <table>
     <tr>
       <th>Tab</th>
@@ -515,19 +1094,19 @@
     </tr>
     <tr>
       <td><strong>Home</strong></td>
-      <td>Dashboard, next game, volunteering</td>
+      <td>Dashboard, next game, volunteering scoreboard</td>
     </tr>
     <tr>
       <td><strong>Roster</strong></td>
-      <td>Players, parents, contacts, invite viewers</td>
+      <td>Players, parents, contacts, player profiles, invite viewers</td>
     </tr>
     <tr>
       <td><strong>Schedule</strong></td>
-      <td>Games, practices, RSVP, volunteers</td>
+      <td>Games, practices, RSVP, volunteer signups</td>
     </tr>
     <tr>
       <td><strong>Chat</strong></td>
-      <td>Group chat, posts, text contacts</td>
+      <td>Group chat, coach posts, text contacts</td>
     </tr>
     <tr>
       <td><strong>Plays</strong></td>
@@ -535,11 +1114,75 @@
     </tr>
     <tr>
       <td><strong>Stats</strong></td>
-      <td>Live stats, game history</td>
+      <td>Live stats, game history, stat tracking</td>
     </tr>
     <tr>
       <td><strong>Highlights</strong></td>
       <td>Photos and videos from games</td>
+    </tr>
+  </table>
+
+  <h3>User Roles Summary</h3>
+  <table>
+    <tr>
+      <th>Feature</th>
+      <th>Coach</th>
+      <th>Parent</th>
+      <th>Viewer</th>
+    </tr>
+    <tr>
+      <td>View schedule/roster/stats</td>
+      <td>✓</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>RSVP & volunteer</td>
+      <td>✓</td>
+      <td>✓</td>
+      <td>✗</td>
+    </tr>
+    <tr>
+      <td>Team chat & posts</td>
+      <td>✓</td>
+      <td>✓</td>
+      <td>✗</td>
+    </tr>
+    <tr>
+      <td>View playbook</td>
+      <td>✓</td>
+      <td>✓</td>
+      <td>✗</td>
+    </tr>
+    <tr>
+      <td>Upload highlights</td>
+      <td>✓</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Track live stats</td>
+      <td>✓</td>
+      <td>As scorekeeper</td>
+      <td>✗</td>
+    </tr>
+    <tr>
+      <td>Edit stats after game</td>
+      <td>✓</td>
+      <td>✗</td>
+      <td>✗</td>
+    </tr>
+    <tr>
+      <td>Create/edit plays</td>
+      <td>✓</td>
+      <td>✗</td>
+      <td>✗</td>
+    </tr>
+    <tr>
+      <td>Invite viewers</td>
+      <td>✓</td>
+      <td>✓ (own child)</td>
+      <td>✗</td>
     </tr>
   </table>
 
@@ -552,6 +1195,6 @@
     Phone: 314-258-1513</p>
   </div>
 
-  <div class="footer">Go Lancers!</div>
+  <div class="footer">Go Lancers! 🏀</div>
 </body>
 </html>
