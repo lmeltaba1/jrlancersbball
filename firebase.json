@@ -17,8 +17,8 @@
       "**/node_modules/**",
       "functions/**",
       "CLAUDE.md",
-      "docs/**",
-      "deploy.sh"
+      "deploy.sh",
+      "scripts/**"
     ],
     "headers": [
       {

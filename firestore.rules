@@ -129,8 +129,8 @@ service cloud.firestore {
       allow update: if isHeadCoach()
         && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['coachNotes', 'updatedAt']);
-      // Only cloud functions create/delete wrap-ups
-      allow create, delete: if false;
+      // Allow head coach to create/delete (for seeding), otherwise only cloud functions
+      allow create, delete: if isHeadCoach();
     }
 
     // Posts - head coach announcements with reactions and comments
