@@ -4,134 +4,265 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jr. Lancers Basketball - Installation Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 700px;
-      margin: 0 auto;
-      padding: 40px 20px;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fafafa;
       color: #1a1a1a;
       line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 60px 24px 100px;
+    }
+
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 60px 0 80px;
+      position: relative;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,0,0,0.15), transparent);
+    }
+    .hero-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #111 0%, #333 100%);
+      color: #fff;
+      font-family: 'Oswald', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 8px 20px;
+      border-radius: 100px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 28px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     }
     h1 {
-      color: #000;
-      border-bottom: 4px solid #FFD700;
-      padding-bottom: 12px;
-      margin-bottom: 8px;
-    }
-    h2 {
-      color: #000;
-      margin-top: 40px;
-      border-bottom: 2px solid #ddd;
-      padding-bottom: 8px;
-    }
-    h3 {
-      color: #B8860B;
-      margin-top: 30px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 48px;
+      font-weight: 700;
+      color: #111;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 20px;
+      line-height: 1.1;
     }
     .subtitle {
+      font-size: 18px;
       color: #666;
-      font-size: 1.2em;
-      margin-top: 0;
+      font-weight: 400;
     }
-    hr {
-      border: none;
-      border-top: 1px solid #ddd;
-      margin: 35px 0;
+    .hero-intro {
+      max-width: 550px;
+      margin: 24px auto 0;
+      color: #555;
+      font-size: 16px;
     }
-    ol, ul {
-      padding-left: 25px;
+
+    /* Section Headers */
+    h2 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 28px;
+      font-weight: 600;
+      color: #111;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 64px;
+      margin-bottom: 8px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e5e5e5;
     }
-    li {
-      margin-bottom: 12px;
+    h3 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 18px;
+      font-weight: 500;
+      color: #111;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 40px;
+      margin-bottom: 16px;
     }
+
+    p { color: #444; margin-bottom: 16px; font-size: 15px; }
+    strong { color: #111; font-weight: 600; }
+    hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, #ddd, transparent); margin: 48px 0; }
+
+    ul, ol { padding-left: 24px; color: #444; margin-bottom: 16px; font-size: 15px; }
+    li { margin-bottom: 10px; }
+    li strong { color: #111; font-weight: 600; }
+    a { color: #111; text-decoration: underline; text-underline-offset: 2px; transition: opacity 0.2s; }
+    a:hover { opacity: 0.6; }
+
     code {
       background: #f0f0f0;
+      color: #111;
       padding: 4px 10px;
       border-radius: 6px;
-      font-size: 1em;
-      font-weight: 600;
+      font-size: 14px;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      font-weight: 500;
     }
+
+    /* Cards */
+    .step-box, .highlight, .tip, .warning {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin: 24px 0;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    .step-box ol { margin-bottom: 0; }
     .highlight {
-      background: #FFFDE7;
-      padding: 18px;
-      border-radius: 10px;
-      border-left: 4px solid #FFD700;
-      margin: 22px 0;
-    }
-    .step-box {
-      background: #f8f9fa;
-      padding: 20px 25px;
-      border-radius: 12px;
-      margin: 20px 0;
-    }
-    .step-box ol {
-      margin-bottom: 0;
+      border-left: 3px solid #111;
+      background: #fff;
     }
     .tip {
-      background: #E8F5E9;
-      padding: 15px 18px;
-      border-radius: 10px;
-      border-left: 4px solid #4CAF50;
-      margin: 18px 0;
+      border-left: 3px solid #22c55e;
+      background: rgba(34,197,94,0.04);
     }
     .warning {
-      background: #FFF3E0;
-      padding: 15px 18px;
-      border-radius: 10px;
-      border-left: 4px solid #FF9800;
-      margin: 18px 0;
+      border-left: 3px solid #f97316;
+      background: rgba(249,115,22,0.04);
     }
-    .screenshot {
-      text-align: center;
-      margin: 25px 0;
-    }
-    .screenshot img {
-      max-width: 280px;
-      border-radius: 24px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.18);
-    }
-    .screenshot-caption {
-      font-size: 0.85em;
-      color: #666;
-      margin-top: 10px;
-      font-style: italic;
-    }
+
+    /* Feature Grid */
     .feature-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
-      margin: 20px 0;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 16px;
+      margin: 28px 0;
     }
     .feature-item {
-      background: #f8f9fa;
-      padding: 12px 15px;
-      border-radius: 8px;
-      font-size: 0.95em;
+      background: #fff;
+      padding: 16px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      border: 1px solid #e5e5e5;
+      color: #333;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
     }
+    .feature-item:hover {
+      border-color: #ccc;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    /* Screenshots */
+    .screenshot {
+      text-align: center;
+      margin: 40px 0;
+    }
+    .screenshot img {
+      max-width: 260px;
+      border-radius: 24px;
+      border: 1px solid #e0e0e0;
+      box-shadow: 0 20px 50px -15px rgba(0,0,0,0.15);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .screenshot img:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 30px 60px -15px rgba(0,0,0,0.2);
+    }
+    .screenshot-caption {
+      font-size: 13px;
+      color: #888;
+      margin-top: 14px;
+      font-weight: 500;
+    }
+    .screenshot-row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 32px 0;
+    }
+    .screenshot-row .screenshot {
+      flex: 1;
+      min-width: 140px;
+      max-width: 180px;
+      margin: 0;
+    }
+    .screenshot-row .screenshot img {
+      width: 100%;
+      max-width: none;
+      border-radius: 20px;
+    }
+    .screenshot-row .screenshot-caption {
+      margin-top: 10px;
+      font-size: 12px;
+    }
+
     .footer {
       text-align: center;
-      margin-top: 50px;
-      padding-top: 25px;
-      border-top: 3px solid #FFD700;
-      color: #000;
-      font-weight: bold;
-      font-size: 1.3em;
+      margin-top: 80px;
+      padding-top: 40px;
+      position: relative;
     }
-    @media (max-width: 600px) {
-      body { padding: 20px 15px; }
+    .footer::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #ccc, transparent);
+    }
+    .footer-text {
+      font-family: 'Oswald', sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: #111;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    @media (max-width: 640px) {
+      .container { padding: 40px 20px 80px; }
+      h1 { font-size: 32px; }
+      h2 { font-size: 24px; }
+      .hero { padding: 40px 0 60px; }
       .screenshot img { max-width: 100%; }
+      .screenshot-row { gap: 16px; }
+      .screenshot-row .screenshot { min-width: 120px; max-width: 160px; }
+      .feature-list { grid-template-columns: 1fr 1fr; gap: 12px; }
+    }
+
+    @media print {
+      body { background: #fff; color: #000; }
+      h1, h2, h3, .footer-text { color: #000; }
+      .step-box, .highlight, .tip, .warning, .feature-item { background: #f5f5f5; border-color: #ddd; }
     }
   </style>
 </head>
 <body>
-  <h1>Jr. Lancers Basketball App</h1>
-  <p class="subtitle">Installation Guide</p>
-
-  <p>Welcome to the Jr. Lancers! This guide will help you install the team app on your phone so you can access schedules, stats, chat, and more.</p>
-
-  <hr>
+<div class="container">
+  <div class="hero">
+    <span class="hero-badge">Get Started</span>
+    <h1>Jr. Lancers Basketball</h1>
+    <p class="subtitle">Installation Guide</p>
+    <p class="hero-intro">Welcome to the Jr. Lancers! This guide will help you install the team app on your phone so you can access schedules, stats, chat, and more.</p>
+  </div>
 
   <h2>What is the Jr. Lancers App?</h2>
   <p>The Jr. Lancers app is a <strong>Progressive Web App (PWA)</strong> - a website that works like a native app on your phone. Once installed, it appears on your home screen just like any other app.</p>
@@ -199,22 +330,22 @@
 
   <h3>iPhone / iPad (Safari)</h3>
 
-  <div class="screenshot-row" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin: 25px 0;">
-    <div class="screenshot" style="flex: 1; min-width: 150px; max-width: 200px;">
-      <img src="screenshots/install-ios-1-menu.png" alt="Step 1: Tap menu" style="width: 100%; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-      <p style="text-align: center; font-size: 0.85em; color: #666; margin-top: 8px;"><strong>1.</strong> Tap the menu icon</p>
+  <div class="screenshot-row">
+    <div class="screenshot">
+      <img src="screenshots/install-ios-1-menu.png" alt="Step 1: Tap menu">
+      <p class="screenshot-caption"><strong>1.</strong> Tap menu icon</p>
     </div>
-    <div class="screenshot" style="flex: 1; min-width: 150px; max-width: 200px;">
-      <img src="screenshots/install-ios-2-share.png" alt="Step 2: Tap Share" style="width: 100%; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-      <p style="text-align: center; font-size: 0.85em; color: #666; margin-top: 8px;"><strong>2.</strong> Tap "Share"</p>
+    <div class="screenshot">
+      <img src="screenshots/install-ios-2-share.png" alt="Step 2: Tap Share">
+      <p class="screenshot-caption"><strong>2.</strong> Tap "Share"</p>
     </div>
-    <div class="screenshot" style="flex: 1; min-width: 150px; max-width: 200px;">
-      <img src="screenshots/install-ios-3-add-to-home.png" alt="Step 3: Add to Home Screen" style="width: 100%; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-      <p style="text-align: center; font-size: 0.85em; color: #666; margin-top: 8px;"><strong>3.</strong> Tap "Add to Home Screen"</p>
+    <div class="screenshot">
+      <img src="screenshots/install-ios-3-add-to-home.png" alt="Step 3: Add to Home Screen">
+      <p class="screenshot-caption"><strong>3.</strong> "Add to Home Screen"</p>
     </div>
-    <div class="screenshot" style="flex: 1; min-width: 150px; max-width: 200px;">
-      <img src="screenshots/install-ios-4-confirm.png" alt="Step 4: Tap Add" style="width: 100%; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-      <p style="text-align: center; font-size: 0.85em; color: #666; margin-top: 8px;"><strong>4.</strong> Tap "Add"</p>
+    <div class="screenshot">
+      <img src="screenshots/install-ios-4-confirm.png" alt="Step 4: Tap Add">
+      <p class="screenshot-caption"><strong>4.</strong> Tap "Add"</p>
     </div>
   </div>
 
@@ -355,6 +486,9 @@
     Phone: 314-258-1513</p>
   </div>
 
-  <div class="footer">Go Lancers! 🏀</div>
+  <div class="footer">
+    <span class="footer-text">Go Lancers! 🏀</span>
+  </div>
+</div>
 </body>
 </html>
