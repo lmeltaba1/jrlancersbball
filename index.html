@@ -283,28 +283,9 @@
       try {
         messaging = firebase.messaging();
 
-        // Handle token refresh - FCM tokens expire periodically
-        messaging.onTokenRefresh(async () => {
-          if (!auth || !auth.currentUser) return;
-          try {
-            const swRegistration = await navigator.serviceWorker.ready;
-            const newToken = await messaging.getToken({
-              vapidKey: 'BP4liMqNZXn23mOL1sGsutauAN88uEy1lCH3vZ3qs18_47U6zGlToDDsmM7CU0prkvyenA9bf7FIHV84HxSCqWM',
-              serviceWorkerRegistration: swRegistration
-            });
-            if (newToken && db) {
-              await db.collection('fcmTokens').doc(auth.currentUser.uid).set({
-                token: newToken,
-                uid: auth.currentUser.uid,
-                email: auth.currentUser.email,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-              });
-              console.log('FCM token refreshed');
-            }
-          } catch (e) {
-            console.error('Token refresh failed:', e);
-          }
-        });
+        // Note: onTokenRefresh is deprecated in Firebase 9+
+        // Token refresh is now handled automatically by the SDK
+        // We handle token updates via service worker onupdatefound in checkNotificationStatus()
 
         // Handle foreground messages - show notification when app is open
         messaging.onMessage((payload) => {
