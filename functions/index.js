@@ -6,6 +6,7 @@ const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { getAuth } = require('firebase-admin/auth');
+const { getStorage } = require('firebase-admin/storage');
 const sgMail = require('@sendgrid/mail');
 
 initializeApp();
@@ -955,6 +956,13 @@ exports.syncConfig = onRequest({ invoker: 'public' }, async (request, response) 
     const schedule = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'schedule-full.json'), 'utf8'));
     const roster = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'roster-full.json'), 'utf8'));
 
+    // Read plays backup if it exists
+    let playsData = { plays: [] };
+    const playsPath = path.join(__dirname, 'data', 'plays-full.json');
+    if (fs.existsSync(playsPath)) {
+      playsData = JSON.parse(fs.readFileSync(playsPath, 'utf8'));
+    }
+
     // Create coachEmails lookup map for Firestore rules
     const coachEmails = {};
     let headCoachEmail = null;
@@ -983,6 +991,7 @@ exports.syncConfig = onRequest({ invoker: 'public' }, async (request, response) 
       }
     }
 
+    // Sync config documents
     await Promise.all([
       db.collection('config').doc('schedule').set(schedule),
       db.collection('config').doc('roster').set(roster),
@@ -991,9 +1000,168 @@ exports.syncConfig = onRequest({ invoker: 'public' }, async (request, response) 
       db.collection('config').doc('adminEmails').set(adminEmails)
     ]);
 
+    // Sync plays from backup file to customPlays collection
+    let playsRestored = 0;
+    if (playsData.plays && playsData.plays.length > 0) {
+      const batch = db.batch();
+      for (const play of playsData.plays) {
+        const playId = play.id || `play_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const playRef = db.collection('customPlays').doc(playId);
+        const { id, ...playData } = play; // Remove id from data since it's the doc ID
+        batch.set(playRef, playData);
+        playsRestored++;
+      }
+      await batch.commit();
+    }
+
     response.json({
       success: true,
-      message: `Synced ${schedule.games.length} games, ${roster.players.length} players, ${Object.keys(coachEmails).length} coaches, head coach: ${headCoachEmail}`
+      message: `Synced ${schedule.games.length} games, ${roster.players.length} players, ${Object.keys(coachEmails).length} coaches, ${playsRestored} plays, head coach: ${headCoachEmail}`
+    });
+  } catch (error) {
+    response.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// PLAYS BACKUP SYSTEM
+// Automatically backs up all plays to Firebase Storage whenever any play changes
+// ==========================================
+
+// Auto-backup plays to Storage whenever a play is created, updated, or deleted
+exports.onPlayChanged = onDocumentWritten('customPlays/{playId}', async (event) => {
+  try {
+    // Get all current plays from Firestore
+    const snapshot = await db.collection('customPlays').get();
+    const plays = [];
+
+    snapshot.forEach(doc => {
+      plays.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    // Create backup object
+    const backup = {
+      plays: plays,
+      lastExported: new Date().toISOString(),
+      version: 1,
+      playCount: plays.length
+    };
+
+    // Save to Firebase Storage
+    const storage = getStorage();
+    const bucket = storage.bucket();
+
+    // Save current backup
+    const currentBackupFile = bucket.file('backups/plays-current.json');
+    await currentBackupFile.save(JSON.stringify(backup, null, 2), {
+      contentType: 'application/json',
+      metadata: {
+        cacheControl: 'no-cache'
+      }
+    });
+
+    // Also save a timestamped version (keep last 10 versions)
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestampedFile = bucket.file(`backups/plays-${timestamp}.json`);
+    await timestampedFile.save(JSON.stringify(backup, null, 2), {
+      contentType: 'application/json'
+    });
+
+    // Clean up old backups (keep last 10)
+    const [files] = await bucket.getFiles({ prefix: 'backups/plays-2' }); // timestamped files start with year
+    if (files.length > 10) {
+      const oldFiles = files.slice(0, files.length - 10);
+      for (const file of oldFiles) {
+        await file.delete().catch(() => {}); // Ignore errors on cleanup
+      }
+    }
+
+    console.log(`Plays backup created: ${plays.length} plays saved to Storage`);
+  } catch (error) {
+    console.error('Error backing up plays:', error);
+  }
+});
+
+// Export all plays as JSON (coach only)
+exports.exportPlays = onRequest({ invoker: 'public' }, async (request, response) => {
+  if (setCorsHeaders(request, response)) return;
+
+  const authResult = await verifyAdminAuth(request, { coachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ error: authResult.error });
+    return;
+  }
+
+  try {
+    const snapshot = await db.collection('customPlays').get();
+    const plays = [];
+
+    snapshot.forEach(doc => {
+      plays.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    const exportData = {
+      plays: plays,
+      lastExported: new Date().toISOString(),
+      version: 1,
+      exportedBy: authResult.email
+    };
+
+    response.json(exportData);
+  } catch (error) {
+    response.status(500).json({ error: error.message });
+  }
+});
+
+// Restore plays from backup (head coach only)
+exports.restorePlaysFromBackup = onRequest({ invoker: 'public' }, async (request, response) => {
+  if (setCorsHeaders(request, response)) return;
+
+  const authResult = await verifyAdminAuth(request, { headCoachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ error: authResult.error });
+    return;
+  }
+
+  try {
+    // Get backup from Storage
+    const storage = getStorage();
+    const bucket = storage.bucket();
+    const file = bucket.file('backups/plays-current.json');
+
+    const [exists] = await file.exists();
+    if (!exists) {
+      response.status(404).json({ error: 'No backup found' });
+      return;
+    }
+
+    const [contents] = await file.download();
+    const backup = JSON.parse(contents.toString());
+
+    if (!backup.plays || backup.plays.length === 0) {
+      response.status(400).json({ error: 'Backup is empty' });
+      return;
+    }
+
+    // Restore plays to Firestore
+    const batch = db.batch();
+    for (const play of backup.plays) {
+      const playId = play.id;
+      const playRef = db.collection('customPlays').doc(playId);
+      const { id, ...playData } = play;
+      batch.set(playRef, playData);
+    }
+    await batch.commit();
+
+    response.json({
+      success: true,
+      message: `Restored ${backup.plays.length} plays from backup (created ${backup.lastExported})`
     });
   } catch (error) {
     response.status(500).json({ error: error.message });

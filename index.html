@@ -1059,6 +1059,9 @@
     let currentNextEvent = null; // Store for RSVP update after auth
 
     document.addEventListener('DOMContentLoaded', async function() {
+      // Small delay to ensure Firebase is fully initialized (fixes iOS race condition)
+      await new Promise(r => setTimeout(r, 50));
+
       // Wait for auth first since Firestore requires authentication
       try {
         const userInfo = await requireAuth();
