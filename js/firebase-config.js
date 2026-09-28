@@ -8,20 +8,30 @@ async function loadAdminEmails() {
   if (_cachedAdminEmails !== null) return _cachedAdminEmails;
   if (typeof db === 'undefined' || !db) return {};
   try {
+    // Add timeout to prevent iOS IndexedDB hangs
+    var timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 3000)
+    );
     // Try to load adminEmails document
-    const doc = await db.collection('config').doc('adminEmails').get();
+    const doc = await Promise.race([
+      db.collection('config').doc('adminEmails').get(),
+      timeoutPromise
+    ]);
     if (doc.exists) {
       _cachedAdminEmails = doc.data();
       return _cachedAdminEmails;
     }
     // Fallback: if adminEmails doesn't exist, use head coach as admin
-    const headCoachDoc = await db.collection('config').doc('headCoach').get();
+    const headCoachDoc = await Promise.race([
+      db.collection('config').doc('headCoach').get(),
+      timeoutPromise
+    ]);
     if (headCoachDoc.exists && headCoachDoc.data().email) {
       _cachedAdminEmails = { [headCoachDoc.data().email.toLowerCase()]: true };
       return _cachedAdminEmails;
     }
   } catch (e) {
-    console.error('Error loading admin emails:', e);
+    console.log('loadAdminEmails timeout or error:', e.message);
   }
   return {};
 }
@@ -138,7 +148,12 @@ async function loadTime() {
   if (_timeLoaded) return _timeOffsetMs;
   try {
     if (db) {
-      var doc = await db.collection('config').doc('simulation').get();
+      // Add timeout to prevent iOS IndexedDB hangs
+      var timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 3000)
+      );
+      var fetchPromise = db.collection('config').doc('simulation').get();
+      var doc = await Promise.race([fetchPromise, timeoutPromise]);
       if (doc.exists) {
         var data = doc.data();
         // New offset-based approach - time advances naturally
@@ -151,7 +166,9 @@ async function loadTime() {
         }
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.log('loadTime timeout or error, using real time');
+  }
   _timeLoaded = true;
   return _timeOffsetMs;
 }
@@ -164,6 +181,9 @@ function isSimulated() {
   return _timeOffsetMs !== null;
 }
 
+// Promise that resolves when Firestore is ready (persistence initialized)
+var _firestoreReady = null;
+
 // Initialize Firebase
 if (typeof firebase !== 'undefined') {
   try {
@@ -174,16 +194,19 @@ if (typeof firebase !== 'undefined') {
     }
     if (typeof firebase.firestore === 'function') {
       db = firebase.firestore();
-      // Enable offline persistence for faster loads
-      db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
-        if (err.code === 'failed-precondition') {
-          // Multiple tabs open, persistence can only be enabled in one tab at a time
-          console.log('Persistence unavailable: multiple tabs open');
-        } else if (err.code === 'unimplemented') {
-          // Browser doesn't support persistence
-          console.log('Persistence unavailable: browser not supported');
-        }
-      });
+      // Enable offline persistence - MUST complete before Firestore calls on iOS
+      _firestoreReady = db.enablePersistence({ synchronizeTabs: true })
+        .then(() => {
+          console.log('Firestore persistence enabled');
+        })
+        .catch((err) => {
+          if (err.code === 'failed-precondition') {
+            console.log('Persistence unavailable: multiple tabs open');
+          } else if (err.code === 'unimplemented') {
+            console.log('Persistence unavailable: browser not supported');
+          }
+          // Persistence failed but Firestore still works
+        });
     }
     if (typeof firebase.storage === 'function') {
       storage = firebase.storage();
@@ -195,6 +218,21 @@ if (typeof firebase !== 'undefined') {
     } catch (e) {}
   } catch (e) {
     console.error('Firebase init error:', e);
+  }
+}
+
+// Wait for Firestore to be ready (call before first Firestore operation)
+async function waitForFirestore() {
+  if (_firestoreReady) {
+    try {
+      // Add timeout in case persistence hangs on iOS (1s should be plenty)
+      await Promise.race([
+        _firestoreReady,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore init timeout')), 1000))
+      ]);
+    } catch (e) {
+      console.log('Firestore ready timeout, continuing anyway');
+    }
   }
 }
 
@@ -238,7 +276,14 @@ async function loadRosterData() {
     return null;
   }
   try {
-    const doc = await db.collection('config').doc('roster').get();
+    // Add timeout to prevent iOS IndexedDB hangs
+    var timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 3000)
+    );
+    const doc = await Promise.race([
+      db.collection('config').doc('roster').get(),
+      timeoutPromise
+    ]);
     if (doc.exists) {
       return doc.data();
     } else {
@@ -452,6 +497,12 @@ function requireAuth(options = {}) {
       return;
     }
 
+    // Wait for Firestore persistence to be ready (critical for iOS)
+    waitForFirestore().then(() => {
+      setupAuthListener();
+    });
+
+    function setupAuthListener() {
     // Timeout protection - prevents infinite hang on slow networks
     let resolved = false;
     const timeoutId = setTimeout(() => {
@@ -533,6 +584,7 @@ function requireAuth(options = {}) {
         }
       }
     });
+    } // end setupAuthListener
   });
 }
 
