@@ -173,15 +173,16 @@ var _firestoreReady = null;
 if (typeof firebase !== 'undefined') {
   try {
     app = firebase.initializeApp(firebaseConfig);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (typeof firebase.auth === 'function') {
       auth = firebase.auth();
       auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     }
     if (typeof firebase.firestore === 'function') {
       db = firebase.firestore();
-      // Skip persistence on iOS - IndexedDB causes intermittent hangs
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       if (!isIOS) {
+        // Desktop: Enable persistence for offline support
+        // iOS: Skip persistence (IndexedDB causes hangs), use default WebSocket
         _firestoreReady = db.enablePersistence({ synchronizeTabs: true })
           .catch(() => {});
       }
@@ -239,22 +240,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Wrap Firestore query with timeout (safety net)
-async function firestoreWithTimeout(queryPromise, timeoutMs = 2000) {
-  let timeoutId;
-  const timeout = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error('Firestore timeout')), timeoutMs);
-  });
-  try {
-    const result = await Promise.race([queryPromise, timeout]);
-    clearTimeout(timeoutId);
-    return result;
-  } catch (e) {
-    clearTimeout(timeoutId);
-    throw e;
-  }
-}
-
 // Helper to load roster data from Firestore
 async function loadRosterData() {
   if (!db) {
@@ -262,7 +247,7 @@ async function loadRosterData() {
     return null;
   }
   try {
-    const doc = await firestoreWithTimeout(db.collection('config').doc('roster').get());
+    const doc = await db.collection('config').doc('roster').get();
     if (doc.exists) {
       return doc.data();
     } else {

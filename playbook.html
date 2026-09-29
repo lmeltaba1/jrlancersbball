@@ -439,7 +439,20 @@
       to { opacity: 1; }
     }
 
-    /* Empty state */
+    /* Skeleton play cards */
+    .skeleton-play-card {
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    #plays-skeleton.hidden {
+      display: none;
+    }
+
+    /* Empty state - only show when skeleton is hidden */
     #plays-container:empty::after {
       content: "No plays in this section";
       display: block;
@@ -447,6 +460,10 @@
       padding: 60px 20px;
       color: var(--text-muted);
       font-size: 0.9rem;
+    }
+
+    #plays-skeleton:not(.hidden) + #plays-container:empty::after {
+      display: none;
     }
 
     /* Drafts tab styling */
@@ -730,6 +747,23 @@
     </div>
 
     <!-- Plays Container -->
+    <div id="plays-skeleton">
+      <div class="skeleton-play-card">
+        <div class="skeleton skeleton-text medium" style="height: 20px; margin-bottom: 16px;"></div>
+        <div class="skeleton" style="width: 100%; padding-bottom: 75%; border-radius: 12px;"></div>
+        <div class="skeleton skeleton-text short" style="height: 14px; margin-top: 12px;"></div>
+      </div>
+      <div class="skeleton-play-card">
+        <div class="skeleton skeleton-text medium" style="height: 20px; margin-bottom: 16px;"></div>
+        <div class="skeleton" style="width: 100%; padding-bottom: 75%; border-radius: 12px;"></div>
+        <div class="skeleton skeleton-text short" style="height: 14px; margin-top: 12px;"></div>
+      </div>
+      <div class="skeleton-play-card">
+        <div class="skeleton skeleton-text medium" style="height: 20px; margin-bottom: 16px;"></div>
+        <div class="skeleton" style="width: 100%; padding-bottom: 75%; border-radius: 12px;"></div>
+        <div class="skeleton skeleton-text short" style="height: 14px; margin-top: 12px;"></div>
+      </div>
+    </div>
     <div id="plays-container"></div>
 
     <!-- Drafts Container (for coaches) -->
@@ -2014,6 +2048,10 @@
 
     // Render all plays for current chapter
     function renderPlays() {
+      // Hide skeleton
+      const skeleton = document.getElementById('plays-skeleton');
+      if (skeleton) skeleton.classList.add('hidden');
+
       const container = document.getElementById('plays-container');
       container.innerHTML = '';
 
@@ -2195,6 +2233,9 @@
         }
       }).catch(function(err) {
         console.log('Auth required:', err);
+        // Hide skeleton on auth failure
+        const skeleton = document.getElementById('plays-skeleton');
+        if (skeleton) skeleton.classList.add('hidden');
       });
     });
 
