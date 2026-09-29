@@ -419,6 +419,27 @@ const PlayViewer = (function() {
     renderDefenders(playId, phase);
   }
 
+  // Render court without actions (for animation - actions shown progressively)
+  function renderCourtForAnimation(playId, phase) {
+    renderPlayers(playId, phase);
+    // Clear actions layer - actions will be added as they animate
+    const layer = document.getElementById(`actionsLayer-${playId}`);
+    if (layer) layer.innerHTML = '';
+    renderDefenders(playId, phase);
+  }
+
+  // Add specific actions to the actions layer
+  function addActionsToLayer(playId, actions, phase) {
+    const layer = document.getElementById(`actionsLayer-${playId}`);
+    if (!layer || !phase.actions) return;
+
+    actions.forEach(action => {
+      const index = phase.actions.indexOf(action);
+      const g = createActionSVG(playId, action, index);
+      layer.appendChild(g);
+    });
+  }
+
   // Initialize a play viewer in a container
   function init(container, play) {
     const playId = play.id;
@@ -533,14 +554,16 @@ const PlayViewer = (function() {
         }
 
         const actionsToAnimate = getSimultaneousActions(phase, actionIndex);
+        // Show action lines as they start animating (not all at once)
+        addActionsToLayer(playId, actionsToAnimate, phase);
         animateActions(playId, actionsToAnimate, phase, () => {
           actionIndex += actionsToAnimate.length;
           state.timeout = setTimeout(animateNextAction, 200);
         });
       }
 
-      // Render this phase's initial state
-      renderCourt(playId, phase);
+      // Render this phase's initial state (players only, no actions yet)
+      renderCourtForAnimation(playId, phase);
 
       if (phase.actions && phase.actions.length > 0) {
         state.timeout = setTimeout(animateNextAction, 300);
@@ -661,9 +684,11 @@ const PlayViewer = (function() {
         }
       });
 
-      renderCourt(playId, phase);
+      // Only update players and defenders, keep action lines as-is
+      renderPlayers(playId, phase);
+      renderDefenders(playId, phase);
 
-      // Re-append shot ball after renderCourt (which clears layers)
+      // Re-append shot ball (which clears players layer)
       if (shotBall) {
         const svg = document.getElementById(`courtSvg-${playId}`);
         if (svg && !svg.contains(shotBall)) {

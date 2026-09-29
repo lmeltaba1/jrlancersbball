@@ -333,11 +333,11 @@
         // Load game results, attendance, and volunteers from Firestore IN PARALLEL
         if (db) {
           try {
-            // Parallel fetch - much faster than sequential
+            // Parallel fetch with timeout to prevent iOS hangs
             const [gameStatsSnapshot, attendanceSnapshot, volunteersSnapshot] = await Promise.all([
-              db.collection('gameStats').get(),
-              db.collection('attendance').get(),
-              db.collection('volunteers').get()
+              firestoreWithTimeout(db.collection('gameStats').get()),
+              firestoreWithTimeout(db.collection('attendance').get()),
+              firestoreWithTimeout(db.collection('volunteers').get())
             ]);
 
             // Process game stats

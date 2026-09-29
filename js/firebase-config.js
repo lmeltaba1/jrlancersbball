@@ -179,19 +179,12 @@ if (typeof firebase !== 'undefined') {
     }
     if (typeof firebase.firestore === 'function') {
       db = firebase.firestore();
-      // Enable offline persistence - MUST complete before Firestore calls on iOS
-      _firestoreReady = db.enablePersistence({ synchronizeTabs: true })
-        .then(() => {
-          console.log('Firestore persistence enabled');
-        })
-        .catch((err) => {
-          if (err.code === 'failed-precondition') {
-            console.log('Persistence unavailable: multiple tabs open');
-          } else if (err.code === 'unimplemented') {
-            console.log('Persistence unavailable: browser not supported');
-          }
-          // Persistence failed but Firestore still works
-        });
+      // Skip persistence on iOS - IndexedDB causes intermittent hangs
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (!isIOS) {
+        _firestoreReady = db.enablePersistence({ synchronizeTabs: true })
+          .catch(() => {});
+      }
     }
     if (typeof firebase.storage === 'function') {
       storage = firebase.storage();
@@ -206,19 +199,11 @@ if (typeof firebase !== 'undefined') {
   }
 }
 
-// Wait for Firestore to be ready (call before first Firestore operation)
+// Wait for Firestore persistence with timeout (prevents iOS IndexedDB hangs)
 async function waitForFirestore() {
-  if (_firestoreReady) {
-    try {
-      // Short timeout - persistence usually completes in <100ms
-      await Promise.race([
-        _firestoreReady,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore init timeout')), 200))
-      ]);
-    } catch (e) {
-      console.log('Firestore ready timeout, continuing anyway');
-    }
-  }
+  if (!_firestoreReady) return;
+  const timeout = new Promise(resolve => setTimeout(resolve, 150));
+  await Promise.race([_firestoreReady, timeout]);
 }
 
 // Unregister old caching service worker (was causing loading issues)
@@ -254,6 +239,22 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Wrap Firestore query with timeout (safety net)
+async function firestoreWithTimeout(queryPromise, timeoutMs = 2000) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('Firestore timeout')), timeoutMs);
+  });
+  try {
+    const result = await Promise.race([queryPromise, timeout]);
+    clearTimeout(timeoutId);
+    return result;
+  } catch (e) {
+    clearTimeout(timeoutId);
+    throw e;
+  }
+}
+
 // Helper to load roster data from Firestore
 async function loadRosterData() {
   if (!db) {
@@ -261,7 +262,7 @@ async function loadRosterData() {
     return null;
   }
   try {
-    const doc = await db.collection('config').doc('roster').get();
+    const doc = await firestoreWithTimeout(db.collection('config').doc('roster').get());
     if (doc.exists) {
       return doc.data();
     } else {
@@ -280,7 +281,6 @@ async function getPlayerFromRoster(email) {
   try {
     // Load admin emails first to ensure isAdmin() works correctly
     await loadAdminEmails();
-
     const data = await loadRosterData();
     if (!data) {
       console.error('Failed to load roster data');
