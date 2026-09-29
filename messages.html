@@ -9,6 +9,8 @@
   <title>Messages - Jr. Lancers</title>
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="css/athletic.css">
   <link rel="manifest" href="manifest.json">
   <style>
@@ -822,28 +824,20 @@
           isFirstSnapshot = false;
           chatInitialLoadComplete = true;
 
-          console.log('DIVIDER DEBUG: isFirstSnapshot complete, unreadDividerAdded=' + unreadDividerAdded);
-          console.log('DIVIDER DEBUG: lastReadMessageId=' + lastReadMessageId);
-          console.log('DIVIDER DEBUG: container children=' + container.children.length);
-
           if (!unreadDividerAdded) {
             var dividerDiv = document.createElement('div');
             dividerDiv.className = 'unread-divider';
             dividerDiv.id = 'unreadDivider';
-            // Force visible with inline styles
             dividerDiv.style.cssText = 'display:flex;align-items:center;gap:12px;color:#FFD700;font-size:0.85rem;font-weight:700;text-transform:uppercase;margin:20px 0;padding:10px 0;background:rgba(255,215,0,0.1);border-radius:8px;justify-content:center;';
 
             var lastReadElement = lastReadMessageId ? container.querySelector('[data-message-id="' + lastReadMessageId + '"]') : null;
-            console.log('DIVIDER DEBUG: lastReadElement found=' + !!lastReadElement);
 
             if (lastReadElement && lastReadElement.nextElementSibling) {
               dividerDiv.textContent = 'NEW MESSAGES';
               container.insertBefore(dividerDiv, lastReadElement.nextElementSibling);
-              console.log('DIVIDER DEBUG: Inserted after lastReadElement');
             } else if (lastReadElement) {
               dividerDiv.textContent = 'LAST READ';
               container.appendChild(dividerDiv);
-              console.log('DIVIDER DEBUG: Appended at end (last read is last msg)');
             } else {
               dividerDiv.textContent = 'NEW MESSAGES';
               if (container.firstChild) {
@@ -851,10 +845,8 @@
               } else {
                 container.appendChild(dividerDiv);
               }
-              console.log('DIVIDER DEBUG: Inserted at beginning (no last read found)');
             }
             unreadDividerAdded = true;
-            console.log('DIVIDER DEBUG: Divider created, id=' + dividerDiv.id + ', text=' + dividerDiv.textContent);
 
             // Scroll to divider - center it on screen so it's clearly visible
             dividerDiv.scrollIntoView({ behavior: 'auto', block: 'center' });

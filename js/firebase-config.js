@@ -8,30 +8,20 @@ async function loadAdminEmails() {
   if (_cachedAdminEmails !== null) return _cachedAdminEmails;
   if (typeof db === 'undefined' || !db) return {};
   try {
-    // Add timeout to prevent iOS IndexedDB hangs
-    var timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), 3000)
-    );
     // Try to load adminEmails document
-    const doc = await Promise.race([
-      db.collection('config').doc('adminEmails').get(),
-      timeoutPromise
-    ]);
+    const doc = await db.collection('config').doc('adminEmails').get();
     if (doc.exists) {
       _cachedAdminEmails = doc.data();
       return _cachedAdminEmails;
     }
     // Fallback: if adminEmails doesn't exist, use head coach as admin
-    const headCoachDoc = await Promise.race([
-      db.collection('config').doc('headCoach').get(),
-      timeoutPromise
-    ]);
+    const headCoachDoc = await db.collection('config').doc('headCoach').get();
     if (headCoachDoc.exists && headCoachDoc.data().email) {
       _cachedAdminEmails = { [headCoachDoc.data().email.toLowerCase()]: true };
       return _cachedAdminEmails;
     }
   } catch (e) {
-    console.log('loadAdminEmails timeout or error:', e.message);
+    console.log('loadAdminEmails error:', e.message);
   }
   return {};
 }
@@ -148,12 +138,7 @@ async function loadTime() {
   if (_timeLoaded) return _timeOffsetMs;
   try {
     if (db) {
-      // Add timeout to prevent iOS IndexedDB hangs
-      var timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 3000)
-      );
-      var fetchPromise = db.collection('config').doc('simulation').get();
-      var doc = await Promise.race([fetchPromise, timeoutPromise]);
+      var doc = await db.collection('config').doc('simulation').get();
       if (doc.exists) {
         var data = doc.data();
         // New offset-based approach - time advances naturally
@@ -167,7 +152,7 @@ async function loadTime() {
       }
     }
   } catch (e) {
-    console.log('loadTime timeout or error, using real time');
+    console.log('loadTime error, using real time:', e.message);
   }
   _timeLoaded = true;
   return _timeOffsetMs;
@@ -225,10 +210,10 @@ if (typeof firebase !== 'undefined') {
 async function waitForFirestore() {
   if (_firestoreReady) {
     try {
-      // Add timeout in case persistence hangs on iOS (1s should be plenty)
+      // Short timeout - persistence usually completes in <100ms
       await Promise.race([
         _firestoreReady,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore init timeout')), 1000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore init timeout')), 200))
       ]);
     } catch (e) {
       console.log('Firestore ready timeout, continuing anyway');
@@ -276,14 +261,7 @@ async function loadRosterData() {
     return null;
   }
   try {
-    // Add timeout to prevent iOS IndexedDB hangs
-    var timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), 3000)
-    );
-    const doc = await Promise.race([
-      db.collection('config').doc('roster').get(),
-      timeoutPromise
-    ]);
+    const doc = await db.collection('config').doc('roster').get();
     if (doc.exists) {
       return doc.data();
     } else {
@@ -525,9 +503,8 @@ function requireAuth(options = {}) {
       }
 
       try {
-        // Load admin emails and time config
-        await loadAdminEmails();
-        await loadTime();
+        // Load admin emails and time config in parallel
+        await Promise.all([loadAdminEmails(), loadTime()]);
 
         // Check for emulation (admin only)
         const effectiveEmail = getEffectiveEmail(user.email);
