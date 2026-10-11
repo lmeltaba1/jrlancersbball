@@ -180,7 +180,11 @@ if (typeof firebase !== 'undefined') {
     }
     if (typeof firebase.firestore === 'function') {
       db = firebase.firestore();
-      if (!isIOS) {
+      if (isIOS) {
+        // iOS: Auto-detect when WebSocket fails and fall back to long polling
+        // Gives fast WebSocket when it works, reliable fallback when it doesn't
+        db.settings({ experimentalAutoDetectLongPolling: true });
+      } else {
         // Desktop: Enable persistence for offline support
         _firestoreReady = db.enablePersistence({ synchronizeTabs: true })
           .catch(() => {});
@@ -239,30 +243,29 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Helper to load roster data from Firestore with retry for iOS
+// Helper to load roster data from Firestore
+// Uses onSnapshot instead of get() because onSnapshot waits for connection
+// to be established, while get() fails immediately on iOS PWA first launch
 async function loadRosterData() {
   if (!db) {
     console.error('loadRosterData: db is undefined');
     return null;
   }
 
-  const maxRetries = 3;
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const doc = await db.collection('config').doc('roster').get();
-      if (doc.exists) {
-        return doc.data();
-      } else {
-        console.error('loadRosterData: roster document does not exist');
-        return null;
-      }
-    } catch (e) {
-      console.error('loadRosterData attempt ' + attempt + ' failed:', e);
-      if (attempt < maxRetries) {
-        // Wait before retry (500ms, 1000ms)
-        await new Promise(r => setTimeout(r, attempt * 500));
-      }
+  try {
+    const doc = await new Promise((resolve, reject) => {
+      const unsubscribe = db.collection('config').doc('roster').onSnapshot(
+        (snapshot) => { unsubscribe(); resolve(snapshot); },
+        (error) => { unsubscribe(); reject(error); }
+      );
+    });
+    if (doc.exists) {
+      return doc.data();
+    } else {
+      console.error('loadRosterData: roster document does not exist');
     }
+  } catch (e) {
+    console.error('Error loading roster from Firestore:', e);
   }
   return null;
 }
@@ -506,6 +509,10 @@ function requireAuth(options = {}) {
       }
 
       try {
+        // Ensure auth token is ready before Firestore reads
+        // onAuthStateChanged fires before token is propagated on iOS
+        await user.getIdToken();
+
         // Load admin emails and time config in parallel
         await Promise.all([loadAdminEmails(), loadTime()]);
 
