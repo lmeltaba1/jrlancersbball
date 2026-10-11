@@ -1059,6 +1059,112 @@ exports.syncConfig = onRequest({ invoker: 'public' }, async (request, response) 
 });
 
 // ==========================================
+// EMAIL ELIGIBILITY CHECK
+// Public endpoint to check if an email is eligible to register
+// Must be public since users aren't authenticated during registration
+// ==========================================
+
+// Public endpoint to get roster data (used on iOS where Firestore hangs)
+exports.getRosterData = onRequest({ invoker: 'public' }, async (request, response) => {
+  if (setCorsHeaders(request, response)) return;
+
+  const fs = require('fs');
+  const path = require('path');
+
+  try {
+    const roster = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'roster-full.json'), 'utf8'));
+    response.json(roster);
+  } catch (error) {
+    console.error('getRosterData error:', error);
+    response.status(500).json({ error: error.message });
+  }
+});
+
+exports.checkEmailEligibility = onRequest({ invoker: 'public' }, async (request, response) => {
+  if (setCorsHeaders(request, response)) return;
+
+  const email = request.query.email?.toLowerCase();
+  if (!email) {
+    response.status(400).json({ error: 'Email is required' });
+    return;
+  }
+
+  const fs = require('fs');
+  const path = require('path');
+
+  try {
+    // Read roster from local files (same source as syncConfig)
+    const roster = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'roster-full.json'), 'utf8'));
+
+    // Check coaches
+    if (roster.coaches && Array.isArray(roster.coaches)) {
+      for (const coach of roster.coaches) {
+        if (coach.email && coach.email.toLowerCase() === email) {
+          response.json({ eligible: true });
+          return;
+        }
+      }
+    }
+
+    // Check players' parents
+    if (roster.players && Array.isArray(roster.players)) {
+      for (const player of roster.players) {
+        // Check parents
+        if (player.parents && Array.isArray(player.parents)) {
+          for (const parent of player.parents) {
+            if (parent.email && parent.email.toLowerCase() === email) {
+              response.json({ eligible: true });
+              return;
+            }
+          }
+        }
+        // Check static viewers in roster (e.g., player's own email)
+        if (player.viewers && Array.isArray(player.viewers)) {
+          for (const viewer of player.viewers) {
+            if (viewer.email && viewer.email.toLowerCase() === email) {
+              response.json({ eligible: true });
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    // Check Firestore viewers (dynamically added by parents)
+    const viewersSnapshot = await db.collection('viewers').get();
+    for (const doc of viewersSnapshot.docs) {
+      const data = doc.data();
+      // Check if on blocklist first
+      const removedEmails = data.removedEmails || [];
+      if (removedEmails.map(e => e.toLowerCase()).includes(email)) {
+        // On blocklist - check if was a roster viewer
+        const playerId = parseInt(doc.id);
+        const player = roster.players?.find(p => p.id === playerId);
+        if (player?.viewers?.some(v => v.email?.toLowerCase() === email)) {
+          // Was a roster viewer but was removed
+          response.json({ eligible: false });
+          return;
+        }
+      }
+      // Check dynamic viewers
+      const viewers = data.viewers || [];
+      for (const viewer of viewers) {
+        if (viewer.email && viewer.email.toLowerCase() === email) {
+          response.json({ eligible: true });
+          return;
+        }
+      }
+    }
+
+    // Email not found
+    response.json({ eligible: false });
+  } catch (error) {
+    console.error('checkEmailEligibility error:', error);
+    response.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
 // PLAYS BACKUP SYSTEM
 // Automatically backs up all plays to Firebase Storage whenever any play changes
 // ==========================================

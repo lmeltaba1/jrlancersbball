@@ -182,7 +182,6 @@ if (typeof firebase !== 'undefined') {
       db = firebase.firestore();
       if (!isIOS) {
         // Desktop: Enable persistence for offline support
-        // iOS: Skip persistence (IndexedDB causes hangs), use default WebSocket
         _firestoreReady = db.enablePersistence({ synchronizeTabs: true })
           .catch(() => {});
       }
@@ -240,21 +239,30 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Helper to load roster data from Firestore
+// Helper to load roster data from Firestore with retry for iOS
 async function loadRosterData() {
   if (!db) {
     console.error('loadRosterData: db is undefined');
     return null;
   }
-  try {
-    const doc = await db.collection('config').doc('roster').get();
-    if (doc.exists) {
-      return doc.data();
-    } else {
-      console.error('loadRosterData: roster document does not exist');
+
+  const maxRetries = 3;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const doc = await db.collection('config').doc('roster').get();
+      if (doc.exists) {
+        return doc.data();
+      } else {
+        console.error('loadRosterData: roster document does not exist');
+        return null;
+      }
+    } catch (e) {
+      console.error('loadRosterData attempt ' + attempt + ' failed:', e);
+      if (attempt < maxRetries) {
+        // Wait before retry (500ms, 1000ms)
+        await new Promise(r => setTimeout(r, attempt * 500));
+      }
     }
-  } catch (e) {
-    console.error('Error loading roster from Firestore:', e);
   }
   return null;
 }

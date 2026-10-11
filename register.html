@@ -84,8 +84,18 @@
 
       try {
         // Check if email is in roster before allowing registration
-        const inRoster = await isEmailInRoster(email);
-        if (!inRoster) {
+        // Uses Cloud Function since user isn't authenticated yet
+        let checkResult;
+        try {
+          const checkResponse = await fetch(`https://us-central1-lancers-bball.cloudfunctions.net/checkEmailEligibility?email=${encodeURIComponent(email)}`);
+          checkResult = await checkResponse.json();
+        } catch (fetchError) {
+          console.error('Email check failed:', fetchError);
+          errorDiv.textContent = 'Unable to verify email. Please try again.';
+          errorDiv.style.display = 'block';
+          return;
+        }
+        if (!checkResult.eligible) {
           errorDiv.textContent = 'This email is not authorized. Please contact Coach Logan to be added to the team roster.';
           errorDiv.style.display = 'block';
           return;
@@ -93,7 +103,10 @@
 
         const result = await auth.createUserWithEmailAndPassword(email, password);
 
-        showToast('Account created! You can now log in.', 'success');
+        // Show success and redirect
+        errorDiv.style.color = '#10B981';
+        errorDiv.textContent = 'Account created! Redirecting to login...';
+        errorDiv.style.display = 'block';
         setTimeout(() => { window.location.href = 'login.html'; }, 1500);
 
       } catch (error) {
