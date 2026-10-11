@@ -25,12 +25,50 @@ service cloud.firestore {
         getUserEmail() in get(/databases/$(database)/documents/config/coachEmails).data;
     }
 
+    // Helper: Check if user is admin (head coach or in adminEmails)
+    function isAdmin() {
+      return isHeadCoach() || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/config/adminEmails) &&
+        getUserEmail() in get(/databases/$(database)/documents/config/adminEmails).data
+      );
+    }
+
+    // Helper: Validate stat value is non-negative integer or null
+    function isValidStat(val) {
+      return val == null || (val is int && val >= 0);
+    }
+
+    // Helper: Validate player stats object has valid values
+    function hasValidPlayerStats(stats) {
+      return stats is map &&
+        isValidStat(stats.get('points', null)) &&
+        isValidStat(stats.get('rebounds', null)) &&
+        isValidStat(stats.get('assists', null)) &&
+        isValidStat(stats.get('steals', null)) &&
+        isValidStat(stats.get('blocks', null)) &&
+        isValidStat(stats.get('fouls', null)) &&
+        isValidStat(stats.get('turnovers', null)) &&
+        isValidStat(stats.get('twoPointersMade', null)) &&
+        isValidStat(stats.get('twoPointersMissed', null)) &&
+        isValidStat(stats.get('threePointersMade', null)) &&
+        isValidStat(stats.get('threePointersMissed', null)) &&
+        isValidStat(stats.get('freeThrowsMade', null)) &&
+        isValidStat(stats.get('freeThrowsMissed', null));
+    }
+
     // Game stats - read by authenticated, create/update by authenticated (scorekeeper), delete by coach
-    // Note: Scorekeeper writes are allowed during game window (verified by frontend)
+    // Note: Scorekeeper role and time window are validated by frontend
     match /gameStats/{gameId} {
       allow read: if isAuthenticated();
-      // Any authenticated user can create/update (frontend validates scorekeeper role + time window)
-      allow create, update: if isAuthenticated();
+      // Create/update: authenticated user, validate stat values are non-negative
+      allow create, update: if isAuthenticated() &&
+        // Validate gamePhase if present
+        (!('gamePhase' in request.resource.data) ||
+          request.resource.data.gamePhase in ['notStarted', 'Q1', 'Q2', 'halftime', 'Q3', 'Q4', 'OT', 'final']) &&
+        // Validate lancersScore and opponentScore if present
+        isValidStat(request.resource.data.get('lancersScore', null)) &&
+        isValidStat(request.resource.data.get('opponentScore', null));
       // Only coaches can delete
       allow delete: if isCoach();
     }
@@ -38,15 +76,26 @@ service cloud.firestore {
     // Volunteers - read by authenticated, write by authenticated (parents/coaches sign up)
     match /volunteers/{gameId} {
       allow read: if isAuthenticated();
-      // Allow authenticated users to write (frontend validates parent/coach role)
-      allow write: if isAuthenticated();
+      // Write: authenticated users, validate structure
+      allow write: if isAuthenticated() &&
+        // Must have valid structure for scorekeeper/tableWorker if present
+        (!('scorekeeper' in request.resource.data) ||
+          (request.resource.data.scorekeeper is map &&
+           request.resource.data.scorekeeper.keys().hasAll(['email', 'name']))) &&
+        (!('tableWorker' in request.resource.data) ||
+          (request.resource.data.tableWorker is map &&
+           request.resource.data.tableWorker.keys().hasAll(['email', 'name'])));
     }
 
     // Attendance - read by authenticated, write by authenticated
     match /attendance/{docId} {
       allow read: if isAuthenticated();
-      // Allow authenticated users to write their attendance
-      allow write: if isAuthenticated();
+      // Write: authenticated users, validate status value
+      allow write: if isAuthenticated() &&
+        request.resource.data.keys().hasAll(['gameId', 'playerId', 'status']) &&
+        request.resource.data.status in ['yes', 'no', 'maybe'] &&
+        request.resource.data.playerId is int &&
+        request.resource.data.gameId is int;
     }
 
     // Chat messages - read/create by authenticated, author can delete own
@@ -91,33 +140,63 @@ service cloud.firestore {
     // Config (schedule/roster sync) - readable by authenticated, writable by functions only
     match /config/{docId} {
       allow read: if isAuthenticated();
-      // Allow any authenticated user to write simulation config (for testing)
-      allow write: if docId == 'simulation' && isAuthenticated();
+      // Simulation config: only admins/coaches can modify (for time testing)
+      allow write: if docId == 'simulation' && isAdmin();
       // Allow head coach to manage hidden plays
       allow write: if docId == 'hiddenPlays' && isHeadCoach();
-      // Other config docs only writable by cloud functions
+      // Other config docs only writable by cloud functions (roster, schedule, headCoach, etc.)
     }
 
     // Highlights - photos/videos of game moments
     match /highlights/{docId} {
       allow read: if isAuthenticated();
-      // Create: must set uploadedBy to own UID
-      allow create: if isAuthenticated()
-        && request.resource.data.uploadedBy == request.auth.uid;
+      // Create: must set uploadedBy to own UID, validate required fields
+      allow create: if isAuthenticated() &&
+        request.resource.data.uploadedBy == request.auth.uid &&
+        // Must have either downloadUrl (real upload) or url (simulated)
+        ('downloadUrl' in request.resource.data || 'url' in request.resource.data) &&
+        // Must have gameId and playerId
+        'gameId' in request.resource.data &&
+        'playerId' in request.resource.data &&
+        request.resource.data.gameId is int &&
+        request.resource.data.playerId is int;
       // Update: only uploader can update
-      allow update: if isAuthenticated()
-        && resource.data.uploadedBy == request.auth.uid;
+      allow update: if isAuthenticated() &&
+        resource.data.uploadedBy == request.auth.uid;
       // Delete: uploader or coaches can delete
-      allow delete: if isAuthenticated()
-        && (resource.data.uploadedBy == request.auth.uid || isCoach());
+      allow delete: if isAuthenticated() &&
+        (resource.data.uploadedBy == request.auth.uid || isCoach());
+    }
+
+    // Parent-player mapping for viewer management validation
+    // Generated by syncConfig from roster data
+    match /parentPlayers/{email} {
+      allow read: if isAuthenticated();
+      // Only cloud functions can write (via syncConfig)
+      allow write: if false;
+    }
+
+    // Helper: Check if user is parent of the given player
+    function isParentOf(playerId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/parentPlayers/$(getUserEmail())) &&
+        int(playerId) in get(/databases/$(database)/documents/parentPlayers/$(getUserEmail())).data.playerIds;
     }
 
     // Viewers - invited family members who can view but not interact
-    // Parents can manage viewers for their player (validated by frontend)
+    // Only parents can manage viewers for their own kids, coaches can manage any
     match /viewers/{playerId} {
       allow read: if isAuthenticated();
-      // Write: authenticated users (frontend validates parent role)
-      allow write: if isAuthenticated();
+      // Write: coaches OR parent of this specific player
+      allow write: if isAuthenticated() &&
+        // Validate viewers array structure if present
+        (!('viewers' in request.resource.data) ||
+          request.resource.data.viewers is list) &&
+        // Validate removedEmails is array if present
+        (!('removedEmails' in request.resource.data) ||
+          request.resource.data.removedEmails is list) &&
+        // Must be coach OR parent of this player
+        (isCoach() || isParentOf(playerId));
     }
 
     // Wrap-ups - post-game AI reports with coach notes

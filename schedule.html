@@ -287,7 +287,7 @@
       requireAuth().then(async function(userInfo) {
         clearTimeout(loadingTimeout);
         currentUserInfo = userInfo; // Store for use in renderSchedule
-        if (userInfo.isViewer) hideViewerRestrictedNav();
+        if (userInfo.isViewer || userInfo.isPlayer) hideViewerRestrictedNav(userInfo);
         if (typeof initNotificationCenter === 'function') initNotificationCenter();
         // Show profile button
         const profileWrapper = document.getElementById('profileBtnWrapper');
@@ -333,11 +333,11 @@
         // Load game results, attendance, and volunteers from Firestore IN PARALLEL
         if (db) {
           try {
-            // Parallel fetch with timeout to prevent iOS hangs
+            // Parallel fetch
             const [gameStatsSnapshot, attendanceSnapshot, volunteersSnapshot] = await Promise.all([
-              firestoreWithTimeout(db.collection('gameStats').get()),
-              firestoreWithTimeout(db.collection('attendance').get()),
-              firestoreWithTimeout(db.collection('volunteers').get())
+              db.collection('gameStats').get(),
+              db.collection('attendance').get(),
+              db.collection('volunteers').get()
             ]);
 
             // Process game stats

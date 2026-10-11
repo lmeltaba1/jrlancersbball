@@ -270,7 +270,7 @@ async function getPlayerFromRoster(email) {
     if (!data) {
       console.error('Failed to load roster data');
       // Return a basic coach object to prevent lockout on errors
-      return { isCoach: true, isParent: false, isViewer: false, name: email, canChat: true, canViewPlaybook: true, canSignUp: true };
+      return { isCoach: true, isParent: false, isViewer: false, isPlayer: false, name: email, canChat: true, canViewPlaybook: true, canSignUp: true, canUploadHighlights: true };
     }
     const emailLower = email.toLowerCase();
 
@@ -326,6 +326,7 @@ async function getPlayerFromRoster(email) {
       return {
         isCoach: isCoach,
         isViewer: false,
+        isPlayer: false,
         isParent: true,
         name: isCoach ? coachInfo.name : selected.parent.name,
         player: selected.player,
@@ -337,6 +338,7 @@ async function getPlayerFromRoster(email) {
         canChat: true,
         canViewPlaybook: true,
         canSignUp: true,
+        canUploadHighlights: true,
         allPlayers: allPlayers.length > 1 ? allPlayers : null
       };
     }
@@ -346,9 +348,11 @@ async function getPlayerFromRoster(email) {
       if (player.viewers) {
         for (const viewer of player.viewers) {
           if (viewer.email.toLowerCase() === emailLower) {
+            const isPlayerSelf = (viewer.relationship || '').toLowerCase() === 'player';
             return {
               isCoach: false,
-              isViewer: true,
+              isViewer: !isPlayerSelf,  // Player is a special role, not a viewer
+              isPlayer: isPlayerSelf,
               isParent: false,
               name: viewer.name,
               player: player,
@@ -359,8 +363,9 @@ async function getPlayerFromRoster(email) {
               relationship: viewer.relationship || 'Viewer',
               canTrackStats: false,
               canChat: false,
-              canViewPlaybook: false,
-              canSignUp: false
+              canViewPlaybook: isPlayerSelf,  // Players can see playbook
+              canSignUp: false,
+              canUploadHighlights: !isPlayerSelf  // Viewers can upload, players cannot
             };
           }
         }
@@ -396,9 +401,11 @@ async function getPlayerFromRoster(email) {
           const viewers = doc.data().viewers || [];
           for (const viewer of viewers) {
             if (viewer.email.toLowerCase() === emailLower && player) {
+              const isPlayerSelf = (viewer.relationship || '').toLowerCase() === 'player';
               return {
                 isCoach: false,
-                isViewer: true,
+                isViewer: !isPlayerSelf,  // Player is a special role, not a viewer
+                isPlayer: isPlayerSelf,
                 isParent: false,
                 name: viewer.name,
                 player: player,
@@ -409,8 +416,9 @@ async function getPlayerFromRoster(email) {
                 relationship: viewer.relationship || 'Viewer',
                 canTrackStats: false,
                 canChat: false,
-                canViewPlaybook: false,
-                canSignUp: false
+                canViewPlaybook: isPlayerSelf,  // Players can see playbook
+                canSignUp: false,
+                canUploadHighlights: !isPlayerSelf  // Viewers can upload, players cannot
               };
             }
           }
@@ -425,13 +433,15 @@ async function getPlayerFromRoster(email) {
       return {
         isCoach: true,
         isViewer: false,
+        isPlayer: false,
         isParent: false,
         name: coachInfo.name,
         position: null,
         canTrackStats: coachInfo.canTrackStats,
         canChat: true,
         canViewPlaybook: true,
-        canSignUp: true
+        canSignUp: true,
+        canUploadHighlights: true
       };
     }
 
@@ -513,12 +523,12 @@ function requireAuth(options = {}) {
           return;
         }
 
-        // Check if page requires parent/coach (not viewer)
-        if (options.requireParent && userInfo.isViewer) {
+        // Check if page requires parent/coach (not viewer or player)
+        if (options.requireParent && (userInfo.isViewer || userInfo.isPlayer)) {
           resolved = true;
           clearTimeout(timeoutId);
           window.location.href = 'index.html';
-          reject('Viewer not allowed');
+          reject('Viewer/Player not allowed');
           return;
         }
 
@@ -550,12 +560,18 @@ function requireAuth(options = {}) {
   });
 }
 
-// Hide nav items that viewers can't access (chat, playbook)
-function hideViewerRestrictedNav() {
-  // Hide Chat and Plays nav items for viewers
+// Hide nav items based on user role
+// Viewers: hide Chat and Plays
+// Players: hide only Chat (they can see playbook)
+function hideViewerRestrictedNav(userInfo) {
   document.querySelectorAll('.nav-item').forEach(item => {
     const text = item.textContent.trim().toLowerCase();
-    if (text.includes('chat') || text.includes('plays')) {
+    // Always hide Chat for viewers and players
+    if (text.includes('chat')) {
+      item.style.display = 'none';
+    }
+    // Hide Plays only for viewers (not players - they need to see playbook)
+    if (text.includes('plays') && userInfo && !userInfo.isPlayer) {
       item.style.display = 'none';
     }
   });

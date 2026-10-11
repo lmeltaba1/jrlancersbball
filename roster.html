@@ -418,7 +418,12 @@
           <input type="text" id="viewer-name" placeholder="Name (e.g., Grandma Jane)" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 16px;">
         </div>
         <div style="margin-bottom: 8px;">
-          <input type="text" id="viewer-relationship" placeholder="Relationship (e.g., Grandmother)" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 16px;">
+          <select id="viewer-relationship" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 16px;">
+            <option value="">Select relationship...</option>
+            <option value="Player">Player (self)</option>
+            <option value="Family">Family</option>
+            <option value="Friend">Friend</option>
+          </select>
         </div>
         <div style="display: flex; gap: 8px;">
           <button type="button" onclick="saveViewer()" class="btn btn-primary" style="flex: 1; padding: 10px;">Send Invite</button>
@@ -584,7 +589,7 @@
     document.addEventListener('DOMContentLoaded', async function() {
       // Require auth - all users can view roster
       requireAuth().then(async function(userInfo) {
-        if (userInfo.isViewer) hideViewerRestrictedNav();
+        if (userInfo.isViewer || userInfo.isPlayer) hideViewerRestrictedNav(userInfo);
         if (typeof initNotificationCenter === 'function') initNotificationCenter();
 
         // Show profile button

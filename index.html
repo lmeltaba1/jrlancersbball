@@ -1325,14 +1325,14 @@
           document.getElementById('coach-role').textContent = 'Head Coach';
         }
 
-        // Hide nav items that viewers can't access
-        if (userInfo.isViewer) {
-          hideViewerRestrictedNav();
+        // Hide nav items that viewers/players can't access
+        if (userInfo.isViewer || userInfo.isPlayer) {
+          hideViewerRestrictedNav(userInfo);
         }
 
-        // Hide all volunteer panels for coaches and viewers
-        console.log('User info:', userInfo.isCoach, userInfo.isViewer, userInfo.isParent);
-        if (userInfo.isCoach || userInfo.isViewer) {
+        // Hide all volunteer panels for coaches, viewers, and players
+        console.log('User info:', userInfo.isCoach, userInfo.isViewer, userInfo.isParent, userInfo.isPlayer);
+        if (userInfo.isCoach || userInfo.isViewer || userInfo.isPlayer) {
           console.log('Hiding volunteer panels for coach/viewer');
           document.getElementById('volunteer-status-card').style.display = 'none';
         }

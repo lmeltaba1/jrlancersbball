@@ -433,7 +433,7 @@
         currentUser = auth.currentUser;
         userInfo = info;
         if (typeof initNotificationCenter === 'function') initNotificationCenter();
-        if (info.isViewer) hideViewerRestrictedNav();
+        if (info.isViewer || info.isPlayer) hideViewerRestrictedNav(info);
         // Show profile button
         const profileWrapper = document.getElementById('profileBtnWrapper');
         if (profileWrapper) profileWrapper.style.display = 'block';

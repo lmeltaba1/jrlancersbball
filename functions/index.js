@@ -991,6 +991,25 @@ exports.syncConfig = onRequest({ invoker: 'public' }, async (request, response) 
       }
     }
 
+    // Build parentPlayers lookup: maps parent email -> their player IDs
+    // Used by Firestore rules to validate parents can only manage their own kids' viewers
+    const parentPlayersMap = {};
+    if (roster.players && Array.isArray(roster.players)) {
+      for (const player of roster.players) {
+        if (player.parents && Array.isArray(player.parents)) {
+          for (const parent of player.parents) {
+            if (parent.email) {
+              const email = parent.email.toLowerCase();
+              if (!parentPlayersMap[email]) {
+                parentPlayersMap[email] = { playerIds: [] };
+              }
+              parentPlayersMap[email].playerIds.push(player.id);
+            }
+          }
+        }
+      }
+    }
+
     // Sync config documents
     await Promise.all([
       db.collection('config').doc('schedule').set(schedule),
@@ -999,6 +1018,22 @@ exports.syncConfig = onRequest({ invoker: 'public' }, async (request, response) 
       db.collection('config').doc('headCoach').set({ email: headCoachEmail }),
       db.collection('config').doc('adminEmails').set(adminEmails)
     ]);
+
+    // Sync parentPlayers collection (clear and rebuild)
+    const parentPlayersRef = db.collection('parentPlayers');
+    const existingParentDocs = await parentPlayersRef.listDocuments();
+    if (existingParentDocs.length > 0) {
+      const deleteBatch = db.batch();
+      existingParentDocs.forEach(doc => deleteBatch.delete(doc));
+      await deleteBatch.commit();
+    }
+    if (Object.keys(parentPlayersMap).length > 0) {
+      const parentBatch = db.batch();
+      for (const [email, data] of Object.entries(parentPlayersMap)) {
+        parentBatch.set(parentPlayersRef.doc(email), data);
+      }
+      await parentBatch.commit();
+    }
 
     // Sync plays from backup file to customPlays collection
     let playsRestored = 0;
@@ -1016,7 +1051,7 @@ exports.syncConfig = onRequest({ invoker: 'public' }, async (request, response) 
 
     response.json({
       success: true,
-      message: `Synced ${schedule.games.length} games, ${roster.players.length} players, ${Object.keys(coachEmails).length} coaches, ${playsRestored} plays, head coach: ${headCoachEmail}`
+      message: `Synced ${schedule.games.length} games, ${roster.players.length} players, ${Object.keys(coachEmails).length} coaches, ${Object.keys(parentPlayersMap).length} parent mappings, ${playsRestored} plays, head coach: ${headCoachEmail}`
     });
   } catch (error) {
     response.status(500).json({ error: error.message });

@@ -667,7 +667,7 @@
         currentUserInfo = userInfo;
         if (typeof initNotificationCenter === 'function') initNotificationCenter();
 
-        if (userInfo.isViewer) hideViewerRestrictedNav();
+        if (userInfo.isViewer || userInfo.isPlayer) hideViewerRestrictedNav(userInfo);
 
         // Show profile button
         const profileWrapper = document.getElementById('profileBtnWrapper');
@@ -684,8 +684,10 @@
         }
         if (userInfo.isEmulating) { showEmulationBanner(userInfo.emulatedEmail); }
 
-        // Show upload button for all authenticated users (parents, coaches, viewers)
-        document.getElementById('uploadBtn').style.display = 'flex';
+        // Show upload button for users who can upload (parents, coaches, viewers - but NOT players)
+        if (userInfo.canUploadHighlights !== false) {
+          document.getElementById('uploadBtn').style.display = 'flex';
+        }
 
         loadPageContent();
       }).catch(function(err) {

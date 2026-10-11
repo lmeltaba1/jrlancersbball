@@ -404,7 +404,7 @@
     document.addEventListener('DOMContentLoaded', async function() {
       // Require auth - all users can view stats
       requireAuth().then(async function(userInfo) {
-        if (userInfo.isViewer) hideViewerRestrictedNav();
+        if (userInfo.isViewer || userInfo.isPlayer) hideViewerRestrictedNav(userInfo);
         if (typeof initNotificationCenter === 'function') initNotificationCenter();
         // Show profile button
         const profileWrapper = document.getElementById('profileBtnWrapper');
