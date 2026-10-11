@@ -534,13 +534,13 @@ function closeNotificationPanelOnClickOutside(e) {
   }
 }
 
-// Handle notification click - mark as read and navigate
+// Handle notification click - dismiss and navigate
 async function handleNotificationClick(notificationId, source, url, isAggregate) {
   if (!currentUserUid) return;
 
   // Handle aggregated notifications (like chat)
   if (isAggregate === 'true' || isAggregate === true) {
-    // Find the aggregate notification and mark all its children as read
+    // Find the aggregate notification and dismiss all its children
     const item = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
     const aggregateIdsStr = item?.dataset.aggregateIds;
     if (aggregateIdsStr) {
@@ -548,27 +548,29 @@ async function handleNotificationClick(notificationId, source, url, isAggregate)
         const aggregateIds = JSON.parse(aggregateIdsStr);
         for (const {id, source: src} of aggregateIds) {
           if (src === 'team') {
+            broadcastDismissedIds.add(id);
             broadcastReadIds.add(id);
           }
         }
         await saveBroadcastStatus();
       } catch (e) {
-        console.error('Error marking aggregate notifications read:', e);
+        console.error('Error dismissing aggregate notifications:', e);
       }
     }
   } else {
-    // Mark single notification as read based on source
+    // Dismiss single notification based on source
     if (source === 'team') {
+      broadcastDismissedIds.add(notificationId);
       broadcastReadIds.add(notificationId);
       await saveBroadcastStatus();
     } else {
-      // User notification - update directly in Firestore
+      // User notification - delete from Firestore
       try {
         await db.collection('userNotifications').doc(currentUserUid)
           .collection('notifications').doc(notificationId)
-          .update({ read: true });
+          .delete();
       } catch (e) {
-        console.error('Error marking notification read:', e);
+        console.error('Error dismissing notification:', e);
       }
     }
   }

@@ -3,7 +3,8 @@
 importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
 
-// Firebase init
+// Firebase init - only for token management, NOT for push display
+// We handle push manually via the 'push' event listener below
 firebase.initializeApp({
   apiKey: "AIzaSyCZDonC8aqbg5OvtM-cHdA5LTJleZn8nwk",
   authDomain: "lancers-bball.firebaseapp.com",
@@ -13,10 +14,8 @@ firebase.initializeApp({
   appId: "1:840563401504:web:fab87697f7129e98976d45"
 });
 
-const messaging = firebase.messaging();
-
-// Background message handler removed - notifications now use FCM notification payload
-// which is automatically displayed by the browser (no duplicate handling needed)
+// DO NOT call firebase.messaging() here - it sets up a competing background handler
+// that causes duplicate notifications. We handle push display manually below.
 
 // Handle notification click - open URL
 self.addEventListener('notificationclick', (event) => {

@@ -239,28 +239,15 @@ async function sendNotification(title, body, data = {}, options = {}) {
       }
 
       const response = await messaging.sendEachForMulticast({
-        // Data payload - service worker will display notification (all values must be strings)
+        // Data-only payload - service worker's push handler will display notification
+        // DO NOT include webpush.notification - it causes duplicate notifications
+        // (browser auto-displays from webpush.notification AND service worker shows one)
         data: {
           title,
           body,
           url: data.url || '/index.html',
           icon: '/images/lancers-logo-192.png',
           ...stringData
-        },
-        // Web push configuration with notification for display
-        webpush: {
-          notification: {
-            title,
-            body,
-            icon: baseUrl + '/images/lancers-logo-192.png',
-            badge: baseUrl + '/images/lancers-logo-192.png',
-            data: {
-              url: data.url || '/index.html'
-            }
-          },
-          fcmOptions: {
-            link: notificationUrl
-          }
         },
         tokens
       });
@@ -412,20 +399,16 @@ exports.onTokenRegistered = onDocumentWritten('fcmTokens/{uid}', async (event) =
       continue;
     }
 
-    // Send the pending notification
+    // Send the pending notification (data-only to avoid duplicate display)
     try {
-      const notificationUrl = baseUrl + (notif.data?.url || '/index.html');
       await messaging.send({
         token: token,
-        webpush: {
-          notification: {
-            title: notif.title,
-            body: notif.body,
-            icon: baseUrl + '/images/lancers-logo-192.png',
-            badge: baseUrl + '/images/lancers-logo-192.png',
-            data: { url: notif.data?.url || '/index.html' }
-          },
-          fcmOptions: { link: notificationUrl }
+        data: {
+          title: notif.title,
+          body: notif.body,
+          url: notif.data?.url || '/index.html',
+          icon: '/images/lancers-logo-192.png',
+          type: notif.data?.type || ''
         }
       });
       sent++;
