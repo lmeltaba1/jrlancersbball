@@ -433,6 +433,34 @@
     </div>
   </div>
 
+  <!-- Share Invite Modal -->
+  <div class="bottom-sheet-overlay" id="shareInviteOverlay" onclick="closeShareInvite()"></div>
+  <div class="bottom-sheet" id="shareInviteModal" style="max-height: 85vh;">
+    <div class="bottom-sheet-header">
+      <h3 id="shareInviteTitle">Share Invite</h3>
+      <button class="bottom-sheet-close" onclick="closeShareInvite()">&times;</button>
+    </div>
+    <div class="bottom-sheet-content" style="padding: 16px;">
+      <p style="color: var(--text-secondary); margin-bottom: 12px;">Send this message to invite them:</p>
+      <div id="shareInviteMessage" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; margin-bottom: 16px;"></div>
+      <div style="display: flex; gap: 10px;">
+        <button onclick="copyInviteMessage()" class="btn btn-primary" style="flex: 1; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          Copy
+        </button>
+        <a id="shareInviteSmsLink" href="#" class="btn" style="flex: 1; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--accent-green); color: white; text-decoration: none;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          Text
+        </a>
+      </div>
+      <button onclick="closeShareInvite()" class="btn" style="width: 100%; margin-top: 10px; padding: 12px; background: var(--bg-body); border: 1px solid var(--border-color);">Done</button>
+    </div>
+  </div>
+
   <!-- Bottom Navigation -->
   <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="index.html" class="nav-item">
@@ -1253,27 +1281,8 @@
         // Reload to get fresh data with proper source tags
         await loadViewers(currentPlayerId);
 
-        // Send invite email via Cloud Function
-        let emailSent = false;
-        try {
-          const sendViewerInvite = firebase.functions().httpsCallable('sendViewerInvite');
-          const result = await sendViewerInvite({
-            viewerEmail: email,
-            viewerName: name,
-            playerName: playerName,
-            inviterName: currentUserInfo.name || 'A team parent',
-            relationship: relationship || 'Viewer'
-          });
-          emailSent = result.data.emailSent;
-        } catch (emailError) {
-          console.log('Could not send invite email:', emailError);
-        }
-
-        if (emailSent) {
-          showToast(`Invite sent! ${name} will receive an email with instructions.`, 'success');
-        } else {
-          showToast(`${name} added! Tell them to register at register.html with email: ${email}`, 'success', 5000);
-        }
+        // Show share invite modal so parent can text/copy the invite
+        showShareInvite(name, email, playerName);
       } catch (e) {
         console.error('Error saving viewer:', e);
         showToast('Error saving viewer. Please try again.', 'error');
@@ -1328,6 +1337,52 @@
 
     function hideAddViewerForm() {
       document.getElementById('add-viewer-form').style.display = 'none';
+    }
+
+    // Share invite modal
+    let currentInviteMessage = '';
+
+    function showShareInvite(viewerName, viewerEmail, playerName) {
+      const message = `You're invited to follow ${playerName}'s basketball season with Jr. Lancers!
+
+Download the app: https://lancers-bball.web.app
+
+Register with this email: ${viewerEmail}
+
+Install guide: https://lancers-bball.web.app/docs/install-guide.html
+User guide: https://lancers-bball.web.app/docs/user-guide.html`;
+
+      currentInviteMessage = message;
+      document.getElementById('shareInviteTitle').textContent = `Invite ${viewerName}`;
+      document.getElementById('shareInviteMessage').textContent = message;
+
+      // Set up SMS link (works on mobile)
+      const smsBody = encodeURIComponent(message);
+      document.getElementById('shareInviteSmsLink').href = `sms:?body=${smsBody}`;
+
+      document.getElementById('shareInviteOverlay').classList.add('active');
+      document.getElementById('shareInviteModal').classList.add('active');
+    }
+
+    function closeShareInvite() {
+      document.getElementById('shareInviteOverlay').classList.remove('active');
+      document.getElementById('shareInviteModal').classList.remove('active');
+    }
+
+    async function copyInviteMessage() {
+      try {
+        await navigator.clipboard.writeText(currentInviteMessage);
+        showToast('Copied to clipboard!', 'success');
+      } catch (e) {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = currentInviteMessage;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('Copied to clipboard!', 'success');
+      }
     }
 
   </script>

@@ -449,7 +449,7 @@ async function getPlayerFromRoster(email) {
   } catch (e) {
     console.error('Error loading roster:', e);
     // Return a basic object to prevent lockout on errors
-    return { isCoach: true, isParent: false, isViewer: false, name: email, canChat: true, canViewPlaybook: true, canSignUp: true };
+    return { isCoach: true, isParent: false, isViewer: false, isPlayer: false, name: email, canChat: true, canViewPlaybook: true, canSignUp: true, canUploadHighlights: true };
   }
 }
 
