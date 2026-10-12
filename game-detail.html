@@ -165,7 +165,7 @@
         <div id="wrapup-video" style="display: none; margin-bottom: 12px;">
           <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; text-align: center;">Highlight Reel</div>
           <div style="position: relative; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 16/9;">
-            <video id="compiled-video" controls style="width: 100%; height: 100%;"></video>
+            <video id="compiled-video" controls poster="/images/highlight-reel-poster.png" style="width: 100%; height: 100%; background: #000;"></video>
           </div>
           <p id="highlight-reel-count" style="text-align: center; margin-top: 6px; font-size: 0.75rem; color: var(--text-secondary);"></p>
         </div>
@@ -1232,13 +1232,19 @@
         const targetEl = document.getElementById(targetId);
         if (targetEl && targetEl.style.display !== 'none') {
           // Use longer timeout for iOS PWA which can be slow
-          setTimeout(() => {
-            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 300);
+          // Calculate exact scroll position accounting for header and padding
+          const scrollToTarget = () => {
+            const headerHeight = 60; // Account for fixed header
+            const padding = 80; // Extra padding so card title is clearly visible
+            const targetTop = targetEl.getBoundingClientRect().top + window.scrollY - headerHeight - padding;
+            window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+          };
+          setTimeout(scrollToTarget, 300);
           // Fallback scroll in case first one didn't work (iOS timing issues)
           setTimeout(() => {
-            if (targetEl.getBoundingClientRect().top > window.innerHeight) {
-              targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const rect = targetEl.getBoundingClientRect();
+            if (rect.top > window.innerHeight || rect.top < 100) {
+              scrollToTarget();
             }
           }, 800);
         }

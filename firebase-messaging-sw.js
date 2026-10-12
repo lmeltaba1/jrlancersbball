@@ -31,9 +31,13 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   // Add parameter to mark notifications as read when page loads
+  // Must insert BEFORE hash, not after
   if (notificationType) {
-    const separator = url.includes('?') ? '&' : '?';
-    url += separator + 'fromPush=' + encodeURIComponent(notificationType);
+    const hashIndex = url.indexOf('#');
+    const hash = hashIndex !== -1 ? url.substring(hashIndex) : '';
+    const baseUrl = hashIndex !== -1 ? url.substring(0, hashIndex) : url;
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    url = baseUrl + separator + 'fromPush=' + encodeURIComponent(notificationType) + hash;
   }
 
   console.log('Notification clicked, opening:', url);

@@ -2084,7 +2084,9 @@ Write a 2-3 paragraph game recap in an enthusiastic but professional sports jour
 Mention specific players and plays. Include the final score and key moments.
 Keep the tone positive and encouraging - these are 10-11 year old kids.
 Do not make up any statistics or events not mentioned above.
-Do not use the phrase "young Lancers" - just say "Lancers" or "the team".`;
+Do not use the phrase "young Lancers" - just say "Lancers" or "the team".
+
+IMPORTANT: Output ONLY the narrative text itself. Do NOT include any notes, comments, or meta-commentary to the coach. Do NOT mention if coach notes seem inconsistent with the stats - just use the actual statistics and ignore any inaccurate parts of the coach notes. The output will be published directly to parents.`;
 
   try {
     const modelId = 'claude-sonnet-5-5';
@@ -2233,12 +2235,21 @@ async function compileHighlightsVideo(gameId, videoHighlights) {
               },
             },
           },
+          {
+            key: 'audio-stream0',
+            audioStream: {
+              codec: 'aac',
+              bitrateBps: 128000,
+              sampleRateHertz: 48000,
+              channelCount: 2,
+            },
+          },
         ],
         muxStreams: [
           {
             key: 'sd',
             container: 'mp4',
-            elementaryStreams: ['video-stream0'],
+            elementaryStreams: ['video-stream0', 'audio-stream0'],
             fileName: outputFileName,
           },
         ],
@@ -2833,97 +2844,17 @@ exports.checkPendingWrapups = onSchedule({
   return null;
 });
 
-// Trigger wrap-up when coach adds notes after the coach window has ended
+// Log when coach notes are saved (generation happens via scheduled job after window or manual trigger)
 exports.onCoachNotesAdded = onDocumentUpdated('wrapups/{gameId}', async (event) => {
   const before = event.data.before.data();
   const after = event.data.after.data();
   const gameId = event.params.gameId;
 
-  // Only proceed if:
-  // 1. coachNotes was just added (before was null/missing, after has value)
-  // 2. Status is still 'pending'
-  // 3. Coach window has ended
   const hadNotesBefore = before?.coachNotes && (before.coachNotes.commentary || before.coachNotes.playerShoutouts?.length || before.coachNotes.gameHighlight);
   const hasNotesAfter = after?.coachNotes && (after.coachNotes.commentary || after.coachNotes.playerShoutouts?.length || after.coachNotes.gameHighlight);
 
-  if (hadNotesBefore || !hasNotesAfter) {
-    // Notes weren't just added
-    return null;
-  }
-
-  if (after.status !== 'pending') {
-    // Already generating or complete
-    return null;
-  }
-
-  const now = await getServerNow();
-  const windowEnds = after.coachWindowEndsAt?.toDate?.() || after.coachWindowEndsAt;
-
-  if (!windowEnds || now.toDate() < windowEnds) {
-    // Still within coach window - let the scheduled job handle it
-    console.log(`Game ${gameId}: Coach added notes within window, will generate at window end`);
-    return null;
-  }
-
-  console.log(`Game ${gameId}: Coach added notes after window ended, triggering immediate generation`);
-
-  try {
-    const gameStatsDoc = await db.collection('gameStats').doc(gameId).get();
-    const highlightsSnapshot = await db.collection('highlights')
-      .where('gameId', '==', parseInt(gameId))
-      .get();
-    const scheduleDoc = await db.collection('config').doc('schedule').get();
-
-    if (!gameStatsDoc.exists) {
-      console.log(`Game stats not found for ${gameId}`);
-      return null;
-    }
-
-    const gameStats = gameStatsDoc.data();
-    const games = scheduleDoc.exists ? scheduleDoc.data().games || [] : [];
-    const game = games.find(g => g.id.toString() === gameId);
-    const opponentName = game ? game.opponent : after.opponent || 'Opponent';
-
-    // Update status
-    await event.data.after.ref.update({ status: 'generating', updatedAt: Timestamp.now() });
-
-    // Generate narrative
-    const narrative = await generateNarrativeWithClaude(gameStats, after, opponentName);
-
-    // Get highlights
-    const highlights = [];
-    highlightsSnapshot.forEach(hdoc => highlights.push({ id: hdoc.id, ...hdoc.data() }));
-
-    // Save results - pending coach approval
-    await event.data.after.ref.update({
-      status: 'pendingApproval',
-      report: { narrative: narrative, generatedAt: Timestamp.now() },
-      highlightCount: highlights.length,
-      approvalNotificationSentAt: Timestamp.now(),
-      updatedAt: Timestamp.now()
-    });
-
-    // Send notification to head coach for approval
-    const headCoachDoc = await db.collection('config').doc('headCoach').get();
-    const headCoachEmail = headCoachDoc.exists ? headCoachDoc.data().email : null;
-
-    if (headCoachEmail) {
-      await sendNotification(
-        'Wrap-Up Ready for Review',
-        `${opponentName} game wrap-up is ready for approval`,
-        { type: 'wrapupReady', gameId: gameId, url: `/game-detail.html?id=${gameId}` },
-        { emails: [headCoachEmail] }
-      );
-    }
-
-    console.log(`Game ${gameId}: Wrap-up generated and sent for approval`);
-  } catch (error) {
-    console.error(`Error generating wrap-up for game ${gameId}:`, error);
-    await event.data.after.ref.update({
-      status: 'error',
-      error: error.message,
-      updatedAt: Timestamp.now()
-    });
+  if (!hadNotesBefore && hasNotesAfter) {
+    console.log(`Game ${gameId}: Coach notes saved. Wrap-up will generate when window ends or via manual trigger.`);
   }
 
   return null;
@@ -2989,6 +2920,68 @@ exports.cleanupPendingWrapups = onRequest(async (request, response) => {
     response.json({ success: true, deleted: pendingSnapshot.size });
   } catch (error) {
     console.error('Error cleaning up wrap-ups:', error);
+    response.status(500).json({ error: error.message });
+  }
+});
+
+// Test notification endpoint (head coach only)
+exports.sendTestNotification = onRequest(async (request, response) => {
+  // Allow CORS
+  const allowedOrigins = ['https://lancers-bball.web.app', 'https://lancers-bball.firebaseapp.com', 'http://localhost:5000'];
+  const origin = request.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    response.set('Access-Control-Allow-Origin', origin);
+  }
+  response.set('Access-Control-Allow-Credentials', 'true');
+  if (request.method === 'OPTIONS') {
+    response.set('Access-Control-Allow-Methods', 'POST');
+    response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    response.status(204).send('');
+    return;
+  }
+
+  // Verify head coach auth
+  const authHeader = request.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    response.status(401).json({ error: 'Authorization required' });
+    return;
+  }
+
+  try {
+    const idToken = authHeader.split('Bearer ')[1];
+    const decodedToken = await auth.verifyIdToken(idToken);
+    const userEmail = decodedToken.email?.toLowerCase();
+
+    const headCoachDoc = await db.collection('config').doc('headCoach').get();
+    const headCoachEmail = headCoachDoc.exists ? headCoachDoc.data().email : null;
+    if (userEmail !== headCoachEmail) {
+      response.status(403).json({ error: 'Only the head coach can send test notifications' });
+      return;
+    }
+  } catch (authError) {
+    response.status(401).json({ error: 'Invalid authentication token' });
+    return;
+  }
+
+  try {
+    const { type, gameId } = request.body;
+
+    if (type === 'wrapup') {
+      const gid = gameId || 5;
+      const wrapupDoc = await db.collection('wrapups').doc(gid.toString()).get();
+      const opponent = wrapupDoc.exists ? wrapupDoc.data().opponent : 'Thunder';
+
+      await sendNotification(
+        'Game Wrap-Up Ready!',
+        `Check out the recap from the ${opponent} game`,
+        { type: 'wrapupReady', url: `/game-detail.html?id=${gid}#wrapup-card`, gameId: gid.toString() }
+      );
+      response.json({ success: true, message: `Sent wrapup notification for game ${gid}` });
+    } else {
+      response.status(400).json({ error: 'Invalid notification type. Use: wrapup' });
+    }
+  } catch (error) {
+    console.error('Error sending test notification:', error);
     response.status(500).json({ error: error.message });
   }
 });
