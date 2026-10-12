@@ -1800,8 +1800,8 @@ exports.generateWrapupReport = onRequest({
       return;
     }
 
-    // Rate limit: 5 requests per hour per user
-    if (await checkRateLimit(userEmail, 'generateWrapup', 5, 60)) {
+    // Rate limit: 20 requests per hour per user
+    if (await checkRateLimit(userEmail, 'generateWrapup', 20, 60)) {
       response.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
       return;
     }
@@ -1812,6 +1812,10 @@ exports.generateWrapupReport = onRequest({
   }
 
   const gameId = request.body.gameId || request.query.gameId;
+  const regenerate = request.body.regenerate === true || request.body.regenerate === 'true' || request.query.regenerate === 'true';
+  console.log('Request body:', JSON.stringify(request.body));
+  console.log('Request query:', JSON.stringify(request.query));
+  console.log('Regenerate flag:', regenerate);
 
   if (!gameId) {
     response.status(400).json({ error: 'gameId required' });
@@ -1854,12 +1858,8 @@ exports.generateWrapupReport = onRequest({
       return;
     }
 
-    // Skip if pending approval (already generated, waiting for coach) unless regenerate requested
-    if (wrapupData.status === 'pendingApproval' && !regenerate) {
-      console.log(`Wrap-up for game ${gameId} pending approval, skipping (use regenerate=true to force)`);
-      response.json({ success: true, skipped: true, message: 'Pending approval - use regenerate=true to force' });
-      return;
-    }
+    // Always regenerate if explicitly triggered - don't skip
+    console.log(`Proceeding with generation for game ${gameId}, status=${wrapupData.status}`);
 
     if (!gameStatsDoc.exists) {
       response.status(404).json({ error: 'Game stats not found' });
@@ -1908,7 +1908,7 @@ exports.generateWrapupReport = onRequest({
     // Save results - pending coach approval
     await wrapupRef.update({
       status: 'pendingApproval',
-      report: narrative,
+      report: { narrative: narrative, generatedAt: Timestamp.now() },
       compiledVideo: compiledVideo,
       highlightCount: highlights.length,
       updatedAt: Timestamp.now()
@@ -2087,15 +2087,27 @@ Do not make up any statistics or events not mentioned above.
 Do not use the phrase "young Lancers" - just say "Lancers" or "the team".`;
 
   try {
+    const modelId = 'claude-sonnet-5-5';
+    console.log('Calling Claude API with model:', modelId);
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: modelId,
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }]
     });
 
-    return message.content[0].text;
+    console.log('Claude API response content types:', message.content?.map(c => c.type).join(', '));
+    // Find the text block (may have thinking blocks before it)
+    const textBlock = message.content?.find(c => c.type === 'text');
+    const narrative = textBlock?.text;
+    if (!narrative) {
+      console.error('No text block in Claude response:', JSON.stringify(message.content?.map(c => ({ type: c.type, length: c.text?.length || c.thinking?.length || 0 }))));
+      return generateFallbackNarrative(gameStats, wrapupData, opponentName);
+    }
+    console.log('Claude API returned narrative:', narrative.substring(0, 100) + '...');
+    return narrative;
   } catch (error) {
-    console.error('Claude API error:', error);
+    console.error('Claude API error:', error.status, error.message || error);
+    console.error('Claude API error details:', JSON.stringify(error));
     return generateFallbackNarrative(gameStats, wrapupData, opponentName);
   }
 }
@@ -2318,6 +2330,15 @@ exports.triggerWrapupGeneration = onRequest(async (request, response) => {
   // Check if wrap-up exists
   const wrapupDoc = await db.collection('wrapups').doc(gameId).get();
 
+  // Reset status if stuck in error or generating state
+  if (wrapupDoc.exists) {
+    const status = wrapupDoc.data().status;
+    if (status === 'error' || status === 'generating') {
+      console.log(`Resetting stuck status '${status}' to 'pending' for game ${gameId}`);
+      await db.collection('wrapups').doc(gameId).update({ status: 'pending' });
+    }
+  }
+
   if (!wrapupDoc.exists) {
     // Create wrap-up doc if it doesn't exist
     const gameStatsDoc = await db.collection('gameStats').doc(gameId).get();
@@ -2344,12 +2365,14 @@ exports.triggerWrapupGeneration = onRequest(async (request, response) => {
     });
   }
 
-  // Trigger generation - pass through the auth token
-  const functionUrl = `https://us-central1-lancers-bball.cloudfunctions.net/generateWrapupReport`;
+  // Trigger generation - pass through the auth token and regenerate flag
   const authHeader = request.headers.authorization;
+  const regenerate = request.query.regenerate === 'true';
+  // Pass regenerate in URL query to ensure it's received
+  const functionUrl = `https://us-central1-lancers-bball.cloudfunctions.net/generateWrapupReport?gameId=${gameId}&regenerate=${regenerate}`;
 
   const https = require('https');
-  const postData = JSON.stringify({ gameId });
+  const postData = JSON.stringify({});
 
   const req = https.request(functionUrl, {
     method: 'POST',
@@ -2782,7 +2805,7 @@ exports.checkPendingWrapups = onSchedule({
       // Save results - pending coach approval (and mark notification sent)
       await doc.ref.update({
         status: 'pendingApproval',
-        report: narrative,
+        report: { narrative: narrative, generatedAt: Timestamp.now() },
         highlightCount: highlights.length,
         approvalNotificationSentAt: Timestamp.now(),
         updatedAt: Timestamp.now()
@@ -2874,7 +2897,7 @@ exports.onCoachNotesAdded = onDocumentUpdated('wrapups/{gameId}', async (event) 
     // Save results - pending coach approval
     await event.data.after.ref.update({
       status: 'pendingApproval',
-      report: narrative,
+      report: { narrative: narrative, generatedAt: Timestamp.now() },
       highlightCount: highlights.length,
       approvalNotificationSentAt: Timestamp.now(),
       updatedAt: Timestamp.now()
