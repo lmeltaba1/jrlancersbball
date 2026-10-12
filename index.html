@@ -1125,26 +1125,19 @@
             if (isCompleted) {
               // Game finished - show result and view button
               buttonHtml = `
-                <div style="margin-top: 16px; text-align: center;">
-                  <div style="font-size: 1.1rem; font-weight: 700; color: ${nextEvent.result === 'W' ? '#22C55E' : '#EF4444'}; margin-bottom: 8px;">
+                <div style="margin-top: 10px; text-align: center;">
+                  <div style="font-size: 0.95rem; font-weight: 700; color: ${nextEvent.result === 'W' ? '#4ade80' : '#f87171'}; margin-bottom: 8px;">
                     ${nextEvent.result === 'W' ? 'WIN' : 'LOSS'}
                   </div>
-                  <a href="${eventLink}" class="btn btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="event.stopPropagation();">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
+                  <a href="${eventLink}" style="display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.05); color: var(--text-secondary); font-size: 0.75rem; font-weight: 600; padding: 10px 16px; border-radius: 8px; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.1);" onclick="event.stopPropagation();">
                     View Game Results
                   </a>
                 </div>
               `;
             } else if (showLiveStats) {
               buttonHtml = `
-                <div id="live-stats-btn-container" style="margin-top: 16px; text-align: center;">
-                  <a id="live-stats-follow-btn" href="game-stats.html?game=${nextEvent.id}&view=1" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="event.stopPropagation();">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
+                <div id="live-stats-btn-container" style="margin-top: 10px; text-align: center;">
+                  <a id="live-stats-follow-btn" href="game-stats.html?game=${nextEvent.id}&view=1" style="display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.05); color: var(--text-secondary); font-size: 0.75rem; font-weight: 600; padding: 10px 16px; border-radius: 8px; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.1);" onclick="event.stopPropagation();">
                     Follow Live
                   </a>
                 </div>
@@ -1170,7 +1163,7 @@
                       </svg>
                       ${nextEvent.time}
                     </span>
-                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--gold); cursor: pointer;" onclick="event.stopPropagation();">
+                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="cursor: pointer;" onclick="event.stopPropagation();">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -1179,11 +1172,11 @@
                     </span>
                   </div>
                   ${!isCompleted ? `
-                    <div style="text-align: center; margin-top: 10px;">
+                    <div style="text-align: center; margin-top: 8px;">
                       <span class="jersey-indicator ${nextEvent.jersey}">${formatJerseyLabel(nextEvent.jersey)}</span>
                     </div>
                   ` : ''}
-                  <div id="next-event-rsvp" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); text-align: center;"></div>
+                  <div id="next-event-rsvp" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center;"></div>
                   ${buttonHtml}
                 </div>
               </div>
@@ -1193,12 +1186,12 @@
             eventTitle.textContent = nextEvent.isToday ? "Today's Practice" : 'Next Practice';
             eventContent.innerHTML = `
               <div class="game-card" style="margin: 0; cursor: pointer;" onclick="window.location.href='${eventLink}'">
-                <div class="game-card-header practice" style="background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);">
+                <div class="game-card-header practice">
                   <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
-                  <span class="league-badge" style="background: rgba(255,255,255,0.2); color: white;">Practice</span>
+                  <span class="league-badge practice">PRACTICE</span>
                 </div>
                 <div class="game-card-body">
-                  <div style="text-align: center; font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">
+                  <div style="text-align: center; font-size: 0.9rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
                     ${nextEvent.name}
                   </div>
                   <div class="game-details">
@@ -1208,7 +1201,7 @@
                       </svg>
                       ${nextEvent.time}${nextEvent.endTime ? ' - ' + nextEvent.endTime : ''}
                     </span>
-                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--gold); cursor: pointer;" onclick="event.stopPropagation();">
+                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="cursor: pointer;" onclick="event.stopPropagation();">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -1216,8 +1209,8 @@
                       ${nextEvent.location}
                     </span>
                   </div>
-                  ${nextEvent.notes ? `<div style="text-align: center; margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem;">${nextEvent.notes}</div>` : ''}
-                  <div id="next-event-rsvp" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); text-align: center;"></div>
+                  ${nextEvent.notes ? `<div style="text-align: center; margin-top: 8px; color: var(--text-muted); font-size: 0.75rem;">${nextEvent.notes}</div>` : ''}
+                  <div id="next-event-rsvp" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center;"></div>
                 </div>
               </div>
             `;
@@ -1226,12 +1219,12 @@
             eventTitle.textContent = nextEvent.isToday ? "Today's Event" : 'Next Event';
             eventContent.innerHTML = `
               <div class="game-card" style="margin: 0; cursor: pointer;" onclick="window.location.href='${eventLink}'">
-                <div class="game-card-header event" style="background: linear-gradient(135deg, var(--gold) 0%, #B8860B 100%);">
+                <div class="game-card-header practice">
                   <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
-                  <span class="league-badge" style="background: rgba(0,0,0,0.3); color: white;">Event</span>
+                  <span class="league-badge practice">EVENT</span>
                 </div>
                 <div class="game-card-body">
-                  <div style="text-align: center; font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">
+                  <div style="text-align: center; font-size: 0.9rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
                     ${nextEvent.name}
                   </div>
                   <div class="game-details">
@@ -1241,7 +1234,7 @@
                       </svg>
                       ${nextEvent.time}${nextEvent.endTime ? ' - ' + nextEvent.endTime : ''}
                     </span>
-                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="color: var(--gold); cursor: pointer;">
+                    <span class="game-detail location-copy" data-location="${nextEvent.location}" style="cursor: pointer;">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -1249,7 +1242,7 @@
                       ${nextEvent.location}
                     </span>
                   </div>
-                  ${nextEvent.notes ? `<div style="text-align: center; margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem;">${nextEvent.notes}</div>` : ''}
+                  ${nextEvent.notes ? `<div style="text-align: center; margin-top: 8px; color: var(--text-muted); font-size: 0.75rem;">${nextEvent.notes}</div>` : ''}
                 </div>
               </div>
             `;

@@ -502,10 +502,10 @@
           if (!event.result) {
             const att = attendance[event.id] || { attending: 0, notAttending: 0, noResponse: totalPlayers };
             attendanceHtml = `
-              <div style="display: flex; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); font-size: 0.75rem;">
-                <span style="color: #22C55E;">&#10003; ${att.attending}</span>
-                <span style="color: #EF4444;">&#10007; ${att.notAttending}</span>
-                <span style="color: #6B7280;">? ${att.noResponse}</span>
+              <div style="display: flex; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.7rem; justify-content: center;">
+                <span style="color: #4ade80;">✓ ${att.attending}</span>
+                <span style="color: #f87171;">✗ ${att.notAttending}</span>
+                <span style="color: rgba(255,255,255,0.35);">? ${att.noResponse}</span>
               </div>
             `;
           }
@@ -523,18 +523,11 @@
               if (isCoach) {
                 // Coach gets both buttons
                 trackStatsBtnHtml = `
-                  <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; gap: 8px;">
-                    <a href="game-stats.html?game=${event.id}" class="btn btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background: #22C55E; font-size: 0.8rem; padding: 10px;" onclick="event.stopPropagation();">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 16px; height: 16px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
+                  <div style="margin-top: 10px; display: flex; gap: 8px;">
+                    <a href="game-stats.html?game=${event.id}" style="flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(34, 197, 94, 0.15); color: #4ade80; font-size: 0.75rem; font-weight: 600; padding: 10px 12px; border-radius: 8px; text-decoration: none; border: 1px solid rgba(34, 197, 94, 0.3);" onclick="event.stopPropagation();">
                       Track
                     </a>
-                    <a href="game-stats.html?game=${event.id}&view=1" class="btn btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.8rem; padding: 10px;" onclick="event.stopPropagation();">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 16px; height: 16px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
+                    <a href="game-stats.html?game=${event.id}&view=1" style="flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.05); color: var(--text-secondary); font-size: 0.75rem; font-weight: 600; padding: 10px 12px; border-radius: 8px; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.1);" onclick="event.stopPropagation();">
                       Follow
                     </a>
                   </div>
@@ -542,11 +535,8 @@
               } else if (isScorekeeper) {
                 // Scorekeeper gets Track button only
                 trackStatsBtnHtml = `
-                  <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
-                    <a href="game-stats.html?game=${event.id}" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: #22C55E; font-size: 0.85rem; padding: 10px;" onclick="event.stopPropagation();">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 18px; height: 18px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
+                  <div style="margin-top: 10px;">
+                    <a href="game-stats.html?game=${event.id}" style="display: flex; align-items: center; justify-content: center; background: rgba(34, 197, 94, 0.15); color: #4ade80; font-size: 0.75rem; font-weight: 600; padding: 10px 16px; border-radius: 8px; text-decoration: none; border: 1px solid rgba(34, 197, 94, 0.3);" onclick="event.stopPropagation();">
                       Track Live Stats
                     </a>
                   </div>
@@ -554,12 +544,8 @@
               } else {
                 // Everyone else gets Follow button only
                 trackStatsBtnHtml = `
-                  <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
-                    <a href="game-stats.html?game=${event.id}&view=1" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.85rem; padding: 10px;" onclick="event.stopPropagation();">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 18px; height: 18px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
+                  <div style="margin-top: 10px;">
+                    <a href="game-stats.html?game=${event.id}&view=1" style="display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.05); color: var(--text-secondary); font-size: 0.75rem; font-weight: 600; padding: 10px 16px; border-radius: 8px; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.1);" onclick="event.stopPropagation();">
                       Follow Live
                     </a>
                   </div>
@@ -596,8 +582,8 @@
                   </span>
                 </div>
                 ${event.jersey ? `
-                  <div style="text-align: center; margin-top: 10px;">
-                    <span class="jersey-indicator ${event.jersey}">${event.jersey === 'parkrock' ? 'PARK ROCK' : event.jersey.toUpperCase()} JERSEY</span>
+                  <div style="text-align: center; margin-top: 8px;">
+                    <span class="jersey-indicator ${event.jersey}">${event.jersey.toUpperCase()}</span>
                   </div>
                 ` : ''}
                 ${resultHtml}
@@ -614,10 +600,10 @@
           // Attendance status for practices/events
           const att = attendance[event.id] || { attending: 0, notAttending: 0, noResponse: totalPlayers };
           const attendanceHtml = `
-            <div style="display: flex; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); font-size: 0.75rem;">
-              <span style="color: #22C55E;">&#10003; ${att.attending}</span>
-              <span style="color: #EF4444;">&#10007; ${att.notAttending}</span>
-              <span style="color: #6B7280;">? ${att.noResponse}</span>
+            <div style="display: flex; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.7rem; justify-content: center;">
+              <span style="color: #4ade80;">✓ ${att.attending}</span>
+              <span style="color: #f87171;">✗ ${att.notAttending}</span>
+              <span style="color: rgba(255,255,255,0.35);">? ${att.noResponse}</span>
             </div>
           `;
 
@@ -628,23 +614,23 @@
                 <span class="league-badge practice">${typeLabel.toUpperCase()}</span>
               </div>
               <div class="game-card-body">
-                <div style="font-weight: 700; font-size: 1rem; margin-bottom: 8px;">${event.name || typeLabel}</div>
+                <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; text-align: center;">${event.name || typeLabel}</div>
                 <div class="game-details">
                   <span class="game-detail">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:12px;height:12px;">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     ${event.time}${event.endTime ? ' - ' + event.endTime : ''}
                   </span>
                   <span class="game-detail">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:12px;height:12px;">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     ${event.location}
                   </span>
                 </div>
-                ${event.notes ? `<p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 10px;">${event.notes}</p>` : ''}
+                ${event.notes ? `<p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 6px; text-align: center;">${event.notes}</p>` : ''}
                 ${attendanceHtml}
               </div>
             </div>
