@@ -375,21 +375,20 @@
     </div>
   </main>
 
-  <!-- Upload Bottom Sheet -->
-  <div class="bottom-sheet-overlay" id="uploadOverlay" onclick="closeUploadModal()"></div>
-  <div class="bottom-sheet" id="uploadModal">
-    <div class="bottom-sheet-handle"></div>
-    <div class="bottom-sheet-header">
-      <h2 class="bottom-sheet-title">Add Highlight</h2>
-      <button class="bottom-sheet-close" onclick="closeUploadModal()">&times;</button>
-    </div>
-    <div class="bottom-sheet-body">
-      <div class="file-picker" id="filePicker" onclick="document.getElementById('fileInput').click()">
-        <input type="file" id="fileInput" accept="image/*,video/*" onchange="handleFileSelect(event)">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <!-- Upload Modal (simple fixed overlay like game-detail.html) -->
+  <div id="uploadModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 2000; padding: 20px; overflow-y: auto;">
+    <div style="max-width: 500px; margin: 40px auto; background: var(--bg-card); border-radius: 12px; padding: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0; font-size: 1.2rem;">Add Highlight</h2>
+        <button onclick="closeUploadModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer;">&times;</button>
+      </div>
+
+      <div class="file-picker" id="filePicker" onclick="document.getElementById('fileInput').click()" style="background: var(--bg-body); border: 2px dashed var(--border-accent); border-radius: 8px; padding: 30px 20px; text-align: center; cursor: pointer; margin-bottom: 16px;">
+        <input type="file" id="fileInput" accept="image/*,video/*" onchange="handleFileSelect(event)" style="display: none;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 48px; height: 48px; color: var(--text-secondary); margin-bottom: 10px;">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
-        <p>Tap to select video or photo</p>
+        <p style="color: var(--lancers-gold); font-weight: 600; margin: 0;">Tap to select video or photo</p>
       </div>
 
       <!-- Smart match suggestion banner -->
@@ -402,31 +401,31 @@
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Game</label>
-        <select id="uploadGame" required>
+      <div style="margin-bottom: 16px;">
+        <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 5px;">Game</label>
+        <select id="uploadGame" required style="width: 100%; padding: 12px; border-radius: 8px; background: var(--bg-body); border: 1px solid var(--border-accent); color: var(--text-primary); font-size: 1rem;">
           <option value="">Select a game...</option>
         </select>
       </div>
 
-      <div class="form-group">
-        <label>Player</label>
-        <select id="uploadPlayer" required>
+      <div style="margin-bottom: 16px;">
+        <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 5px;">Player</label>
+        <select id="uploadPlayer" required style="width: 100%; padding: 12px; border-radius: 8px; background: var(--bg-body); border: 1px solid var(--border-accent); color: var(--text-primary); font-size: 1rem;">
           <option value="">Select a player...</option>
         </select>
       </div>
 
-      <div class="form-group">
-        <label>Caption (optional)</label>
-        <textarea id="uploadCaption" placeholder="Describe this highlight..."></textarea>
+      <div style="margin-bottom: 16px;">
+        <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 5px;">Caption (optional)</label>
+        <textarea id="uploadCaption" placeholder="Describe this highlight..." style="width: 100%; padding: 12px; border-radius: 8px; background: var(--bg-body); border: 1px solid var(--border-accent); color: var(--text-primary); font-size: 1rem; min-height: 60px; resize: vertical;"></textarea>
       </div>
 
-      <div class="progress-bar" id="progressBar">
-        <div class="progress-bar-fill" id="progressFill"></div>
+      <div class="progress-bar" id="progressBar" style="display: none; background: var(--bg-body); border-radius: 4px; height: 8px; overflow: hidden; margin-bottom: 16px;">
+        <div class="progress-bar-fill" id="progressFill" style="background: var(--lancers-gold); height: 100%; width: 0%; transition: width 0.3s;"></div>
       </div>
 
-      <button class="upload-submit" id="uploadSubmit" onclick="uploadHighlight()" disabled>
-        Upload
+      <button id="uploadSubmit" onclick="uploadHighlight()" disabled style="width: 100%; padding: 14px; background: #fff; color: #000; border: none; border-radius: 8px; font-weight: 700; font-size: 1rem; cursor: pointer; opacity: 0.5;">
+        Upload Highlight
       </button>
     </div>
   </div>
@@ -555,97 +554,89 @@
     let highlights = [];
     let unsubscribeHighlights = null;
 
-    // Parse MP4 creation_time from mvhd atom (browser-compatible)
-    async function getMp4CreationTime(file) {
-      const buffer = await file.slice(0, Math.min(file.size, 50 * 1024)).arrayBuffer(); // Read first 50KB
-      const view = new DataView(buffer);
-      const len = view.byteLength;
+    // Find any ISO date embedded in the video file (creationdate or similar)
+    // Returns the earliest valid date found (likely the capture time)
+    async function getEmbeddedISODate(file) {
+      try {
+        // Search first 2MB
+        let buffer = await file.slice(0, Math.min(file.size, 2 * 1024 * 1024)).arrayBuffer();
+        let dates = findISODatesInBuffer(buffer);
 
-      // Search for 'mvhd' atom (movie header)
-      for (let i = 0; i < len - 20; i++) {
-        // Look for 'mvhd' signature
-        if (view.getUint8(i) === 0x6D && view.getUint8(i+1) === 0x76 &&
-            view.getUint8(i+2) === 0x68 && view.getUint8(i+3) === 0x64) {
-          // Found mvhd at position i
-          const version = view.getUint8(i + 4);
-          let creationTime;
-
-          if (version === 0) {
-            // 32-bit timestamps
-            creationTime = view.getUint32(i + 8);
-          } else {
-            // 64-bit timestamps (version 1) - read as two 32-bit parts
-            const high = view.getUint32(i + 8);
-            const low = view.getUint32(i + 12);
-            creationTime = high * 0x100000000 + low;
-          }
-
-          // Convert from Mac HFS+ epoch (1904) to Unix epoch (1970)
-          // Difference is 2082844800 seconds
-          const unixTime = (creationTime - 2082844800) * 1000;
-          const date = new Date(unixTime);
-
-          // Sanity check - date should be reasonable (after 2000, before 2100)
-          if (date.getFullYear() >= 2000 && date.getFullYear() <= 2100) {
-            return date;
-          }
+        // Also search last 1MB if file is larger
+        if (file.size > 2 * 1024 * 1024) {
+          const endStart = Math.max(0, file.size - 1024 * 1024);
+          buffer = await file.slice(endStart, file.size).arrayBuffer();
+          dates = dates.concat(findISODatesInBuffer(buffer));
         }
+
+        if (dates.length === 0) return null;
+
+        // Return the earliest date (most likely to be capture time)
+        dates.sort((a, b) => a.getTime() - b.getTime());
+        return dates[0];
+      } catch (e) {
+        return null;
       }
-      return null;
     }
 
-    // Extract capture timestamp from file (EXIF for photos, MP4 metadata for videos)
+    function findISODatesInBuffer(buffer) {
+      const bytes = new Uint8Array(buffer);
+      const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+
+      // Find all ISO date patterns
+      const matches = text.match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:?\d{2}/g) || [];
+
+      const dates = [];
+      for (const match of matches) {
+        const parsed = new Date(match);
+        if (!isNaN(parsed.getTime()) && parsed.getFullYear() >= 2020 && parsed.getFullYear() <= 2030) {
+          dates.push(parsed);
+        }
+      }
+      return dates;
+    }
+
+    // Get capture timestamp from file
+    // Priority: QuickTime creationdate (videos) > EXIF (photos) > lastModified (fallback)
+    // Note: iOS rewrites mvhd timestamps when sharing, so we skip that
     async function getCaptureTimestamp(file) {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
 
-      // For photos: Read EXIF DateTimeOriginal
-      if (isImage && typeof EXIF !== 'undefined') {
-        return new Promise((resolve) => {
-          EXIF.getData(file, function() {
-            // Try DateTimeOriginal first (when photo was taken)
-            // Then DateTimeDigitized, then DateTime
-            const dateOriginal = EXIF.getTag(this, 'DateTimeOriginal');
-            const dateDigitized = EXIF.getTag(this, 'DateTimeDigitized');
-            const dateTime = EXIF.getTag(this, 'DateTime');
-
-            const exifDate = dateOriginal || dateDigitized || dateTime;
-
-            if (exifDate) {
-              // EXIF format: "YYYY:MM:DD HH:MM:SS" -> "YYYY-MM-DD HH:MM:SS"
-              const normalized = exifDate.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
-              const parsed = new Date(normalized);
-              if (!isNaN(parsed.getTime())) {
-                console.log('📷 Using EXIF date:', exifDate, '->', parsed);
-                resolve(parsed);
-                return;
-              }
-            }
-
-            console.log('📷 No EXIF date, using lastModified:', new Date(file.lastModified));
-            resolve(new Date(file.lastModified));
-          });
-        });
-      }
-
-      // For videos: Read MP4/MOV creation time from mvhd atom
+      // For videos: Try to find embedded ISO date (most reliable)
       if (isVideo) {
-        try {
-          const creationTime = await getMp4CreationTime(file);
-          if (creationTime) {
-            console.log('🎬 Using MP4 creation time:', creationTime);
-            return creationTime;
-          }
-        } catch (e) {
-          console.log('🎬 MP4 metadata parse error:', e.message);
+        // Search for any ISO date string embedded in the file
+        const embeddedDate = await getEmbeddedISODate(file);
+        if (embeddedDate) {
+          console.log('📹 Got embedded ISO date:', embeddedDate.toLocaleString());
+          return embeddedDate;
         }
-
-        console.log('🎬 No MP4 creation time, using lastModified:', new Date(file.lastModified));
-        return new Date(file.lastModified);
       }
 
-      // Fallback for other file types
-      console.log('📁 Using lastModified:', new Date(file.lastModified));
+      // For photos: Try EXIF
+      if (isImage && typeof EXIF !== 'undefined') {
+        try {
+          const exifDate = await new Promise((resolve) => {
+            EXIF.getData(file, function() {
+              const dateOriginal = EXIF.getTag(this, 'DateTimeOriginal');
+              const dateDigitized = EXIF.getTag(this, 'DateTimeDigitized');
+              const dateTime = EXIF.getTag(this, 'DateTime');
+              resolve(dateOriginal || dateDigitized || dateTime);
+            });
+          });
+          if (exifDate) {
+            const normalized = exifDate.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+            const parsed = new Date(normalized);
+            if (!isNaN(parsed.getTime())) {
+              console.log('📷 Got EXIF date:', parsed.toLocaleString());
+              return parsed;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // Fallback to lastModified (works for unedited files)
+      console.log('📁 Using lastModified:', new Date(file.lastModified).toLocaleString());
       return new Date(file.lastModified);
     }
     let currentUser = null;
@@ -901,16 +892,12 @@
 
     function openUploadModal() {
       modalPreviousActiveElement = document.activeElement;
-      document.getElementById('uploadOverlay').classList.add('active');
-      document.getElementById('uploadModal').classList.add('active');
+      document.getElementById('uploadModal').style.display = 'block';
       document.body.style.overflow = 'hidden';
-      const closeBtn = document.querySelector('#uploadModal .bottom-sheet-close');
-      if (closeBtn) closeBtn.focus();
     }
 
     function closeUploadModal() {
-      document.getElementById('uploadOverlay').classList.remove('active');
-      document.getElementById('uploadModal').classList.remove('active');
+      document.getElementById('uploadModal').style.display = 'none';
       document.body.style.overflow = '';
       resetUploadForm();
       if (modalPreviousActiveElement) {
@@ -922,7 +909,7 @@
     // Focus trap for modals
     document.addEventListener('keydown', function(e) {
       const uploadModal = document.getElementById('uploadModal');
-      if (!uploadModal.classList.contains('active')) return;
+      if (uploadModal.style.display !== 'block') return;
       if (e.key === 'Escape') { closeUploadModal(); return; }
       if (e.key !== 'Tab') return;
 
@@ -1026,10 +1013,15 @@
         const captureTime = await getCaptureTimestamp(file);
         const captureMs = captureTime.getTime();
 
-        console.log('🔍 Searching for play-by-play match at:', captureTime.toLocaleString());
+        console.log('🔍 File capture time:', captureTime.toLocaleString(), '(', captureMs, 'ms)');
 
-        // Query all gameStats with events
-        const gamesSnapshot = await db.collection('gameStats').get();
+        // Query all gameStats with events (use onSnapshot for iOS)
+        const gamesSnapshot = await new Promise((resolve, reject) => {
+          const unsubscribe = db.collection('gameStats').onSnapshot(
+            (snapshot) => { unsubscribe(); resolve(snapshot); },
+            (error) => { unsubscribe(); reject(error); }
+          );
+        });
         let bestMatch = null;
         let bestDiff = Infinity;
 
@@ -1047,9 +1039,10 @@
                               (event.timestamp?.seconds ? event.timestamp.seconds * 1000 : 0);
             if (!eventTime) return;
 
-            // Highlight should be captured 0-8 seconds BEFORE the event
+            // Video ends right after basket, scorekeeper logs 0-15 seconds later
+            // So event timestamp should be 0-15 seconds AFTER file capture time
             const diff = eventTime - captureMs;
-            if (diff >= 0 && diff < 8000 && diff < bestDiff) {
+            if (diff >= 0 && diff < 15000 && diff < bestDiff) {
               bestDiff = diff;
               bestMatch = {
                 gameId: data.gameId || parseInt(doc.id),
@@ -1062,8 +1055,6 @@
         });
 
         if (bestMatch) {
-          console.log('✅ Found match:', bestMatch.event.description, `(${bestMatch.diffSeconds}s before recording)`);
-
           // Pre-select game dropdown
           const gameSelect = document.getElementById('uploadGame');
           if (gameSelect.querySelector(`option[value="${bestMatch.gameId}"]`)) {
@@ -1083,9 +1074,8 @@
 
           validateUploadForm();
         } else {
-          // No match found - show message prompting manual selection
-          console.log('❌ No play-by-play match found within 8 seconds');
-          suggestionText.textContent = 'No auto-match found. Please select game and player.';
+          // No match found
+          suggestionText.textContent = 'No matching play found. Please select game and player.';
           suggestionBanner.style.background = 'rgba(239, 68, 68, 0.15)';
           suggestionBanner.style.display = 'block';
         }
@@ -1101,7 +1091,11 @@
       const hasFile = selectedFile !== null;
       const hasGame = document.getElementById('uploadGame').value !== '';
       const hasPlayer = document.getElementById('uploadPlayer').value !== '';
-      document.getElementById('uploadSubmit').disabled = !(hasFile && hasGame && hasPlayer);
+      const btn = document.getElementById('uploadSubmit');
+      const isValid = hasFile && hasGame && hasPlayer;
+      btn.disabled = !isValid;
+      btn.style.opacity = isValid ? '1' : '0.5';
+      btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
     }
 
     // Add validation listeners

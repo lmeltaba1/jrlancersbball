@@ -1453,7 +1453,13 @@
         viewOnlyMode = true;
       } else if (db && auth.currentUser) {
         try {
-          const volDoc = await db.collection('volunteers').doc(currentGameId.toString()).get();
+          // Use onSnapshot instead of get() - waits for connection on iOS
+          const volDoc = await new Promise((resolve, reject) => {
+            const unsubscribe = db.collection('volunteers').doc(currentGameId.toString()).onSnapshot(
+              (snapshot) => { unsubscribe(); resolve(snapshot); },
+              (error) => { unsubscribe(); reject(error); }
+            );
+          });
           if (volDoc.exists) {
             const volData = volDoc.data();
             // Use emulated email if available, otherwise real email
@@ -1501,7 +1507,13 @@
       // Initialize or load stats
       if (db) {
         const docRef = db.collection('gameStats').doc(currentGameId.toString());
-        const doc = await docRef.get();
+        // Use onSnapshot instead of get() - waits for connection on iOS
+        const doc = await new Promise((resolve, reject) => {
+          const unsubscribe = docRef.onSnapshot(
+            (snapshot) => { unsubscribe(); resolve(snapshot); },
+            (error) => { unsubscribe(); reject(error); }
+          );
+        });
 
         if (doc.exists) {
           const data = doc.data();

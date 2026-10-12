@@ -65,7 +65,7 @@ service cloud.firestore {
       allow create, update: if isAuthenticated() &&
         // Validate gamePhase if present
         (!('gamePhase' in request.resource.data) ||
-          request.resource.data.gamePhase in ['notStarted', 'Q1', 'Q2', 'halftime', 'Q3', 'Q4', 'OT', 'final']) &&
+          request.resource.data.gamePhase in ['pre', 'Q1', 'Q2', 'halftime', 'Q3', 'Q4', 'OT', 'final']) &&
         // Validate lancersScore and opponentScore if present
         isValidStat(request.resource.data.get('lancersScore', null)) &&
         isValidStat(request.resource.data.get('opponentScore', null));

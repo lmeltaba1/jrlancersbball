@@ -20,9 +20,15 @@ async function loadRoster() {
   if (_cachedRoster) return _cachedRoster;
 
   // Load from Firestore (requires authentication)
+  // Use onSnapshot instead of get() - waits for connection on iOS PWA
   if (typeof db !== 'undefined' && db) {
     try {
-      const doc = await db.collection('config').doc('roster').get();
+      const doc = await new Promise((resolve, reject) => {
+        const unsubscribe = db.collection('config').doc('roster').onSnapshot(
+          (snapshot) => { unsubscribe(); resolve(snapshot); },
+          (error) => { unsubscribe(); reject(error); }
+        );
+      });
       if (doc.exists) {
         _cachedRoster = doc.data();
         return _cachedRoster;
@@ -41,9 +47,15 @@ async function loadSchedule() {
   if (_cachedSchedule) return _cachedSchedule;
 
   // Load from Firestore (requires authentication)
+  // Use onSnapshot instead of get() - waits for connection on iOS PWA
   if (typeof db !== 'undefined' && db) {
     try {
-      const doc = await db.collection('config').doc('schedule').get();
+      const doc = await new Promise((resolve, reject) => {
+        const unsubscribe = db.collection('config').doc('schedule').onSnapshot(
+          (snapshot) => { unsubscribe(); resolve(snapshot); },
+          (error) => { unsubscribe(); reject(error); }
+        );
+      });
       if (doc.exists) {
         _cachedSchedule = doc.data();
         return _cachedSchedule;

@@ -2467,9 +2467,139 @@ exports.onSimulationTimeChanged = onDocumentWritten({
   }
 
   console.log(`Simulation time changed to: ${now.toISOString()}`);
-  console.log('Checking for pending wrap-ups...');
 
-  // Find wrap-ups where window ended but status is still pending
+  // Load schedule and roster for notification checks
+  const [scheduleDoc, rosterDoc] = await Promise.all([
+    db.collection('config').doc('schedule').get(),
+    db.collection('config').doc('roster').get()
+  ]);
+
+  if (!scheduleDoc.exists || !rosterDoc.exists) {
+    console.log('Schedule or roster not found, skipping notification checks');
+    return null;
+  }
+
+  const schedule = scheduleDoc.data();
+  const roster = rosterDoc.data();
+  const games = schedule.games || [];
+  const today = new Date(now.getTime());
+  today.setHours(0, 0, 0, 0);
+
+  // === SCOREKEEPER REMINDERS (games starting within 10 min) ===
+  console.log('Checking scorekeeper reminders...');
+  for (const game of games) {
+    if (game.result) continue;
+
+    const gameDateTime = parseGameDateTime(game.date, game.time);
+    if (!gameDateTime) continue;
+
+    const minutesUntilGame = (gameDateTime - now) / (1000 * 60);
+
+    // Within 10 minutes of game start
+    if (minutesUntilGame > 0 && minutesUntilGame <= 10) {
+      const volunteerDoc = await db.collection('volunteers').doc(game.id.toString()).get();
+      if (!volunteerDoc.exists) continue;
+
+      const volunteerData = volunteerDoc.data();
+
+      // Check scorekeeper
+      const scorekeeper = volunteerData.scorekeeper;
+      if (scorekeeper?.email) {
+        const reminderKey = `scorekeeperReminder_${game.id}`;
+        const reminderDoc = await db.collection('notificationsSent').doc(reminderKey).get();
+        if (!reminderDoc.exists) {
+          await sendNotification(
+            'Game Starting Soon!',
+            `You're scorekeeping vs ${game.opponent} in ${Math.round(minutesUntilGame)} minutes. Please open app to start keeping score.`,
+            { type: 'scorekeeperReminder', url: `/game-stats.html?game=${game.id}` },
+            { emails: [scorekeeper.email.toLowerCase()] }
+          );
+          await db.collection('notificationsSent').doc(reminderKey).set({ gameId: game.id, sentAt: Timestamp.now() });
+          console.log(`Sent scorekeeper reminder to ${scorekeeper.email} for game ${game.id}`);
+        }
+      }
+
+      // Check table worker
+      const tableWorker = volunteerData.tableWorker;
+      if (tableWorker?.email) {
+        const reminderKey = `tableWorkerReminder_${game.id}`;
+        const reminderDoc = await db.collection('notificationsSent').doc(reminderKey).get();
+        if (!reminderDoc.exists) {
+          await sendNotification(
+            'Game Starting Soon!',
+            `You're on table duty vs ${game.opponent} in ${Math.round(minutesUntilGame)} minutes. Please head to the scorer's table.`,
+            { type: 'tableWorkerReminder', url: `/game-detail.html?id=${game.id}` },
+            { emails: [tableWorker.email.toLowerCase()] }
+          );
+          await db.collection('notificationsSent').doc(reminderKey).set({ gameId: game.id, sentAt: Timestamp.now() });
+          console.log(`Sent table worker reminder to ${tableWorker.email} for game ${game.id}`);
+        }
+      }
+    }
+  }
+
+  // === VOLUNTEER REMINDERS (games 0-2 days away) ===
+  console.log('Checking volunteer reminders...');
+  for (const game of games) {
+    if (game.result) continue;
+
+    const gameDate = new Date(game.date);
+    gameDate.setHours(0, 0, 0, 0);
+    const daysUntil = Math.ceil((gameDate - today) / (1000 * 60 * 60 * 24));
+
+    if (daysUntil >= 0 && daysUntil <= 2) {
+      await sendVolunteerReminderForGame(game, roster, daysUntil);
+    }
+  }
+
+  // === ATTENDANCE REMINDERS (games within 4 days) ===
+  console.log('Checking attendance reminders...');
+  for (const game of games) {
+    if (game.result) continue;
+
+    const gameDate = new Date(game.date);
+    gameDate.setHours(0, 0, 0, 0);
+    const daysUntil = Math.ceil((gameDate - today) / (1000 * 60 * 60 * 24));
+
+    if (daysUntil > 0 && daysUntil <= 4) {
+      // Check who hasn't responded
+      const attendanceSnapshot = await db.collection('attendance')
+        .where('gameId', '==', game.id)
+        .get();
+
+      const respondedPlayerIds = new Set();
+      attendanceSnapshot.forEach(doc => respondedPlayerIds.add(doc.data().playerId));
+
+      const nonResponders = (roster.players || []).filter(p => !respondedPlayerIds.has(p.id));
+
+      if (nonResponders.length > 0) {
+        const dateStr = gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+        for (const player of nonResponders) {
+          if (!player.parents || player.parents.length === 0) continue;
+
+          const parentEmails = player.parents.filter(p => p.email).map(p => p.email.toLowerCase());
+          if (parentEmails.length === 0) continue;
+
+          const reminderKey = `attendanceReminder_${game.id}_${player.id}`;
+          const reminderDoc = await db.collection('notificationsSent').doc(reminderKey).get();
+          if (!reminderDoc.exists) {
+            const playerName = player.firstName || player.name || 'your player';
+            await sendNotification(
+              'RSVP Needed',
+              `vs ${game.opponent} on ${dateStr} - Let us know if ${playerName} can attend!`,
+              { type: 'attendance', url: `/attendance.html?game=${game.id}`, playerId: player.id },
+              { emails: parentEmails }
+            );
+            await db.collection('notificationsSent').doc(reminderKey).set({ gameId: game.id, playerId: player.id, sentAt: Timestamp.now() });
+          }
+        }
+      }
+    }
+  }
+
+  // === WRAP-UP CHECKS ===
+  console.log('Checking for pending wrap-ups...');
   const pendingSnapshot = await db.collection('wrapups')
     .where('status', '==', 'pending')
     .get();
@@ -2478,10 +2608,8 @@ exports.onSimulationTimeChanged = onDocumentWritten({
     const data = doc.data();
     const windowEnds = data.coachWindowEndsAt;
 
-    // Generate 5 min before window ends (1:55 after game)
     const generateAt = new Date(windowEnds.toDate().getTime() - 5 * 60 * 1000);
 
-    console.log(`  Game ${doc.id}: generateAt=${generateAt.toISOString()}, now=${now.toISOString()}`);
     if (now >= generateAt) {
       console.log(`  -> Triggering wrap-up for game ${doc.id}`);
       await triggerWrapupForGame(doc.id, data);
@@ -2490,6 +2618,35 @@ exports.onSimulationTimeChanged = onDocumentWritten({
 
   return null;
 });
+
+// Helper to parse game date/time into Date object (CST timezone aware)
+function parseGameDateTime(dateStr, timeStr) {
+  try {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!timeMatch) return null;
+
+    let hours = parseInt(timeMatch[1]);
+    const minutes = parseInt(timeMatch[2]);
+    const isPM = timeMatch[3].toUpperCase() === 'PM';
+
+    if (isPM && hours !== 12) hours += 12;
+    if (!isPM && hours === 12) hours = 0;
+
+    // Create local date then convert to CST (handles DST correctly)
+    const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+
+    // Get the timezone offset for this specific date in America/Chicago
+    const chicagoDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+    const utcDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const offsetMs = utcDate - chicagoDate;
+
+    // Apply the offset to get the correct UTC time
+    return new Date(localDate.getTime() + offsetMs);
+  } catch (e) {
+    return null;
+  }
+}
 
 async function triggerWrapupForGame(gameId, wrapupData) {
   try {
