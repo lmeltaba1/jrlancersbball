@@ -209,7 +209,10 @@ body {
   background: var(--bg-body);
   color: var(--text-primary);
   min-height: 100vh;
-  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  /* Top padding for iOS notch/Dynamic Island */
+  padding-top: env(safe-area-inset-top, 0px);
+  /* Bottom padding for fixed nav bar */
+  padding-bottom: 50px;
   -webkit-font-smoothing: antialiased;
   position: relative;
 }
@@ -319,6 +322,9 @@ body::before {
   top: 0;
   z-index: 1000;
   border-bottom: 1px solid var(--border-accent);
+  /* Extend header background into iOS safe area when scrolling */
+  margin-top: calc(-1 * env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .header-content {
@@ -548,15 +554,21 @@ html.light-mode .league-badge {
 }
 
 html.light-mode .league-badge.parkrock {
-  background: rgba(184, 134, 11, 0.1);
-  color: #92400e;
-  border: 1px solid rgba(184, 134, 11, 0.2);
+  background: rgba(249, 115, 22, 0.1);
+  color: #ea580c;
+  border: 1px solid rgba(249, 115, 22, 0.2);
 }
 
 html.light-mode .league-badge.cnr {
-  background: rgba(0, 0, 0, 0.05);
-  color: #555;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+html.light-mode .league-badge.practice {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
 /* Game result badges */
@@ -622,15 +634,9 @@ html.light-mode .vs-badge {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 10px 4px;
+  padding: 6px 12px;
   z-index: 99999;
   border-top: 1px solid var(--border-accent);
-}
-
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .bottom-nav {
-    padding-bottom: calc(10px + env(safe-area-inset-bottom));
-  }
 }
 
 .nav-item {
@@ -673,6 +679,34 @@ html.light-mode .vs-badge {
 .nav-item.active svg {
   color: var(--gold);
   filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
+}
+
+/* Hide entire nav until auth completes - prevents any flash */
+.bottom-nav {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+/* Show nav once auth is ready */
+body.auth-ready .bottom-nav {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Restricted nav items - hidden for viewers */
+body.auth-ready .nav-item.restricted-nav {
+  display: none;
+}
+
+/* Show restricted nav when user has full access (parents/coaches) */
+body.auth-ready.auth-full-access .nav-item.restricted-nav {
+  display: flex;
+}
+
+/* Players: show Plays only, not Chat */
+body.auth-ready.auth-plays-access .nav-item.restricted-nav.nav-plays {
+  display: flex;
 }
 
 /* ========== MAIN CONTENT ========== */
@@ -851,21 +885,21 @@ html.light-mode .vs-badge {
 }
 
 .league-badge.parkrock {
-  background: rgba(251, 146, 60, 0.15);
+  background: rgba(249, 115, 22, 0.15);
   color: #fb923c;
-  border: 1px solid rgba(251, 146, 60, 0.3);
+  border: 1px solid rgba(249, 115, 22, 0.3);
 }
 
 .league-badge.cnr {
-  background: rgba(96, 165, 250, 0.15);
+  background: rgba(59, 130, 246, 0.15);
   color: #60a5fa;
-  border: 1px solid rgba(96, 165, 250, 0.3);
+  border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 .league-badge.practice {
-  background: rgba(168, 162, 158, 0.15);
-  color: #a8a29e;
-  border: 1px solid rgba(168, 162, 158, 0.3);
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
 /* ========== JERSEY INDICATOR ========== */
@@ -880,16 +914,22 @@ html.light-mode .vs-badge {
   border-radius: 6px;
 }
 
-.jersey-indicator.gold {
-  background: rgba(250, 204, 21, 0.15);
-  color: #facc15;
-  border: 1px solid rgba(250, 204, 21, 0.3);
+.jersey-indicator.white {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .jersey-indicator.black {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.4);
+  color: #a1a1aa;
   border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.jersey-indicator.parkrock {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.3);
 }
 
 /* ========== QUICK LINKS - Modern ========== */
@@ -1518,13 +1558,6 @@ a:hover {
   color: var(--gold);
 }
 
-/* ========== SAFE AREA ========== */
-@supports (padding: max(0px)) {
-  .header-content {
-    padding-top: max(12px, env(safe-area-inset-top)) !important;
-  }
-}
-
 /* ========== LEADERBOARD ========== */
 .leaderboard-user-summary {
   background: linear-gradient(135deg, var(--bg-elevated) 0%, rgba(40, 40, 45, 0.9) 100%);
@@ -1800,6 +1833,7 @@ a:hover {
 }
 
 /* ========== BOTTOM SHEET ========== */
+/* z-index must be higher than bottom-nav (99999) so modals appear above nav */
 .bottom-sheet-overlay {
   position: fixed;
   top: 0;
@@ -1809,7 +1843,7 @@ a:hover {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: 10000;
+  z-index: 100000;
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s ease;
@@ -1829,7 +1863,7 @@ a:hover {
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   max-height: 90vh;
   overflow: hidden;
-  z-index: 10001;
+  z-index: 100001;
   transform: translateY(100%);
   transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
@@ -2421,6 +2455,7 @@ body.has-ticker .header {
 }
 
 /* ========== BOTTOM SHEET ========== */
+/* z-index must be higher than bottom-nav (99999) so modals appear above nav */
 .bottom-sheet-overlay {
   position: fixed;
   top: 0;
@@ -2428,7 +2463,7 @@ body.has-ticker .header {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.85);
-  z-index: 9998;
+  z-index: 100000;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease, visibility 0.3s ease;
@@ -2446,7 +2481,7 @@ body.has-ticker .header {
   bottom: 0;
   background: var(--bg-body);
   border-radius: 20px 20px 0 0;
-  z-index: 9999;
+  z-index: 100001;
   transform: translateY(100%);
   transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
   max-height: 90vh;

@@ -9,7 +9,7 @@
       "location": "Lafayette High School Gym",
       "home": true,
       "league": "parkrock",
-      "jersey": "black"
+      "jersey": "parkrock"
     },
     {
       "id": 2,
@@ -19,7 +19,7 @@
       "location": "CNR Sportsplex",
       "home": false,
       "league": "cnr",
-      "jersey": "gold"
+      "jersey": "black"
     },
     {
       "id": 3,
@@ -29,7 +29,7 @@
       "location": "Parkway West Middle School",
       "home": false,
       "league": "parkrock",
-      "jersey": "black"
+      "jersey": "parkrock"
     },
     {
       "id": 4,
@@ -39,7 +39,7 @@
       "location": "CNR Sportsplex",
       "home": true,
       "league": "cnr",
-      "jersey": "gold"
+      "jersey": "white"
     },
     {
       "id": 5,
@@ -49,7 +49,7 @@
       "location": "Lafayette High School Gym",
       "home": true,
       "league": "parkrock",
-      "jersey": "black"
+      "jersey": "parkrock"
     },
     {
       "id": 6,
@@ -59,7 +59,7 @@
       "location": "CNR Sportsplex",
       "home": false,
       "league": "cnr",
-      "jersey": "gold"
+      "jersey": "black"
     },
     {
       "id": 7,
@@ -69,7 +69,7 @@
       "location": "Selvidge Middle School",
       "home": false,
       "league": "parkrock",
-      "jersey": "black"
+      "jersey": "parkrock"
     },
     {
       "id": 8,
@@ -79,7 +79,7 @@
       "location": "CNR Sportsplex",
       "home": true,
       "league": "cnr",
-      "jersey": "gold"
+      "jersey": "white"
     },
     {
       "id": 9,
@@ -89,7 +89,7 @@
       "location": "Lafayette High School Gym",
       "home": true,
       "league": "parkrock",
-      "jersey": "black"
+      "jersey": "parkrock"
     },
     {
       "id": 10,
@@ -99,7 +99,7 @@
       "location": "CNR Sportsplex",
       "home": false,
       "league": "cnr",
-      "jersey": "gold"
+      "jersey": "black"
     },
     {
       "id": 11,
@@ -109,7 +109,7 @@
       "location": "Parkway Central Middle School",
       "home": false,
       "league": "parkrock",
-      "jersey": "black"
+      "jersey": "parkrock"
     },
     {
       "id": 12,
@@ -119,7 +119,7 @@
       "location": "CNR Sportsplex",
       "home": true,
       "league": "cnr",
-      "jersey": "gold"
+      "jersey": "white"
     },
     {
       "id": 13,
@@ -129,7 +129,7 @@
       "location": "Lafayette High School Gym",
       "home": true,
       "league": "parkrock",
-      "jersey": "black"
+      "jersey": "parkrock"
     }
   ],
   "events": [

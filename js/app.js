@@ -99,6 +99,13 @@ const leagueNames = {
   cnr: 'CNR'
 };
 
+// Jersey display names
+const jerseyNames = {
+  white: 'White Lancers',
+  black: 'Black Lancers',
+  parkrock: 'Park Rock'
+};
+
 // Format date for display
 function formatDate(dateString) {
   const [year, month, day] = dateString.split('-').map(Number);
@@ -194,12 +201,7 @@ function convertTo24Hour(timeStr) {
 // Format jersey label for display
 function formatJerseyLabel(jersey) {
   if (!jersey) return '';
-  switch (jersey) {
-    case 'parkrock': return 'PARK ROCK JERSEY';
-    case 'home': return 'HOME JERSEY';
-    case 'away': return 'AWAY JERSEY';
-    default: return jersey.toUpperCase() + ' JERSEY';
-  }
+  return jerseyNames[jersey] || jersey.toUpperCase();
 }
 
 // Calculate season record

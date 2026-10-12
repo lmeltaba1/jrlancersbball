@@ -575,21 +575,34 @@ function requireAuth(options = {}) {
   });
 }
 
-// Hide nav items based on user role
-// Viewers: hide Chat and Plays
-// Players: hide only Chat (they can see playbook)
+// Show/hide nav items based on user role via CSS classes
+// Nav bar is hidden until auth-ready class is added (prevents flash)
+// Then restricted items shown/hidden based on role:
+// - Parents/Coaches: see Chat and Plays (auth-full-access)
+// - Players: see Plays only (auth-plays-access)
+// - Viewers: see neither (no extra class, CSS keeps them hidden)
 function hideViewerRestrictedNav(userInfo) {
-  document.querySelectorAll('.nav-item').forEach(item => {
-    const text = item.textContent.trim().toLowerCase();
-    // Always hide Chat for viewers and players
-    if (text.includes('chat')) {
-      item.style.display = 'none';
-    }
-    // Hide Plays only for viewers (not players - they need to see playbook)
-    if (text.includes('plays') && userInfo && !userInfo.isPlayer) {
-      item.style.display = 'none';
-    }
-  });
+  // Remove any existing auth classes first
+  document.body.classList.remove('auth-full-access', 'auth-plays-access');
+
+  if (!userInfo) {
+    // Still mark auth as ready so nav shows (will show without restricted items)
+    document.body.classList.add('auth-ready');
+    return;
+  }
+
+  // Parents and coaches get full access
+  if (userInfo.isParent || userInfo.isCoach) {
+    document.body.classList.add('auth-full-access');
+  }
+  // Players can see playbook but not chat
+  else if (userInfo.isPlayer) {
+    document.body.classList.add('auth-plays-access');
+  }
+  // Viewers get no extra class - restricted items stay hidden via CSS
+
+  // Mark auth as ready - this makes the nav visible
+  document.body.classList.add('auth-ready');
 }
 
 // Helper to check if email is in roster (for registration validation)
