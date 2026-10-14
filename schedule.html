@@ -377,7 +377,7 @@
               if (!attendanceByGame[gameId]) {
                 attendanceByGame[gameId] = { attending: 0, notAttending: 0, respondedIds: new Set() };
               }
-              if (data.attending) {
+              if (data.attending === true || data.attending === 'yes') {
                 attendanceByGame[gameId].attending++;
               } else {
                 attendanceByGame[gameId].notAttending++;

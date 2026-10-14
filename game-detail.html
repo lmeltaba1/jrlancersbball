@@ -815,7 +815,7 @@
             const name = player.firstName + ' ' + player.lastName.charAt(0) + '.';
             const response = attendanceData[player.id];
             if (response) {
-              if (response.attending) attending.push(name);
+              if (response.attending === true || response.attending === 'yes') attending.push(name);
               else notAttending.push(name);
             } else {
               noResponse.push(name);

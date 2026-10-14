@@ -559,7 +559,7 @@
         const isCurrentPlayer = player.id == currentPlayerId;
 
         if (response) {
-          if (response.attending) {
+          if (response.attending === true || response.attending === 'yes') {
             attending.push({ name: playerName, highlight: isCurrentPlayer });
           } else {
             notAttending.push({ name: playerName, highlight: isCurrentPlayer });
@@ -655,13 +655,14 @@
         // Already responded - show message
         responseSection.style.display = 'none';
         respondedMessage.style.display = 'flex';
-        respondedMessage.className = 'responded-message ' + (response.attending ? 'attending' : 'not-attending');
+        const isAttending = response.attending === true || response.attending === 'yes';
+        respondedMessage.className = 'responded-message ' + (isAttending ? 'attending' : 'not-attending');
 
-        document.getElementById('respondedIcon').innerHTML = response.attending ?
+        document.getElementById('respondedIcon').innerHTML = isAttending ?
           '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' :
           '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
 
-        document.getElementById('respondedText').textContent = response.attending ?
+        document.getElementById('respondedText').textContent = isAttending ?
           `${currentPlayerName} is attending` :
           `${currentPlayerName} is not attending`;
       } else {
