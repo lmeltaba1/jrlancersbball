@@ -608,7 +608,7 @@
           `;
 
           return `
-            <div class="game-card" id="event-${event.id}" data-date="${event.date}" style="cursor: pointer;" onclick="window.location.href='attendance.html?game=${event.id}'">
+            <div class="game-card" id="event-${event.id}" data-date="${event.date}" style="cursor: pointer;" onclick="window.location.href='game-detail.html?id=${event.id}'">
               <div class="game-card-header practice">
                 <span>${dateInfo.weekday}, ${dateInfo.month} ${dateInfo.day}</span>
                 <span class="league-badge practice">${typeLabel.toUpperCase()}</span>

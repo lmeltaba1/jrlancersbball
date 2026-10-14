@@ -1100,10 +1100,8 @@
           const eventContent = document.getElementById('next-event-content');
           const dateInfo = formatDate(nextEvent.date);
 
-          // Determine link URL based on event type
-          const eventLink = nextEvent.eventType === 'game'
-            ? `game-detail.html?id=${nextEvent.id}`
-            : `attendance.html?game=${nextEvent.id}`;
+          // All events link to game-detail page
+          const eventLink = `game-detail.html?id=${nextEvent.id}`;
 
           if (nextEvent.eventType === 'game') {
             // Display as game card

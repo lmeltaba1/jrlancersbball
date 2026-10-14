@@ -1662,7 +1662,7 @@ exports.onGameEnded = onDocumentUpdated('gameStats/{gameId}', async (event) => {
     const lancersScore = after.lancersScore || 0;
     const oppScore = after.opponentScore || 0;
     const result = lancersScore > oppScore ? 'WIN' : (lancersScore < oppScore ? 'LOSS' : 'TIE');
-    const gameUrl = `/game-detail.html?id=${gameId}`;
+    const gameUrl = `/attendance.html?game=${gameId}`;
 
     // Send notification to everyone - upload highlights (link to highlights section)
     await sendNotification(
@@ -1923,7 +1923,7 @@ exports.generateWrapupReport = onRequest({
     await sendNotification(
       title,
       body,
-      { type: 'wrapupPendingApproval', url: `/game-detail.html?id=${gameId}#wrapup-card`, gameId: gameId.toString() },
+      { type: 'wrapupPendingApproval', url: `/attendance.html?game=${gameId}#wrapup-card`, gameId: gameId.toString() },
       { emails: await getHeadCoachEmail() }
     );
     response.json({ success: true, gameId });
@@ -2021,7 +2021,7 @@ exports.approveWrapup = onRequest(async (request, response) => {
     await sendNotification(
       'Game Wrap-Up Ready!',
       `Check out the recap from the ${opponentName} game`,
-      { type: 'wrapupReady', url: `/game-detail.html?id=${gameId}#wrapup-card`, gameId: gameId.toString() }
+      { type: 'wrapupReady', url: `/attendance.html?game=${gameId}#wrapup-card`, gameId: gameId.toString() }
     );
 
     console.log(`Wrap-up approved and published for game ${gameId}`);
@@ -2562,7 +2562,7 @@ exports.onSimulationTimeChanged = onDocumentWritten({
           await sendNotification(
             'Game Starting Soon!',
             `You're on table duty vs ${game.opponent} in ${Math.round(minutesUntilGame)} minutes. Please head to the scorer's table.`,
-            { type: 'tableWorkerReminder', url: `/game-detail.html?id=${game.id}` },
+            { type: 'tableWorkerReminder', url: `/attendance.html?game=${game.id}` },
             { emails: [tableWorker.email.toLowerCase()] }
           );
           await db.collection('notificationsSent').doc(reminderKey).set({ gameId: game.id, sentAt: Timestamp.now() });
@@ -2730,7 +2730,7 @@ async function triggerWrapupForGame(gameId, wrapupData) {
     });
 
     // Notify head coach
-    const gameUrl = `/game-detail.html?id=${gameId}`;
+    const gameUrl = `/attendance.html?game=${gameId}`;
     await sendNotification(
       'Game Wrap-Up Ready for Review',
       `The ${wrapupData.opponent} game wrap-up is ready. Please review and approve.`,
@@ -2826,7 +2826,7 @@ exports.checkPendingWrapups = onSchedule({
       await sendNotification(
         'Wrap-Up Ready for Review',
         `The ${opponentName} game recap is ready for your approval`,
-        { type: 'wrapupPendingApproval', url: `/game-detail.html?id=${gameId}#wrapup-card`, gameId: gameId },
+        { type: 'wrapupPendingApproval', url: `/attendance.html?game=${gameId}#wrapup-card`, gameId: gameId },
         { emails: await getHeadCoachEmail() }
       );
 
@@ -2974,7 +2974,7 @@ exports.sendTestNotification = onRequest(async (request, response) => {
       await sendNotification(
         'Game Wrap-Up Ready!',
         `Check out the recap from the ${opponent} game`,
-        { type: 'wrapupReady', url: `/game-detail.html?id=${gid}#wrapup-card`, gameId: gid.toString() }
+        { type: 'wrapupReady', url: `/attendance.html?game=${gid}#wrapup-card`, gameId: gid.toString() }
       );
       response.json({ success: true, message: `Sent wrapup notification for game ${gid}` });
     } else {
@@ -3784,4 +3784,120 @@ exports.setupTestAccounts = onRequest({ cors: true }, async (request, response) 
       viewer: { email: 'maureen.trott@att.net', password: 'LancersView123!' }
     }
   });
+});
+
+// ============================================================
+// CLEANUP FOR LAUNCH - Clear all test data
+// ============================================================
+
+async function deleteCollection(collectionPath) {
+  const snapshot = await db.collection(collectionPath).get();
+  if (snapshot.empty) return 0;
+
+  // Delete in batches of 500 (Firestore limit)
+  const batches = [];
+  let batch = db.batch();
+  let count = 0;
+
+  snapshot.docs.forEach((doc, i) => {
+    batch.delete(doc.ref);
+    count++;
+    if ((i + 1) % 500 === 0) {
+      batches.push(batch.commit());
+      batch = db.batch();
+    }
+  });
+
+  if (count % 500 !== 0) {
+    batches.push(batch.commit());
+  }
+
+  await Promise.all(batches);
+  return snapshot.size;
+}
+
+exports.cleanupForLaunch = onRequest({ invoker: 'public' }, async (request, response) => {
+  if (setCorsHeaders(request, response)) return;
+
+  const authResult = await verifyAdminAuth(request, { headCoachOnly: true });
+  if (!authResult.success) {
+    response.status(authResult.status).json({ error: authResult.error });
+    return;
+  }
+
+  const results = { deleted: {}, errors: [] };
+
+  try {
+    // Delete chat messages
+    results.deleted.messages = await deleteCollection('messages');
+
+    // Delete posts and their comments
+    const postsSnapshot = await db.collection('posts').get();
+    for (const postDoc of postsSnapshot.docs) {
+      const commentsSnapshot = await postDoc.ref.collection('comments').get();
+      if (!commentsSnapshot.empty) {
+        const batch = db.batch();
+        commentsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+      }
+      await postDoc.ref.delete();
+    }
+    results.deleted.posts = postsSnapshot.size;
+
+    // Delete game stats
+    results.deleted.gameStats = await deleteCollection('gameStats');
+
+    // Delete attendance
+    results.deleted.attendance = await deleteCollection('attendance');
+
+    // Delete volunteers
+    results.deleted.volunteers = await deleteCollection('volunteers');
+
+    // Delete highlights
+    results.deleted.highlights = await deleteCollection('highlights');
+
+    // Delete wrapups
+    results.deleted.wrapups = await deleteCollection('wrapups');
+
+    // Delete chat read status
+    results.deleted.chatReadStatus = await deleteCollection('chatReadStatus');
+
+    // Delete team notifications
+    results.deleted.teamNotifications = await deleteCollection('teamNotifications');
+
+    // Delete user notifications
+    const userNotifDocs = await db.collection('userNotifications').listDocuments();
+    let userNotifCount = 0;
+    for (const docRef of userNotifDocs) {
+      await docRef.delete();
+      userNotifCount++;
+    }
+    results.deleted.userNotifications = userNotifCount;
+
+    // Delete notification status
+    results.deleted.notificationStatus = await deleteCollection('notificationStatus');
+
+    // Delete notifications sent tracking
+    results.deleted.notificationsSent = await deleteCollection('notificationsSent');
+
+    // Clear schedule (empty games and events)
+    await db.collection('config').doc('schedule').set({
+      season: '2026-2027',
+      games: [],
+      events: []
+    });
+    results.deleted.schedule = 'cleared';
+
+    response.json({
+      success: true,
+      message: 'All test data cleared. App is ready for launch!',
+      results
+    });
+  } catch (error) {
+    response.status(500).json({
+      success: false,
+      error: error.message,
+      results
+    });
+  }
 });

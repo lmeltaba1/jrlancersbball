@@ -1,197 +1,71 @@
 {
   "season": "2026-2027",
-  "games": [
-    {
-      "id": 1,
-      "date": "2026-12-05",
-      "time": "7:00 PM",
-      "opponent": "Warriors",
-      "location": "Lafayette High School Gym",
-      "home": true,
-      "league": "parkrock",
-      "jersey": "parkrock"
-    },
-    {
-      "id": 2,
-      "date": "2026-12-06",
-      "time": "10:15 AM",
-      "opponent": "Eagles",
-      "location": "CNR Sportsplex",
-      "home": false,
-      "league": "cnr",
-      "jersey": "black"
-    },
-    {
-      "id": 3,
-      "date": "2026-12-12",
-      "time": "6:00 PM",
-      "opponent": "Hawks",
-      "location": "Parkway West Middle School",
-      "home": false,
-      "league": "parkrock",
-      "jersey": "parkrock"
-    },
-    {
-      "id": 4,
-      "date": "2026-12-13",
-      "time": "11:30 AM",
-      "opponent": "Celtics",
-      "location": "CNR Sportsplex",
-      "home": true,
-      "league": "cnr",
-      "jersey": "white"
-    },
-    {
-      "id": 5,
-      "date": "2026-10-11",
-      "time": "6:36 PM",
-      "opponent": "Thunder",
-      "location": "Lafayette High School Gym",
-      "home": true,
-      "league": "parkrock",
-      "jersey": "parkrock"
-    },
-    {
-      "id": 6,
-      "date": "2026-12-20",
-      "time": "9:00 AM",
-      "opponent": "Rockets",
-      "location": "CNR Sportsplex",
-      "home": false,
-      "league": "cnr",
-      "jersey": "black"
-    },
-    {
-      "id": 7,
-      "date": "2027-01-03",
-      "time": "6:30 PM",
-      "opponent": "Lakers",
-      "location": "Selvidge Middle School",
-      "home": false,
-      "league": "parkrock",
-      "jersey": "parkrock"
-    },
-    {
-      "id": 8,
-      "date": "2027-01-04",
-      "time": "10:45 AM",
-      "opponent": "Bulls",
-      "location": "CNR Sportsplex",
-      "home": true,
-      "league": "cnr",
-      "jersey": "white"
-    },
-    {
-      "id": 9,
-      "date": "2027-01-10",
-      "time": "7:00 PM",
-      "opponent": "Spurs",
-      "location": "Lafayette High School Gym",
-      "home": true,
-      "league": "parkrock",
-      "jersey": "parkrock"
-    },
-    {
-      "id": 10,
-      "date": "2027-01-17",
-      "time": "11:00 AM",
-      "opponent": "Heat",
-      "location": "CNR Sportsplex",
-      "home": false,
-      "league": "cnr",
-      "jersey": "black"
-    },
-    {
-      "id": 11,
-      "date": "2027-01-18",
-      "time": "2:30 PM",
-      "opponent": "Nets",
-      "location": "Parkway Central Middle School",
-      "home": false,
-      "league": "parkrock",
-      "jersey": "parkrock"
-    },
-    {
-      "id": 12,
-      "date": "2027-01-24",
-      "time": "10:15 AM",
-      "opponent": "Mavericks",
-      "location": "CNR Sportsplex",
-      "home": true,
-      "league": "cnr",
-      "jersey": "white"
-    },
-    {
-      "id": 13,
-      "date": "2027-01-25",
-      "time": "3:00 PM",
-      "opponent": "Raptors",
-      "location": "Lafayette High School Gym",
-      "home": true,
-      "league": "parkrock",
-      "jersey": "parkrock"
-    }
-  ],
+  "games": [],
   "events": [
     {
       "id": 101,
       "type": "practice",
-      "date": "2026-12-03",
-      "time": "6:00 PM",
-      "endTime": "7:30 PM",
-      "name": "Team Practice",
-      "location": "Lafayette High School Gym",
-      "notes": "Work on offensive sets"
+      "date": "2026-09-08",
+      "time": "5:30 PM",
+      "endTime": "7:00 PM",
+      "name": "Uniform Fitting - Room 137",
+      "location": "Lafayette High School",
+      "address": "17050 Clayton Rd, Wildwood, MO 63011",
+      "notes": "Room 137",
+      "arriveEarly": 0,
+      "locationDetails": "Room 137"
     },
     {
       "id": 102,
       "type": "practice",
-      "date": "2026-12-10",
-      "time": "6:00 PM",
-      "endTime": "7:30 PM",
-      "name": "Team Practice",
-      "location": "Lafayette High School Gym",
-      "notes": "Defense and rebounding"
+      "date": "2026-10-07",
+      "time": "6:30 PM",
+      "endTime": "8:00 PM",
+      "name": "Practice",
+      "location": "Fairway Elementary School",
+      "address": "480 Old Fairway Dr, Wildwood, MO 63040",
+      "notes": "",
+      "arriveEarly": 10,
+      "locationDetails": "Door Code 2742145#"
     },
     {
       "id": 103,
       "type": "practice",
-      "date": "2026-12-17",
-      "time": "6:00 PM",
-      "endTime": "7:30 PM",
-      "name": "Team Practice",
-      "location": "Lafayette High School Gym",
-      "notes": "Shooting drills"
+      "date": "2026-10-16",
+      "time": "6:30 PM",
+      "endTime": "8:00 PM",
+      "name": "Practice",
+      "location": "Chesterfield Elementary School",
+      "address": "17700 Wild Horse Creek Rd, Chesterfield, MO 63005",
+      "notes": "",
+      "arriveEarly": 10,
+      "locationDetails": "Door Code 2737963#"
     },
     {
       "id": 104,
       "type": "practice",
-      "date": "2027-01-07",
-      "time": "6:00 PM",
-      "endTime": "7:30 PM",
-      "name": "Team Practice",
-      "location": "Lafayette High School Gym",
-      "notes": "Transition offense"
+      "date": "2026-10-21",
+      "time": "6:30 PM",
+      "endTime": "8:00 PM",
+      "name": "Practice",
+      "location": "Fairway Elementary School",
+      "address": "480 Old Fairway Dr, Wildwood, MO 63040",
+      "notes": "",
+      "arriveEarly": 10,
+      "locationDetails": "Door Code 2742145#"
     },
     {
       "id": 105,
       "type": "practice",
-      "date": "2027-01-14",
-      "time": "6:00 PM",
-      "endTime": "7:30 PM",
-      "name": "Team Practice",
-      "location": "Lafayette High School Gym",
-      "notes": "Game preparation"
-    },
-    {
-      "id": 106,
-      "type": "practice",
-      "date": "2027-01-21",
-      "time": "6:00 PM",
-      "endTime": "7:30 PM",
-      "name": "Team Practice",
-      "location": "Lafayette High School Gym",
-      "notes": "Review plays"
+      "date": "2026-10-30",
+      "time": "6:30 PM",
+      "endTime": "8:00 PM",
+      "name": "Practice",
+      "location": "Chesterfield Elementary School",
+      "address": "17700 Wild Horse Creek Rd, Chesterfield, MO 63005",
+      "notes": "",
+      "arriveEarly": 10,
+      "locationDetails": "Door Code 2737963#"
     }
   ]
 }
