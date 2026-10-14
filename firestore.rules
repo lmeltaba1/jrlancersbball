@@ -91,9 +91,11 @@ service cloud.firestore {
     match /attendance/{docId} {
       allow read: if isAuthenticated();
       // Write: authenticated users, validate required fields
+      // attending can be boolean (true/false) or legacy string ('yes'/'no'/'maybe')
       allow write: if isAuthenticated() &&
         request.resource.data.keys().hasAll(['gameId', 'playerId', 'attending']) &&
-        request.resource.data.attending in ['yes', 'no', 'maybe'] &&
+        (request.resource.data.attending is bool ||
+         request.resource.data.attending in ['yes', 'no', 'maybe']) &&
         request.resource.data.gameId is int;
     }
 
