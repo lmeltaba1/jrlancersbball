@@ -1,6 +1,20 @@
 {
   "season": "2026-2027",
-  "games": [],
+  "games": [
+    {
+      "id": 1,
+      "date": "2026-10-17",
+      "time": "1:00 PM",
+      "endTime": "2:00 PM",
+      "arriveEarly": 30,
+      "opponent": "Eureka Wildcats",
+      "location": "Chesterfield Elementary School",
+      "address": "17700 Wild Horse Creek Rd, Chesterfield, MO 63005",
+      "home": true,
+      "league": "cnr",
+      "jersey": "black"
+    }
+  ],
   "events": [
     {
       "id": 101,

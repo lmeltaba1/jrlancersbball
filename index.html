@@ -771,14 +771,18 @@
       if (!rsvpEl) return;
 
       try {
-        const docId = `${currentNextEvent.id}_${playerId}`;
-        const doc = await db.collection('attendance').doc(docId).get();
+        // Query by gameId only, then filter by playerId (matches notification system exactly)
+        const snapshot = await db.collection('attendance')
+          .where('gameId', '==', currentNextEvent.id)
+          .get();
 
-        if (doc.exists) {
-          const data = doc.data();
-          if (data.attending === true) {
+        const playerDoc = snapshot.docs.find(doc => doc.data().playerId === playerId);
+        if (playerDoc) {
+          const data = playerDoc.data();
+          // Handle both boolean and string values for attending
+          if (data.attending === true || data.attending === 'yes') {
             rsvpEl.innerHTML = `<span style="color: #22C55E; font-weight: 600;">&#10003; Attending</span>`;
-          } else if (data.attending === false) {
+          } else if (data.attending === false || data.attending === 'no') {
             rsvpEl.innerHTML = `<span style="color: #EF4444; font-weight: 600;">&#10007; Not Attending</span>`;
           } else {
             rsvpEl.innerHTML = `<span style="color: #F59E0B; font-weight: 600;">⚠ RSVP Needed</span>`;
